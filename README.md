@@ -196,10 +196,12 @@ If we changed the package of `Page1` for example, it would be compiled and rende
 
 The same is for images. 
 
-When you render the page it should look like this:
+When you render the page it should look like this (Open "target/web/public/main/ba/sake/hepek/example2/index.html"):  
+
 ![whatever](https://upload.cc/i3/BfgtZn.png "Homepage")
 
 
+You can do a `sbt clean` and then `sbt hepek` to convince yourself it works.  
 
 
 

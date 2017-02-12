@@ -23,6 +23,8 @@ project/project/
 
 bin/
 
-# leave the rendered folder:
-!target/web/public
-target/
+# ignore everything in target/ except the rendered folder(bcoz images, js example):
+target/*
+!target/web/
+
+project/target/
