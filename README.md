@@ -6,17 +6,19 @@ Feel free to make suggestions by raising an issue or by pinging me on Twitter @[
 
 ## Quick intro to sbt-hepek
 
+What is it? In a nutshell it is an [SBT](http://www.scala-sbt.org/) plugin for rendering Scala `object`s to files.
+
 The main traits that sbt-hepek plugin uses are `Renderable` and `RelativePath` (found in [hepek-core](https://github.com/sake92/hepek-core) library).  
 `Renderable` **extends** `RelativePath` which means that every *renderable* has its *path* where it **will be rendered** when **hepek** is run.
 Simple, right? You only need an **object** that extends `Renderable` and implements its `render: String` method. That will be the content of the file.  
 
 To render the objects to files you start the sbt shell and run `hepek`.  
-It will compile your sources and render the files to the `hepekTarget` folder.
+It will compile your sources and render the files to the `hepekTarget` folder (currently it is "target/web/public/main/").
 
 ----------------------------------------
 
 Now, the `RelativePath` has some interesting use cases. It is needed for `Renderable` to be rendered properly.  
-The idea is that all resources that extend `RelativePath` will have path relative to it class' **package**.  
+The idea is that all resources that extend `RelativePath` will have path reflecting it's class' **package**.  
 E.g. if you have a resource called "text.txt" in a package `com.myorg` 
 its path would be "com/myorg/text.txt", relative to `hepekTarget` folder.
 - First usecase, concerns files that **will be inserted manually** along with the rendered files (see `RawRelativePath`), 
@@ -67,7 +69,7 @@ Scala's ecosystem is very rich with these, especially with JSON support.
 ## Example 2: HTML
 
 This is where it gets interesting. The main reason why I made this plugin in the first place.  
-An "engine" for static websites (blogs mainly).
+Hepek as an "engine" for static websites (blogs mainly).
 
 First, we'll make a template for our HTML pages. All will have the same look and feel, [Bootstrap](http://getbootstrap.com/) of course,
 what did you expect from a backend developer like me? xD  
