@@ -6,12 +6,23 @@
 .history
 .lib/
 dist/*
-target/
 lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+project/project/
 
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
+.cache-main
+.cache-tests
+.classpath
+.project
+.settings/
+
+bin/
+
+# leave the rendered folder:
+!target/web/public
+target/
