@@ -102,7 +102,7 @@ trait Page extends ClassRelativePath with Renderable {
       |    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
       |    <script src="${relTo(JS.myJs)}"></script>
       |  </body>
-      </html>
+      |</html>
     """.stripMargin
   }
   
@@ -160,6 +160,8 @@ The contents of our blog posts are rendered in second HTML div.
 That's it, we are ready to make our first blog post:
 
 ```scala
+package ba.sake.hepek.example2.pages // render to /pages folder!
+
 object Page1 extends Main {
 
   override def title = "Page 1"
