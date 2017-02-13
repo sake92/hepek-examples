@@ -195,7 +195,7 @@ object JS {
 }
 ```
 
-We can look back at our `Page` template and see that we refer to `myJs` with `src="${relTo(JS.myJs)}"`.  
+We can look back at our `Page` template and see that we refer to `myJs` with `this.relTo(JS.myJs)"`.  
 If we changed the package of `Page1` for example, it would be compiled and rendered again, and the path would still work!
 
 The same is for images. 
