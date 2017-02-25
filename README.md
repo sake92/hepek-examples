@@ -91,18 +91,18 @@ trait Page extends ClassRelativePath with Renderable {
       |    <meta name="viewport" content="width=device-width, initial-scale=1">
       |    <title>$title</title>
       |    <!-- Include Bootstrap CSS -->
-      |    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+      |    <link rel="stylesheet" href="${relTo(WebJars.css.bootstrap)}">
       |  </head>
       |  <body>
       |    <div class="container-fluid">
       |      $body
       |    </div>
       |    <!-- Include Bootstrap & jQuery libs -->
-      |    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-      |    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+      |    <script src="${relTo(WebJars.js.jQuery)}"></script>
+      |    <script src="${relTo(WebJars.js.bootstrap)}"></script>
       |    <script src="${relTo(JS.myJs)}"></script>
       |  </body>
-      |</html>
+      </html>
     """.stripMargin
   }
   
@@ -206,6 +206,7 @@ When you render the page it should look like this (Open "target/web/public/main/
 
 
 You can do a `sbt clean` and then `sbt hepek` to convince yourself it works.  
+Also, since second example uses [sbt-web](https://github.com/sbt/sbt-web) and [WebJars](http://www.webjars.org/) you'll need additional `assets` command (in example2, just to copy images an js to target folder).
 
 
 
