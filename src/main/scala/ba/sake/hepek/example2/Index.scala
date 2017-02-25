@@ -12,9 +12,6 @@ object Index extends Main {
   override def title = "Home Page"
 
   override def content: String = {
-
-    println("Image.bosna: " + Image.bosna)
-    println("relTo(Image.bosna): " + relTo(Image.bosna))
     s"""
       |<h1>Welcome to my Home page!</h1>
       |<img src="${relTo(Image.bosna)}" class="img-rounded" alt="${Image.bosna.relPath.getName}">

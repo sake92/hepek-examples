@@ -3,6 +3,7 @@ package ba.sake.hepek.example2.templates
 import ba.sake.hepek.core._
 import ba.sake.hepek.example2.js.JS
 import ba.sake.hepek.common.ClassRelativePath
+import lib.WebJars
 
 trait Page extends ClassRelativePath with Renderable {
 
@@ -23,15 +24,15 @@ trait Page extends ClassRelativePath with Renderable {
       |    <meta name="viewport" content="width=device-width, initial-scale=1">
       |    <title>$title</title>
       |    <!-- Include Bootstrap CSS -->
-      |    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+      |    <link rel="stylesheet" href="${relTo(WebJars.css.bootstrap)}">
       |  </head>
       |  <body>
       |    <div class="container-fluid">
       |      $body
       |    </div>
       |    <!-- Include Bootstrap & jQuery libs -->
-      |    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-      |    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+      |    <script src="${relTo(WebJars.js.jQuery)}"></script>
+      |    <script src="${relTo(WebJars.js.bootstrap)}"></script>
       |    <script src="${relTo(JS.myJs)}"></script>
       |  </body>
       </html>
