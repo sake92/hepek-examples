@@ -16,7 +16,7 @@ To render the objects to files you start the sbt shell and run `hepek`.
 It will compile your sources and render the files to the `hepekTarget` folder (currently it is "target/web/public/main/").
 
 ----------------------------------------
-
+#### An aside, fell free to skip this
 Now, the `RelativePath` has some interesting use cases. It is needed for `Renderable` to be rendered properly.  
 The idea is that all resources that extend `RelativePath` will have path reflecting it's class' **package**.  
 E.g. if you have a resource called "text.txt" in a package `com.myorg` 
