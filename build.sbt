@@ -1,18 +1,22 @@
-organization := "ba.sake"
+import com.typesafe.sbt.web.Import.WebKeys
 
-name := "hepek-examples"
+scalaVersion in ThisBuild := "2.12.4"
+scalafmtOnCompile in ThisBuild := true
 
-version := "0.0.0-SNAPSHOT"
-
-scalaVersion := "2.11.8"
-
-enablePlugins(HepekPlugin)
-enablePlugins(SbtWeb)
-
-// enable this to see more verbose output
-//logLevel in hepek := Level.Debug
-
-libraryDependencies ++= Seq(
-  "org.webjars" % "jquery" % "3.1.1-1",
-  "org.webjars" % "bootstrap" % "3.3.7-1"
+lazy val commonSettings = Seq(
+  organization := "ba.sake",
+  version := "0.0.0-SNAPSHOT",
+  libraryDependencies ++= Seq(
+    "ba.sake" %% "hepek" % "0.0.3-SNAPSHOT"
+  ),
+  resolvers += Resolver.sonatypeRepo("snapshots")
+  // logLevel in hepek := Level.Debug // enable to see more detailed output
 )
+
+lazy val simpleExample = (project in file("examples/simple"))
+  .settings(commonSettings)
+  .enablePlugins(HepekPlugin, SbtWeb)
+
+lazy val bootstrapExample = (project in file("examples/bootstrap"))
+  .settings(commonSettings)
+  .enablePlugins(HepekPlugin, SbtWeb)
