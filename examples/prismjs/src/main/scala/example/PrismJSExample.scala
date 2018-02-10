@@ -11,11 +11,15 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
   override def pageTitle    = "code examples"
   override def siteSettings = SiteSettings("my.tutorials", PrismJSExample)
 
-  // You have some KNOBS / TWEAKS here :)
+  // invisible characters
+  //override def prismTheme = "prism-twilight"
+
   // invisible characters
   //override def prismShowInvisibles = true
+
   // language badge
   //override def prismShowLanguage = false
+
   // copy button
   //override def prismCopyToClipboard = false
 
