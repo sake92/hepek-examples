@@ -20,3 +20,7 @@ lazy val simpleExample = (project in file("examples/simple"))
 lazy val bootstrapExample = (project in file("examples/bootstrap"))
   .settings(commonSettings)
   .enablePlugins(HepekPlugin, SbtWeb)
+
+lazy val prismjsExample = (project in file("examples/prismjs"))
+  .settings(commonSettings)
+  .enablePlugins(HepekPlugin, SbtWeb)
