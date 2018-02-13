@@ -2,9 +2,10 @@ package example
 
 import scalatags.Text.all._
 import ba.sake.hepek.html.structure.SiteSettings
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
-import ba.sake.hepek.prismjs._
 import ba.sake.hepek.html.structure.blog.Section
+import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import ba.sake.hepek.bootstrap3.component.BootstrapBasicComponents._
+import ba.sake.hepek.prismjs._
 
 object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
 
@@ -54,7 +55,19 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
       h3("File fetched with AJAX"),
       chl.java.ajax(
         "https://raw.githubusercontent.com/sake92/hepek-core/master/src/main/java/ba/sake/hepek/core/Renderable.java"
-      )
+      ),
+      h3("File from Github API (",
+         hyperlink(
+           "https://github.com/TheAdnan/focustube/blob/master/index.js"
+         )("this one"),
+         ")"),
+      chl.javascript.github("TheAdnan", "focustube", "index.js"),
+      h3("File from a Gist (",
+         hyperlink(
+           "https://gist.github.com/codeBelt/65a82e76597f2fb6c2af#file-brick-ts"
+         )("this one"),
+         ")"),
+      chl.typescript.gist("65a82e76597f2fb6c2af", Option("Brick.ts"))
     )
   )
 
@@ -109,16 +122,16 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
       """),
       h3("Custom user"),
       chl.bash
-        .withCmdUser("superadmin", "10.0.0.7")("""
+        .withUser("superadmin", "10.0.0.7")("""
           echo "Test, test..."
           echo "Test, test..."
           echo "Test, test..."
         """),
       h3("Custom prompt"),
-      chl.batch.withCmdPrompt("my~awsome~prompt>")("""set foo=bar;"""),
+      chl.batch.withPrompt("my~awsome~prompt>")("""set foo=bar;"""),
       h3("""Output lines ("2-5")"""),
       chl.batch
-        .withCmdPrompt("""C:\blah>""")
+        .withPrompt("""C:\blah>""")
         .withLineHighlight("2-5")("""
           batchtest.bat
           foo

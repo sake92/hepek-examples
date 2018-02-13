@@ -15,12 +15,12 @@ lazy val commonSettings = Seq(
 
 lazy val simpleExample = (project in file("examples/simple"))
   .settings(commonSettings)
-  .enablePlugins(HepekPlugin, SbtWeb)
+  .enablePlugins(HepekPlugin)
 
 lazy val bootstrapExample = (project in file("examples/bootstrap"))
   .settings(commonSettings)
-  .enablePlugins(HepekPlugin, SbtWeb)
+  .enablePlugins(HepekPlugin)
 
 lazy val prismjsExample = (project in file("examples/prismjs"))
   .settings(commonSettings)
-  .enablePlugins(HepekPlugin, SbtWeb)
+  .enablePlugins(HepekPlugin)
