@@ -33,7 +33,12 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
       )
     )
 
-  def sections = List(basicsSection, lineNumsSection, cmdSection, markupSection)
+  def sections =
+    List(basicsSection,
+         lineNumsSection,
+         highlightLinesSection,
+         cmdSection,
+         markupSection)
 
   val basicsSection = Section(
     "Basics",
@@ -50,9 +55,15 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
       p(
         "This is ",
         chl.scala.inline("""Some("inline")"""),
-        " Scala code."
+        " code."
       ),
-      h3("File fetched with AJAX"),
+      h3(
+        "File fetched with AJAX(",
+        hyperlink(
+          "https://github.com/sake92/hepek-core/blob/master/src/main/java/ba/sake/hepek/core/Renderable.java"
+        )("this one"),
+        ")"
+      ),
       chl.java.ajax(
         "https://raw.githubusercontent.com/sake92/hepek-core/master/src/main/java/ba/sake/hepek/core/Renderable.java"
       ),
@@ -89,8 +100,22 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
         end
         hello("Ruby")
       """),
-      h3("""Only some lines ("1,5-6"), perfect for tutorials"""),
-      chlCustom.cpp.withLineHighlight("1,5-6")(
+      h3("No line numbers"),
+      chlCustom.scala("""
+        object HelloWorld {
+          def main(args: Array[String]): Unit = {
+            println("Hello, world!")
+          }
+        }
+      """)
+    )
+  )
+
+  val highlightLinesSection = Section(
+    "Highlight lines",
+    div(
+      h3("""Highlight some lines ("1,5-6"), perfect for tutorials"""),
+      chl.cpp.withLineHighlight("1,5-6")(
         """
           #include <iostream>
 
@@ -101,14 +126,6 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
           }
         """
       ),
-      h3("No line numbers"),
-      chlCustom.scala("""
-        object HelloWorld {
-          def main(args: Array[String]): Unit = {
-            println("Hello, world!")
-          }
-        }
-      """)
     )
   )
 
@@ -132,7 +149,7 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
       h3("""Output lines ("2-5")"""),
       chl.batch
         .withPrompt("""C:\blah>""")
-        .withLineHighlight("2-5")("""
+        .withOutputLines("2-5")("""
           batchtest.bat
           foo
           bar
