@@ -7,7 +7,7 @@ lazy val commonSettings = Seq(
   organization := "ba.sake",
   version := "0.0.0-SNAPSHOT",
   libraryDependencies ++= Seq(
-    "ba.sake" %% "hepek" % "0.0.3-alpha1-SNAPSHOT"
+    "ba.sake" %% "hepek" % "0.1.0-alpha1-SNAPSHOT"
   ),
   resolvers += Resolver.sonatypeRepo("snapshots")
   // logLevel in hepek := Level.Debug // enable to see more detailed output

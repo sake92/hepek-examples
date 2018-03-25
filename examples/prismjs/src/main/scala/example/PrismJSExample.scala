@@ -3,8 +3,8 @@ package example
 import scalatags.Text.all._
 import ba.sake.hepek.html.structure.SiteSettings
 import ba.sake.hepek.html.structure.blog.Section
+import ba.sake.hepek.html.component.BasicComponents._
 import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
-import ba.sake.hepek.bootstrap3.component.BootstrapBasicComponents._
 import ba.sake.hepek.prismjs._
 
 object PrismJSExample extends BootstrapStaticPage with PrismDependencies {

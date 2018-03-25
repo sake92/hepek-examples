@@ -48,11 +48,12 @@ object MyGrid extends BootstrapGridComponents {
   val mdHalfRatio  = Ratio(List(8, 4))    // 8:4
   val mdThirdRatio = Ratio(List(6, 4, 2)) // 6:4:2
 
-  override def lgRatios = Ratios(lgHalfRatio, lgThirdRatio)
-  override def mdRatios = Option(Ratios(mdHalfRatio, mdThirdRatio))
-
   // stack ("normal" behavior) on small and extra-small screens
-  override def smRatios = None
-  override def xsRatios = None
+  override def screenRatios = super.screenRatios.copy(
+    lg = Ratios(lgHalfRatio, lgThirdRatio),
+    md = Option(Ratios(mdHalfRatio, mdThirdRatio)),
+    sm = None,
+    xs = None
+  )
 
 }
