@@ -15,7 +15,7 @@ object MathJaxExample extends BootstrapStaticPage with MathjaxDependencies {
   override def pageContent = frag(
     p(
       "Probably easiest syntax for MathJax is ",
-      hyperlink("http://asciimath.org/", true)("AsciiMath"),
+      hyperlink("http://asciimath.org/", target := "_blank")("AsciiMath"),
       " (but it also supports Latex, MathML etc.)"
     ),
     p("AsciiMath is written inside backticks, like this:"),

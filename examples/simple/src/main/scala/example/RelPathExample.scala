@@ -12,8 +12,8 @@ object RelPathExample extends Renderable {
 
     val pathToTextFile = relTo(TextFile)
     val pathToJSONFile = relTo(JsonFile)
-    s"""|Relative path from here to ${TextFile.relPath} is $pathToTextFile,
-         |and path to ${JsonFile.relPath} is $pathToJSONFile.
+    s"""|Relative path from here to TextFile is $pathToTextFile,
+         |and path to JsonFile is $pathToJSONFile.
          |
          |Neat!
          |""".stripMargin

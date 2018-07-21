@@ -10,11 +10,16 @@ object SimpleBootstrapPage extends BootstrapStaticPage {
   override def siteSettings = SiteSettings("my.site", SimpleBootstrapPage)
 
   //override def fluidContainer = false
+  override def withBootstrapNavbar = false
 
-  override def pageContent =
+  override def pageContent = div(
+    div(cls := "page-header")(
+      h1("Example Page Header")
+    ),
     div(cls := "jumbotron")(
-      h1("Hello world!"),
+      h2("Hello world!"),
       p("Some content...")
     )
+  )
 
 }

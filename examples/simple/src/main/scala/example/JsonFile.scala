@@ -10,13 +10,8 @@ object JsonFile extends Renderable {
   override def relPath = Paths.get("json/my-json.json")
 
   override def render = {
-    val people = List(
-      Person(UUID.randomUUID(), "Sakib", 25),
-      Person(UUID.randomUUID(), "Mirsad", 26),
-      Person(UUID.randomUUID(), "Amer", 26),
-      Person(UUID.randomUUID(), "Muris", 35)
-    )
-    val peopleJSON = for (p <- people) yield {
+
+    val peopleJSON = for (p <- Person.people) yield {
       s"""|{
           |  "id":    "${p.id}",
           |  "name":  "${p.name}",
@@ -31,6 +26,16 @@ object JsonFile extends Renderable {
         |}""".stripMargin
   }
 
-  case class Person(id: UUID, name: String, age: Int)
+}
 
+case class Person(id: UUID, name: String, age: Int)
+
+object Person {
+
+  val people = List(
+    Person(UUID.randomUUID(), "Sakib", 25),
+    Person(UUID.randomUUID(), "Mirsad", 26),
+    Person(UUID.randomUUID(), "Amer", 26),
+    Person(UUID.randomUUID(), "Muris", 35)
+  )
 }

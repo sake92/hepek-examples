@@ -7,22 +7,30 @@ import ba.sake.hepek.html.component.BasicComponents._
 import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
 import ba.sake.hepek.prismjs._
 
+// this would probably be in separate file
+object chl extends PrismCodeHighlightComponents {}
+
+object chlCustom extends PrismCodeHighlightComponents {
+  override def showLineNumbers = false
+}
+
+// this will be rendered
 object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
 
   override def pageTitle    = "code examples"
-  override def siteSettings = SiteSettings("my.tutorials", PrismJSExample)
+  override def siteSettings = SiteSettings("My tutorials", PrismJSExample)
+
+  // theme, one of these: Default, Coy, Dark, Funky, SolarizedLight, Okaidia, Tomorrow, Twilight
+  // override def prismTheme = Themes.Twilight
 
   // invisible characters
-  //override def prismTheme = "prism-twilight"
-
-  // invisible characters
-  //override def prismShowInvisibles = true
+  // override def prismShowInvisibles = true
 
   // language badge
-  //override def prismShowLanguage = false
+  // override def prismShowLanguage = false
 
   // copy button
-  //override def prismCopyToClipboard = false
+  // override def prismCopyToClipboard = false
 
   override def pageContent =
     div(cls := "row")(
@@ -191,10 +199,4 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
     )
   )
 
-}
-
-object chl extends PrismCodeHighlightComponents {}
-
-object chlCustom extends PrismCodeHighlightComponents {
-  override def showLineNumbers = false
 }
