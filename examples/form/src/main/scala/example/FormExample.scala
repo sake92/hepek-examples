@@ -2,21 +2,16 @@ package docs
 
 import scalatags.Text.all._
 import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
-import ba.sake.hepek.bootstrap3.component.BootstrapGridComponents._
-import ba.sake.hepek.bootstrap3.component.BootstrapFormComponents
+import ba.sake.hepek.pure.statik.PureStaticPage
 import ba.sake.hepek.html.structure.SiteSettings
 
-// this should be in utils, for easier import from different pages! :)
-object forms extends BootstrapFormComponents {
-  import BootstrapFormComponents._
-  // change this and see form change when rendered again !!! :O
-  override def bootstrapFormType: Type = Type.Horizontal()
-}
+/* To try PureCSS instead of Bootstrap3, switch to PureStaticPage and PrFormComponents */
 
 object FormExample extends BootstrapStaticPage {
-  import forms._
+//object FormExample extends PureStaticPage {
+  import formComponents._
 
-  override def pageTitle    = "Formsssss"
+  override def pageTitle    = "Form example"
   override def siteSettings = SiteSettings("my.site", this)
 
   override def pageContent = frag(
@@ -64,4 +59,25 @@ object FormExample extends BootstrapStaticPage {
       )
     )
   )
+}
+
+// this should be in utils, for easier import from different pages! :)
+// use one of (currently) 2 form support frameworks: bootstrap3 or pure
+object formComponents extends BsFormComponents
+//object formComponents extends PrFormComponents
+
+import ba.sake.hepek.bootstrap3.component._
+
+trait BsFormComponents
+    extends BootstrapFormComponents
+    with BootstrapGridComponents {
+  import BootstrapFormComponents._
+  override def bootstrapFormType: Type = Type.Horizontal()
+}
+
+import ba.sake.hepek.pure.component._
+
+trait PrFormComponents extends PureFormComponents with PureGridComponents {
+  import PureFormComponents._
+  override def pureFormType: Type = Type.Horizontal
 }
