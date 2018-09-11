@@ -1,5 +1,7 @@
 # hepek-examples
 
+Examples rendered live [here](https://quizzical-galileo-25497e.netlify.com/).
+
 ## How to run?
 
 Just run `sbt`, wait for shell to load and type `hepek`.  
