@@ -7,8 +7,9 @@ scalafmtOnCompile in ThisBuild := true
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "ba.sake" %% "hepek" % "0.2.0"
+      "ba.sake" %% "hepek" % "0.2.1-SNAPSHOT"
     ),
+    resolvers += Resolver.sonatypeRepo("snapshots"),
     (hepek in Compile) := {
       WebKeys.assets.value // run 'assets' after compiling
       (hepek in Compile).value
