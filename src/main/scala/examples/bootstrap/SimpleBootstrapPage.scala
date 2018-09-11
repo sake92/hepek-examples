@@ -1,16 +1,17 @@
-package example
+package examples.bootstrap
 
 import scalatags.Text.all._
 import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
-import ba.sake.hepek.html.structure.SiteSettings
 
 object SimpleBootstrapPage extends BootstrapStaticPage {
 
-  override def pageTitle    = "awww-some title"
-  override def siteSettings = SiteSettings("my.site", SimpleBootstrapPage)
+  override def pageSettings =
+    super.pageSettings
+      .withTitle("awww-some title")
 
-  //override def fluidContainer = false
-  override def withBootstrapNavbar = false
+  // override def bootstrapContainer = "container"
+
+  // override def bootstrapNavbar  =  Some(Position.FixedBottom, Style.Inverse)
 
   override def pageContent = div(
     div(cls := "page-header")(

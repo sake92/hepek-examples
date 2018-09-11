@@ -25,3 +25,5 @@ bin/
 
 # ignore everything in all target/ folders
 target/
+
+.idea/

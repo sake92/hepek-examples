@@ -1,10 +1,9 @@
-package example
+package examples.prismjs
 
 import scalatags.Text.all._
-import ba.sake.hepek.html.structure.SiteSettings
-import ba.sake.hepek.html.structure.blog.Section
-import ba.sake.hepek.html.component.BasicComponents._
 import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import ba.sake.hepek.html.component.BasicComponents
+import ba.sake.hepek.implicits._
 import ba.sake.hepek.prismjs._
 
 // this would probably be in separate file
@@ -15,10 +14,11 @@ object chlCustom extends PrismCodeHighlightComponents {
 }
 
 // this will be rendered
-object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
+object PrismJSExample extends BootstrapStaticPage with PrismDependencies with BasicComponents {
 
-  override def pageTitle    = "code examples"
-  override def siteSettings = SiteSettings("My tutorials", PrismJSExample)
+  override def pageSettings =
+    super.pageSettings
+      .withTitle("PrismJS")
 
   // theme, one of these: Default, Coy, Dark, Funky, SolarizedLight, Okaidia, Tomorrow, Twilight
   // override def prismTheme = Themes.Twilight
@@ -42,11 +42,7 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
     )
 
   def sections =
-    List(basicsSection,
-         lineNumsSection,
-         highlightLinesSection,
-         cmdSection,
-         markupSection)
+    List(basicsSection, lineNumsSection, highlightLinesSection, cmdSection, markupSection)
 
   val basicsSection = Section(
     "Basics",
@@ -178,7 +174,7 @@ object PrismJSExample extends BootstrapStaticPage with PrismDependencies {
   <li>Tea</li>
   <li>Milk</li>
 </ul>
-      """.trim), // prismjs doesn't trim these...
+      """.trim), // examples.prismjs doesn't trim these...
       h3("CSS (also with Data-URI Highlight)"),
       chl.css(
         """

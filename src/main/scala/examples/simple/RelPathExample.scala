@@ -1,4 +1,4 @@
-package example
+package examples.simple
 
 import java.nio.file.Paths
 import ba.sake.hepek.core.Renderable
@@ -6,7 +6,7 @@ import ba.sake.hepek.core.Renderable
 object RelPathExample extends Renderable {
 
   // we EXPLICITLY set path where it should be rendered :)
-  override def relPath = Paths.get("relpaths.txt")
+  override def relPath = Paths.get("examples/simple/relpaths.txt")
 
   override def render = {
 
