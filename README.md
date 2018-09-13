@@ -1,6 +1,6 @@
 # hepek-examples
 
-Examples rendered live [here](https://quizzical-galileo-25497e.netlify.com/).
+Examples rendered live [here](https://hepek-examples.netlify.com/).
 
 ## How to run?
 
