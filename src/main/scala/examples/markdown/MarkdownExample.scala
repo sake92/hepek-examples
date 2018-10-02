@@ -15,11 +15,67 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       h1("Markdown Example")
     ),
     div(cls := "well well-lg ")(
+      h2(s"""## Headers""".md),
       s"""
-      Here is some test to see that it is being displayed in Markdown
+      Markdown is a simple way to edit text.
+      You can have headers like this:
+      # An example header
+      and sub-headers like this:
+      ## A sub-heading
+      ### Another sub-heading
+      #### A smaller sub-heading
+      """.md,
+    ),
+    div(cls := "well well-lg ")(
+      h2(s"""## Emphasis""".md),
+      s"""
+      To emphasize some words with italics simply *surround them with single asterisks or underscores.* 
+      
+      In order to make words bold then **surround them with double asterisks or underscores.** 
+      """.md,
+    ),
+    div(cls := "well well-lg ")(
+      h2(s"""## Code Snippets""".md),
+      s"""
+      Code can be easily formated in markdown as well.
+      It can be `in-line code`. 
+      
+      Or it can be code blocks:
 
-      # This is a header.
-    """.md,
+          object MarkdownExample extends BootstrapStaticPage with BasicComponents {
+
+            override def pageSettings =
+              super.pageSettings
+                .withTitle("Markdown Example")
+          }
+      Et Voila
+      """.md,
+    ),
+    div(cls := "well well-lg ")(
+      h2(s"""## Lists""".md),
+      s"""
+      Markdown can be used to make bullet lists:
+       - apple,
+       - banana,
+       - orange,
+       
+      and numbered lists:
+       1. One.
+       1. Two.
+       1. Three.
+      """.md,
+    ),
+    div(cls := "well well-lg ")(
+      h2(s"""## Links and Images""".md),
+      s"""
+      Click [this in-line link](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet "Github Markdown Cheatsheet") to see more markdown examples.
+      
+      Other pages in this site can be [referenced](../index.html) as well.
+
+      Images can be added:
+
+      ![example image](https://images.unsplash.com/photo-1518118238797-500670daedf7?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=85cb561f6a237a4926da07acaca7b019&auto=format&fit=crop&w=1350&q=80)
+      """.md,
     )
   )
 }
