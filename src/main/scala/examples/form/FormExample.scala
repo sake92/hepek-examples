@@ -18,7 +18,7 @@ object FormExample extends BootstrapStaticPage {
       .withTitle("Form example")
 
   override def pageContent = frag(
-    formm(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
+    form(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
       row(
         third1(),
         third2(

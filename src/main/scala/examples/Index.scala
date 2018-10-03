@@ -8,6 +8,7 @@ import examples.form.FormExample
 import examples.mathjax.MathJaxExample
 import examples.prismjs.PrismJSExample
 import examples.simple._
+import examples.markdown.MarkdownExample
 
 object Index extends BootstrapStaticPage with BootstrapGridComponents {
 
@@ -16,7 +17,8 @@ object Index extends BootstrapStaticPage with BootstrapGridComponents {
     ("bootstrap", List(SimpleBootstrapPage, BootstrapGridExample)),
     ("prismjs", List(PrismJSExample)),
     ("mathjax", List(MathJaxExample)),
-    ("forms", List(FormExample))
+    ("forms", List(FormExample)),
+    ("markdown", List(MarkdownExample))
   )
 
   override def pageSettings =
