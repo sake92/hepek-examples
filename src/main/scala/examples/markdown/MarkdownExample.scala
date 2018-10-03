@@ -15,8 +15,8 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       h1("Markdown Example")
     ),
     div(cls := "well well-lg ")(
-      h2(s"""## Headers""".md),
       s"""
+      ## Headers
       Markdown is a simple way to edit text.
       You can have headers like this:
       # An example header
@@ -27,16 +27,16 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       """.md,
     ),
     div(cls := "well well-lg ")(
-      h2(s"""## Emphasis""".md),
       s"""
+      ## Emphasis
       To emphasize some words with italics simply *surround them with single asterisks or underscores.* 
       
       In order to make words bold then **surround them with double asterisks or underscores.** 
       """.md,
     ),
     div(cls := "well well-lg ")(
-      h2(s"""## Code Snippets""".md),
       s"""
+      ## Code Snippets
       Code can be easily formated in markdown as well.
       It can be `in-line code`. 
       
@@ -52,8 +52,8 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       """.md,
     ),
     div(cls := "well well-lg ")(
-      h2(s"""## Lists""".md),
       s"""
+      ## Lists
       Markdown can be used to make bullet lists:
        - apple,
        - banana,
@@ -66,8 +66,8 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       """.md,
     ),
     div(cls := "well well-lg ")(
-      h2(s"""## Links and Images""".md),
       s"""
+      ## Links and Images
       Click [this in-line link](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet "Github Markdown Cheatsheet") to see more markdown examples.
       
       Other pages in this site can be [referenced](../index.html) as well.
