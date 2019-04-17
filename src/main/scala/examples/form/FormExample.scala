@@ -32,16 +32,20 @@ object FormExample extends BootstrapStaticPage {
           inputTime("Time", name := "time", id := "time1"),
           inputWeek("Week", name := "weel", id := "wk1"),
           inputMonth("Month", name := "month", id := "mnt1"),
-          inputDate("Date of birth",
-                    name := "date",
-                    id := "date1",
-                    min := "1900-01-01",
-                    max := "2000-01-01"),
-          inputDateTimeLocal("Date and time",
-                             id := "date2",
-                             name := "datetime",
-                             min := "2000-01-01T00:00",
-                             max := "2020-01-01T00:00"),
+          inputDate(
+            "Date of birth",
+            name := "date",
+            id := "date1",
+            min := "1900-01-01",
+            max := "2000-01-01"
+          ),
+          inputDateTimeLocal(
+            "Date and time",
+            id := "date2",
+            name := "datetime",
+            min := "2000-01-01T00:00",
+            max := "2020-01-01T00:00"
+          ),
           //////////////////////
           inputNumber("Number", min := "1", step := "5", name := "num", id := "num1"),
           inputRange("Range", min := "10", step := "2", max := "50", name := "range", id := "rng1"),

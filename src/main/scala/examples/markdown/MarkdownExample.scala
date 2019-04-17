@@ -24,7 +24,7 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       ## A sub-heading
       ### Another sub-heading
       #### A smaller sub-heading
-      """.md,
+      """.md
     ),
     div(cls := "well well-lg ")(
       s"""
@@ -32,7 +32,7 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       To emphasize some words with italics simply *surround them with single asterisks or underscores.* 
       
       In order to make words bold then **surround them with double asterisks or underscores.** 
-      """.md,
+      """.md
     ),
     div(cls := "well well-lg ")(
       s"""
@@ -49,7 +49,7 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
                 .withTitle("Markdown Example")
           }
       Et Voila
-      """.md,
+      """.md
     ),
     div(cls := "well well-lg ")(
       s"""
@@ -63,7 +63,7 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
        1. One.
        1. Two.
        1. Three.
-      """.md,
+      """.md
     ),
     div(cls := "well well-lg ")(
       s"""
@@ -75,7 +75,7 @@ object MarkdownExample extends BootstrapStaticPage with BasicComponents {
       Images can be added:
 
       ![example image](https://images.unsplash.com/photo-1518118238797-500670daedf7?ixlib=rb-0.3.5&ixid=eyJhcHBfaWQiOjEyMDd9&s=85cb561f6a237a4926da07acaca7b019&auto=format&fit=crop&w=1350&q=80)
-      """.md,
+      """.md
     )
   )
 }

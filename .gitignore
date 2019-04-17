@@ -27,3 +27,6 @@ bin/
 target/
 
 .idea/
+
+.bloop/
+.metals/
