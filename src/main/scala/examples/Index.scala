@@ -1,7 +1,7 @@
 package examples
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.BootstrapBundle
+import examples.Imports._
 import examples.simple._
 import examples.statik.SimpleStaticPage
 import examples.grid.GridExample
@@ -9,9 +9,6 @@ import examples.form.FormExample
 import examples.mathjax.MathJaxExample
 import examples.prismjs.PrismJSExample
 import examples.markdown.MarkdownExample
-
-object CustomBundle extends BootstrapBundle
-import CustomBundle._
 
 object Index extends StatikPage with Grid {
 

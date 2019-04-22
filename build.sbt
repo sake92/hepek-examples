@@ -7,7 +7,7 @@ scalafmtOnCompile in ThisBuild := true
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "ba.sake" %% "hepek" % "a772a53a-SNAPSHOT"
+      "ba.sake" %% "hepek" % "8da9e928-SNAPSHOT"
     ),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     (hepek in Compile) := {

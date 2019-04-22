@@ -6,4 +6,4 @@ import ba.sake.hepek.pure.PureBundle
 object Imports extends BootstrapBundle {}
 
 // try to use different Bundle :)
-// object Imports extends PureBundle {}
+//object Imports extends PureBundle {}
