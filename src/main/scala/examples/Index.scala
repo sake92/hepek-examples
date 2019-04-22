@@ -1,20 +1,24 @@
 package examples
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.component.BootstrapGridComponents
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
-import examples.bootstrap._
+import ba.sake.hepek.bootstrap3.BootstrapBundle
+import examples.simple._
+import examples.statik.SimpleStaticPage
+import examples.grid.GridExample
 import examples.form.FormExample
 import examples.mathjax.MathJaxExample
 import examples.prismjs.PrismJSExample
-import examples.simple._
 import examples.markdown.MarkdownExample
 
-object Index extends BootstrapStaticPage with BootstrapGridComponents {
+object CustomBundle extends BootstrapBundle
+import CustomBundle._
+
+object Index extends StatikPage with Grid {
 
   val examples = List(
     ("simple", List(TextFile, JsonFile, RelPathExample)),
-    ("bootstrap", List(SimpleBootstrapPage, BootstrapGridExample)),
+    ("static web page", List(SimpleStaticPage)),
+    ("grid", List(GridExample)),
     ("prismjs", List(PrismJSExample)),
     ("mathjax", List(MathJaxExample)),
     ("forms", List(FormExample)),
@@ -22,8 +26,7 @@ object Index extends BootstrapStaticPage with BootstrapGridComponents {
   )
 
   override def pageSettings =
-    super.pageSettings
-      .withTitle("Hepek examples")
+    super.pageSettings.withTitle("Hepek examples")
 
   override def pageContent = row(
     third1(),

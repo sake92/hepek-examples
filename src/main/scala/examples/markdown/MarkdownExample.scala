@@ -1,14 +1,13 @@
 package examples.markdown
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import examples.Imports._
 import ba.sake.hepek.html.component.BasicComponents
 
-object MarkdownExample extends BootstrapStaticPage with BasicComponents {
+object MarkdownExample extends StatikPage with BasicComponents {
 
   override def pageSettings =
-    super.pageSettings
-      .withTitle("Markdown Example")
+    super.pageSettings.withTitle("Markdown Example")
 
   override def pageContent = frag(
     div(cls := "page-header text-center")(

@@ -1,21 +1,21 @@
 package examples.form
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import examples.Imports._
 
-/* Switch to PureStaticPage and PrFormComponents to see PureCSS version */
-object FormExample extends BootstrapStaticPage {
-//object FormExample extends PureStaticPage {
+object formComponents extends Form {
+  import ba.sake.hepek.bootstrap3.component.BootstrapFormComponents._
+  override def bootstrapFormType: Type = Type.Horizontal()
 
-  // - this should be in utils, for easier import from different pages! :)
-  // - use one of (currently) 2 examples.form support frameworks: bootstrap3 or pure
-  object formComponents extends BsFormComponents
-  //object formComponents extends PrFormComponents
+  //import ba.sake.hepek.pure.component.PureFormComponents._
+  //override def pureFormType: Type = Type.Horizontal
+}
+
+object FormExample extends StatikPage with Grid {
   import formComponents._
 
   override def pageSettings =
-    super.pageSettings
-      .withTitle("Form example")
+    super.pageSettings.withTitle("Form example")
 
   override def pageContent = frag(
     form(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
@@ -61,18 +61,4 @@ object FormExample extends BootstrapStaticPage {
       )
     )
   )
-}
-
-import ba.sake.hepek.bootstrap3.component._
-
-trait BsFormComponents extends BootstrapFormComponents with BootstrapGridComponents {
-  import BootstrapFormComponents._
-  override def bootstrapFormType: Type = Type.Horizontal()
-}
-
-import ba.sake.hepek.pure.component._
-
-trait PrFormComponents extends PureFormComponents with PureGridComponents {
-  import PureFormComponents._
-  override def pureFormType: Type = Type.Horizontal
 }

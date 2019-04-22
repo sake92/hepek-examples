@@ -1,7 +1,7 @@
 package examples.prismjs
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import examples.Imports._
 import ba.sake.hepek.html.component.BasicComponents
 import ba.sake.hepek.implicits._
 import ba.sake.hepek.prismjs._
@@ -14,11 +14,10 @@ object chlCustom extends PrismCodeHighlightComponents {
 }
 
 // this will be rendered
-object PrismJSExample extends BootstrapStaticPage with PrismDependencies with BasicComponents {
+object PrismJSExample extends StatikPage with PrismDependencies with BasicComponents {
 
   override def pageSettings =
-    super.pageSettings
-      .withTitle("PrismJS")
+    super.pageSettings.withTitle("PrismJS")
 
   // theme, one of these: Default, Coy, Dark, Funky, SolarizedLight, Okaidia, Tomorrow, Twilight
   // override def prismTheme = Themes.Twilight

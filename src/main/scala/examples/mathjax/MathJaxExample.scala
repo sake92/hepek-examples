@@ -1,11 +1,11 @@
 package examples.mathjax
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import examples.Imports._
 import ba.sake.hepek.html.component.BasicComponents
 import ba.sake.hepek.mathjax.MathjaxDependencies
 
-object MathJaxExample extends BootstrapStaticPage with MathjaxDependencies with BasicComponents {
+object MathJaxExample extends StatikPage with MathjaxDependencies with BasicComponents {
 
   override def pageSettings =
     super.pageSettings

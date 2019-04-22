@@ -1,16 +1,14 @@
-package examples.bootstrap
+package examples.statik
 
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
+import examples.Imports._
 
-object SimpleBootstrapPage extends BootstrapStaticPage {
+object SimpleStaticPage extends StatikPage {
 
   override def pageSettings =
-    super.pageSettings
-      .withTitle("awww-some title")
+    super.pageSettings.withTitle("awww-some title")
 
   // override def bootstrapContainer = "container"
-
   // override def bootstrapNavbar  =  Some(Position.FixedBottom, Style.Inverse)
 
   override def pageContent = div(
