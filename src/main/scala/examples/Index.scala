@@ -10,7 +10,7 @@ import examples.mathjax.MathJaxExample
 import examples.prismjs.PrismJSExample
 import examples.markdown.MarkdownExample
 
-object Index extends StatikPage with Grid {
+object Index extends StaticPage with Grid {
 
   val examples = List(
     ("simple", List(TextFile, JsonFile, RelPathExample)),
@@ -26,8 +26,8 @@ object Index extends StatikPage with Grid {
     super.pageSettings.withTitle("Hepek examples")
 
   override def pageContent = row(
-    third1(),
-    third2(
+    third(),
+    third(
       div(cls := "page-header")(
         h1("Examples")
       ),
@@ -57,7 +57,7 @@ object Index extends StatikPage with Grid {
         )
       )
     ),
-    third3()
+    third()
   )
 
 }

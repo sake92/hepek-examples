@@ -5,13 +5,13 @@ import examples.Imports._
 
 object formComponents extends Form {
   import ba.sake.hepek.bootstrap3.component.BootstrapFormComponents._
-  override def bootstrapFormType: Type = Type.Horizontal()
+  //override def bootstrapFormType: Type = Type.Horizontal()
 
   //import ba.sake.hepek.pure.component.PureFormComponents._
   //override def pureFormType: Type = Type.Horizontal
 }
 
-object FormExample extends StatikPage with Grid {
+object FormExample extends StaticPage with Grid {
   import formComponents._
 
   override def pageSettings =
@@ -20,8 +20,8 @@ object FormExample extends StatikPage with Grid {
   override def pageContent = frag(
     form(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
       row(
-        third1(),
-        third2(
+        third(),
+        third(
           inputText("Name", name := "name", id := "txt1"),
           inputText("Disabled", name := "disabled", id := "txt2", disabled),
           inputEmail("Email", name := "email", id := "em1", multiple),
@@ -57,7 +57,7 @@ object FormExample extends StatikPage with Grid {
           inputReset("Reset examples.form"),
           inputHidden(name := "abcHidden")
         ),
-        third3()
+        third()
       )
     )
   )

@@ -4,7 +4,7 @@ import scalatags.Text.all._
 import examples.Imports._
 import ba.sake.hepek.html.component.BasicComponents
 
-object MarkdownExample extends StatikPage with BasicComponents {
+object MarkdownExample extends StaticPage with BasicComponents {
 
   override def pageSettings =
     super.pageSettings.withTitle("Markdown Example")

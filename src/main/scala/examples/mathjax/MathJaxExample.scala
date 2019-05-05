@@ -5,7 +5,7 @@ import examples.Imports._
 import ba.sake.hepek.html.component.BasicComponents
 import ba.sake.hepek.mathjax.MathjaxDependencies
 
-object MathJaxExample extends StatikPage with MathjaxDependencies with BasicComponents {
+object MathJaxExample extends StaticPage with MathjaxDependencies with BasicComponents {
 
   override def pageSettings =
     super.pageSettings

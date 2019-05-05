@@ -14,7 +14,7 @@ object chlCustom extends PrismCodeHighlightComponents {
 }
 
 // this will be rendered
-object PrismJSExample extends StatikPage with PrismDependencies with BasicComponents {
+object PrismJSExample extends StaticPage with PrismDependencies with BasicComponents {
 
   override def pageSettings =
     super.pageSettings.withTitle("PrismJS")

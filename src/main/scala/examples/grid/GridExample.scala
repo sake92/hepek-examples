@@ -21,25 +21,27 @@ object grid extends Grid {
       .withXs(None)
 }
 
-object GridExample extends StatikPage {
+object GridExample extends StaticPage {
   import grid._
 
   override def pageSettings =
-    super.pageSettings.withTitle("BS grid")
+    super.pageSettings.withTitle("Grid")
+
+  // override def bootstrapNavbar = None
+  // override def withPureMenu = false
 
   override def pageContent = frag(
     b("Resize browser window to see effect!"),
-    row("Row with plain content, no hepek stuff..."),
     hr,
     row(
-      half1("First half"),
-      half2("Second half")
+      half("First half"),
+      half("Second half")
     ),
     hr,
     row(
-      third1("First third"),
-      third2("Second third"),
-      third3("Third third")
+      third("First third"),
+      third("Second third"),
+      third("Third third")
     )
   )
 
@@ -47,7 +49,7 @@ object GridExample extends StatikPage {
   override def stylesInline = super.stylesInline ++ List(
     """
       div[class^='col'] {
-        border:1px solid black; 
+        border: 1px solid black; 
       }
     """
   )

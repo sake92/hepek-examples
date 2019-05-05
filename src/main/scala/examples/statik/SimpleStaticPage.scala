@@ -3,7 +3,7 @@ package examples.statik
 import scalatags.Text.all._
 import examples.Imports._
 
-object SimpleStaticPage extends StatikPage {
+object SimpleStaticPage extends StaticPage {
 
   override def pageSettings =
     super.pageSettings.withTitle("awww-some title")
