@@ -13,6 +13,15 @@ lazy val root = (project in file("."))
       WebKeys.assets.value // run 'assets' after compiling
       (hepek in Compile).value
     },
-    WebKeys.webModulesLib := "examples/lib"
+    WebKeys.webModulesLib := "examples/lib",
+	// gh pages stuff
+    git.remoteRepo := "git@github.com:sake92/hepek-examples.git",
+    ghpagesNoJekyll := true,
+    siteSourceDirectory := target.value / "web" / "public" / "main" / "examples"
   )
   .enablePlugins(HepekPlugin, SbtWeb)
+  .enablePlugins(GhpagesPlugin)
+
+
+
+
