@@ -1,9 +1,9 @@
 package examples
 
-import ba.sake.hepek.bootstrap3.BootstrapBundle
-import ba.sake.hepek.pure.PureBundle
+import ba.sake.hepek.bootstrap3.statik.BootstrapStaticBundle
+import ba.sake.hepek.bulma.statik.BulmaStaticBundle
 
-object Imports extends BootstrapBundle {}
+object Imports extends BootstrapStaticBundle {}
 
 // try to use different Bundle :)
-//object Imports extends PureBundle {}
+//object Imports extends BulmaStaticBundle {}

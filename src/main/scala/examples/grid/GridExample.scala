@@ -1,7 +1,6 @@
 package examples.grid
 
 import scalatags.Text.all._
-import ba.sake.hepek.implicits._
 import examples.Imports._
 
 object grid extends Grid {

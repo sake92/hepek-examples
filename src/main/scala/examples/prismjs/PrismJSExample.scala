@@ -3,7 +3,6 @@ package examples.prismjs
 import scalatags.Text.all._
 import examples.Imports._
 import ba.sake.hepek.html.component.BasicComponents
-import ba.sake.hepek.implicits._
 import ba.sake.hepek.prismjs._
 
 // this would probably be in separate file
