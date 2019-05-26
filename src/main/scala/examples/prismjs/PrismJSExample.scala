@@ -2,7 +2,6 @@ package examples.prismjs
 
 import scalatags.Text.all._
 import examples.Imports._
-import ba.sake.hepek.html.component.BasicComponents
 import ba.sake.hepek.prismjs._
 
 // this would probably be in separate file
@@ -13,7 +12,7 @@ object chlCustom extends PrismCodeHighlightComponents {
 }
 
 // this will be rendered
-object PrismJSExample extends StaticPage with PrismDependencies with BasicComponents {
+object PrismJSExample extends StaticPage with PrismDependencies {
 
   override def pageSettings =
     super.pageSettings.withTitle("PrismJS")

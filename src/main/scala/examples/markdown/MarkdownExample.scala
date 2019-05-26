@@ -2,9 +2,9 @@ package examples.markdown
 
 import scalatags.Text.all._
 import examples.Imports._
-import ba.sake.hepek.html.component.BasicComponents
+import examples.Index
 
-object MarkdownExample extends StaticPage with BasicComponents {
+object MarkdownExample extends StaticPage {
 
   override def pageSettings =
     super.pageSettings.withTitle("Markdown Example")
@@ -13,7 +13,7 @@ object MarkdownExample extends StaticPage with BasicComponents {
     div(cls := "page-header text-center")(
       h1("Markdown Example")
     ),
-    div(cls := "well well-lg ")(
+    div(cls := "well well-lg")(
       s"""
       ## Headers
       Markdown is a simple way to edit text.
@@ -25,7 +25,7 @@ object MarkdownExample extends StaticPage with BasicComponents {
       #### A smaller sub-heading
       """.md
     ),
-    div(cls := "well well-lg ")(
+    div(cls := "well well-lg")(
       s"""
       ## Emphasis
       To emphasize some words with italics simply *surround them with single asterisks or underscores.* 
@@ -33,24 +33,22 @@ object MarkdownExample extends StaticPage with BasicComponents {
       In order to make words bold then **surround them with double asterisks or underscores.** 
       """.md
     ),
-    div(cls := "well well-lg ")(
+    div(cls := "well well-lg")(
       s"""
       ## Code Snippets
-      Code can be easily formated in markdown as well.
-      It can be `in-line code`. 
-      
-      Or it can be code blocks:
+      Code can be easily formatted in markdown as well.
+      It can be `inline code`, or it can be code blocks:
 
-          object MarkdownExample extends BootstrapStaticPage with BasicComponents {
+      ```scala
+      object MarkdownExample extends StaticPage {
 
-            override def pageSettings =
-              super.pageSettings
-                .withTitle("Markdown Example")
-          }
-      Et Voila
+        override def pageSettings =
+          super.pageSettings.withTitle("Markdown Example")
+      }
+      ```
       """.md
     ),
-    div(cls := "well well-lg ")(
+    div(cls := "well well-lg")(
       s"""
       ## Lists
       Markdown can be used to make bullet lists:
@@ -64,12 +62,12 @@ object MarkdownExample extends StaticPage with BasicComponents {
        1. Three.
       """.md
     ),
-    div(cls := "well well-lg ")(
+    div(cls := "well well-lg")(
       s"""
       ## Links and Images
-      Click [this in-line link](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet "Github Markdown Cheatsheet") to see more markdown examples.
+      Click [here](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet "Github Markdown Cheatsheet") to see more markdown examples.
       
-      Other pages in this site can be [referenced](../index.html) as well.
+      Other pages in this site can be [referenced](${Index.ref}) as well.
 
       Images can be added:
 

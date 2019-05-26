@@ -26,9 +26,6 @@ object GridExample extends StaticPage {
   override def pageSettings =
     super.pageSettings.withTitle("Grid")
 
-  // override def bootstrapNavbar = None
-  // override def withPureMenu = false
-
   override def pageContent = frag(
     b("Resize browser window to see effect!"),
     hr,
