@@ -2,13 +2,21 @@ package examples.form
 
 import scalatags.Text.all._
 import examples.Imports._
+import ba.sake.hepek.html.component.GridComponents
 
-object formComponents extends Form {
-  //override def formType = Form.Type.Horizontal()
+object gridComponents extends Grid {
+  override def screenRatios =
+    super.screenRatios.withAll(Ratios(Ratio(1, 1), Ratio(1, 2, 1)))
 }
 
-object FormExample extends StaticPage with Grid {
+object formComponents extends Form {
+  override def formType = Form.Type.Horizontal()
+}
+
+object FormExample extends StaticPage {
+  import gridComponents._
   import formComponents._
+  import classes._
 
   override def pageSettings =
     super.pageSettings.withTitle("Form example")
@@ -18,34 +26,98 @@ object FormExample extends StaticPage with Grid {
       row(
         third(),
         third(
-          inputText(id := "txt1")("name", "Name"),
-          inputText(id := "txt2", disabled)("disabled", "Disabled"),
-          inputEmail(id := "em1", multiple)("email", "Email"),
-          inputTel(id := "ph1")("phone", "Phone"),
-          inputPassword(id := "pwd1")("pwd", "Password"),
-          inputUrl(id := "url1")("url", "URL"),
-          // date & time
-          inputTime(id := "time1")("time", "Time"),
-          inputWeek(id := "wk1")("weel", "Week"),
-          inputMonth(id := "mnt1")("month", "Month"),
-          inputDate(id := "date1", min := "1900-01-01", max := "2000-01-01")(
-            "date",
-            "Date of birth"
+          formFieldset("Textual inputs")(
+            inputText(id := "txt1")("name", "Name"),
+            inputText(id := "txt2", disabled)("disabled", "Disabled"),
+            inputText(id := "txt3")(
+              "customized",
+              "Customized",
+              _transform = field =>
+                div(cls := "input-group")(
+                  span(cls := "input-group-addon")(i(cls := "glyphicon glyphicon-user")),
+                  field
+                )
+            ),
+            inputTextArea(id := "ta1", attr("minlength") := "5")("textArea", "Free text"),
+            inputEmail(id := "em1", multiple)("email", "Email"),
+            inputTel(id := "ph1")("phone", "Phone"),
+            inputPassword(id := "pwd1")("pwd", "Password"),
+            inputUrl(id := "url1")("url", "URL")
           ),
-          inputDateTimeLocal(id := "date2", min := "2000-01-01T00:00", max := "2020-01-01T00:00")(
-            "datetime",
-            "Date and time"
+          formFieldset("Checkbox inputs")(
+            inputCheckbox(id := "m1", checked)("checkbox", "Man?"),
+            hr,
+            inputCheckboxes(
+              "progLangs",
+              Seq(("scala", "Scala", Nil), ("java", "Java", Nil)),
+              _label = "Favorite languages",
+              _isInline = false
+            )
           ),
-          // other
-          inputNumber(id := "num1", min := "1", step := "5")("num", "Number"),
-          inputRange(id := "rng1", min := "10", step := "2", max := "50")("range", "Range"),
-          inputFile(id := "f1", accept := "image/*")("file", "File"),
-          inputColor(id := "boja")("color", "Color"),
-          inputCheckbox(id := "m1", checked)("checkbox", "Man?"),
-          inputSubmit(value := "CLICK ME!")("Submit"),
-          inputButton(value := "Click this!", cls := "btn-warning")("Button"),
-          inputReset()("Reset examples.form"),
-          inputHidden()("abcHidden")
+          formFieldset("Radio inputs")(
+            inputRadio(
+              "favoriteSuperHero",
+              Seq(("batman", "Batman", Nil), ("superman", "Superman", Nil)),
+              _label = "Super hero",
+              _checkedValue = "superman",
+              _isInline = false
+            )
+          ),
+          formFieldset("Select inputs")(
+            inputSelect(id := "selectCar")(
+              "cars",
+              Seq(("volvo", "Volvo", Nil), ("bmw", "BMW", Seq(selected))),
+              _label = "Cars"
+            ),
+            inputSelectGrouped(multiple, size := "7")(
+              "animals",
+              Seq(
+                "Cats" -> Seq(
+                  ("bengal", "Bengal", Nil),
+                  ("persian", "Persian", Seq(selected))
+                ),
+                "Dogs" -> Seq(
+                  ("goldenRetriever", "Golden retriever", Seq(selected)),
+                  ("husky", "Husky", Nil)
+                )
+              ),
+              _label = "Animals"
+            )
+          ),
+          formFieldset("Date/time inputs")(
+            inputTime(id := "time1")("time", "Time"),
+            inputWeek(id := "wk1")("weel", "Week"),
+            inputMonth(id := "mnt1")("month", "Month"),
+            inputDate(id := "date1", min := "1900-01-01", max := "2000-01-01")(
+              "date",
+              "Date of birth"
+            ),
+            inputDateTimeLocal(
+              id := "dateTime1",
+              min := "2000-01-01T00:00",
+              max := "2020-01-01T00:00"
+            )(
+              "datetime",
+              "Date and time"
+            )
+          ),
+          formFieldset("Numeric inputs")(
+            inputNumber(id := "num1", min := "1", step := "5")("num", "Number"),
+            inputRange(id := "rng1", min := "10", step := "2", max := "50")("range", "Range")
+          ),
+          formFieldset("Misc inputs")(
+            inputFile(id := "f1", accept := "image/*")("file", "File"),
+            inputColor(id := "kolor1")("color", "Color")
+          ),
+          formFieldset("Button inputs")(
+            inputSubmit(btnSizeLg)("Submit"),
+            inputButton(btnWarning, btnSizeSm)(
+              "btnRemove",
+              frag(span(cls := "glyphicon glyphicon-remove"), " Remove")
+            ),
+            inputReset(btnDanger, btnWidthFull)("Reset"),
+            inputHidden()("abcHidden")
+          )
         ),
         third()
       )

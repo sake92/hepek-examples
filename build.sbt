@@ -9,7 +9,7 @@ resolvers in ThisBuild += Resolver.sonatypeRepo("snapshots")
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "ba.sake" %% "hepek" % "0.3.1+43-4ed22c7e-SNAPSHOT"
+      "ba.sake" %% "hepek" % "0.3.1+49-a42b291e-SNAPSHOT"
     ),
     (hepek in Compile) := {
       WebKeys.assets.value // run 'assets' after compiling
