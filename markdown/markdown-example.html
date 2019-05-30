@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Markdown Example</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /><style>body { padding-top: 55px; }</style></head><body><div class="container-fluid"><nav class="navbar navbar-default navbar-fixed-top"><div class="container"><div class="navbar-header"><button type="button" class="btn navbar-toggle collapsed " data-toggle="collapse" data-target="#main-navbar"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button></div><div class="collapse navbar-collapse" id="main-navbar"><ul class="nav navbar-nav navbar-right"></ul></div></div></nav><div class="page-header text-center"><h1>Markdown Example</h1></div><div class="well well-lg "><h2>Headers</h2>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Markdown Example</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /><style>body { padding-top: 55px; }</style></head><body><div class="container-fluid"><nav class="navbar navbar-default navbar-fixed-top"><div class="container"><div class="navbar-header"><button type="button" class="btn navbar-toggle collapsed " data-toggle="collapse" data-target="#main-navbar"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button></div><div class="collapse navbar-collapse" id="main-navbar"><ul class="nav navbar-nav navbar-right"></ul></div></div></nav><div class="page-header text-center"><h1>Markdown Example</h1></div><div class="well well-lg"><h2>Headers</h2>
 <p>Markdown is a simple way to edit text.
 You can have headers like this:</p>
 <h1>An example header</h1>
@@ -6,22 +6,19 @@ You can have headers like this:</p>
 <h2>A sub-heading</h2>
 <h3>Another sub-heading</h3>
 <h4>A smaller sub-heading</h4>
-</div><div class="well well-lg "><h2>Emphasis</h2>
+</div><div class="well well-lg"><h2>Emphasis</h2>
 <p>To emphasize some words with italics simply <em>surround them with single asterisks or underscores.</em></p>
 <p>In order to make words bold then <strong>surround them with double asterisks or underscores.</strong></p>
-</div><div class="well well-lg "><h2>Code Snippets</h2>
-<p>Code can be easily formated in markdown as well.
-It can be <code>in-line code</code>.</p>
-<p>Or it can be code blocks:</p>
-<pre><code>object MarkdownExample extends BootstrapStaticPage with BasicComponents {
+</div><div class="well well-lg"><h2>Code Snippets</h2>
+<p>Code can be easily formatted in markdown as well.
+It can be <code>inline code</code>, or it can be code blocks:</p>
+<pre><code class="language-scala">object MarkdownExample extends StaticPage {
 
   override def pageSettings =
-    super.pageSettings
-      .withTitle(&quot;Markdown Example&quot;)
+    super.pageSettings.withTitle(&quot;Markdown Example&quot;)
 }
 </code></pre>
-<p>Et Voila</p>
-</div><div class="well well-lg "><h2>Lists</h2>
+</div><div class="well well-lg"><h2>Lists</h2>
 <p>Markdown can be used to make bullet lists:</p>
 <ul>
 <li>apple,</li>
@@ -34,8 +31,8 @@ It can be <code>in-line code</code>.</p>
 <li>Two.</li>
 <li>Three.</li>
 </ol>
-</div><div class="well well-lg "><h2>Links and Images</h2>
-<p>Click <a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" title="Github Markdown Cheatsheet">this in-line link</a> to see more markdown examples.</p>
+</div><div class="well well-lg"><h2>Links and Images</h2>
+<p>Click <a href="https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet" title="Github Markdown Cheatsheet">here</a> to see more markdown examples.</p>
 <p>Other pages in this site can be <a href="../index.html">referenced</a> as well.</p>
 <p>Images can be added:</p>
 <p><img src="https://images.unsplash.com/photo-1518118238797-500670daedf7?ixlib=rb-0.3.5&amp;ixid=eyJhcHBfaWQiOjEyMDd9&amp;s=85cb561f6a237a4926da07acaca7b019&amp;auto=format&amp;fit=crop&amp;w=1350&amp;q=80" alt="example image" /></p>
