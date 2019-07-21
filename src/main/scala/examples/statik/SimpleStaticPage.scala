@@ -5,11 +5,11 @@ import examples.Imports._
 
 object SimpleStaticPage extends StaticPage {
 
+  // override def bootstrapContainer = "container"
+  // override def navbar             = Some(BootstrapNavbarComponents)
+
   override def pageSettings =
     super.pageSettings.withTitle("awww-some title")
-
-  // override def bootstrapContainer = "container"
-  // override def bootstrapNavbar  =  Some(Position.FixedBottom, Style.Inverse)
 
   override def pageContent = div(
     div(cls := "page-header")(

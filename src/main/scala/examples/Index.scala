@@ -6,7 +6,8 @@ import examples.simple._
 import examples.statik.SimpleStaticPage
 import examples.grid.GridExample
 import examples.form.FormExample
-import examples.mathjax.MathJaxExample
+import examples.math.MathJaxExample
+import examples.math.KatexExample
 import examples.prismjs.PrismJSExample
 import examples.markdown.MarkdownExample
 
@@ -16,8 +17,8 @@ object Index extends StaticPage with Grid {
     ("simple", List(TextFile, JsonFile, RelPathExample)),
     ("static web page", List(SimpleStaticPage)),
     ("grid", List(GridExample)),
-    ("prismjs", List(PrismJSExample)),
-    ("mathjax", List(MathJaxExample)),
+    ("code highlighting", List(PrismJSExample)),
+    ("math", List(MathJaxExample, KatexExample)),
     ("forms", List(FormExample)),
     ("markdown", List(MarkdownExample))
   )

@@ -2,22 +2,16 @@ package examples.grid
 
 import scalatags.Text.all._
 import examples.Imports._
+import ba.sake.hepek.html.component.GridComponents.Ratios
 
 object grid extends Grid {
 
-  val lgHalfRatio  = Ratio(5, 7)    // 5:7
-  val lgThirdRatio = Ratio(4, 3, 5) // 4:3:5
-
-  val mdHalfRatio  = Ratio(8, 4)    // 8:4
-  val mdThirdRatio = Ratio(6, 4, 2) // 6:4:2
-
-  // stack ("normal" behavior) on small and extra-small screens
   override def screenRatios =
     super.screenRatios
-      .withLg(Ratios(lgHalfRatio, lgThirdRatio))
-      .withMd(Ratios(mdHalfRatio, mdThirdRatio))
-      .withSm(None)
-      .withXs(None)
+      .withLg(Ratios().withSingle(1, 3, 1).withHalf(5, 7).withThird(4, 3, 5))
+      .withMd(Ratios().withHalf(8, 4).withThird(6, 4, 2))
+      .withSm(None) // stack ("normal" behavior) on small
+      .withXs(None) // and extra-small screens
 }
 
 object GridExample extends StaticPage {
@@ -27,7 +21,14 @@ object GridExample extends StaticPage {
     super.pageSettings.withTitle("Grid")
 
   override def pageContent = frag(
-    b("Resize browser window to see effect!"),
+    """
+    ---
+    ### Resize browser window to see effect!
+    ---
+    """.md,
+    row(
+      "Centered row, single column"
+    ),
     hr,
     row(
       half("First half"),

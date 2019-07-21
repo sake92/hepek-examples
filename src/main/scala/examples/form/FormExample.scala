@@ -2,11 +2,12 @@ package examples.form
 
 import scalatags.Text.all._
 import examples.Imports._
-import ba.sake.hepek.html.component.GridComponents
 
 object gridComponents extends Grid {
+
   override def screenRatios =
-    super.screenRatios.withAll(Ratios(Ratio(1, 1), Ratio(1, 2, 1)))
+    super.screenRatios
+      .withAll(Ratios().withThird(1, 2, 1))
 }
 
 object formComponents extends Form {

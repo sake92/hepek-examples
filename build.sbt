@@ -9,7 +9,7 @@ resolvers in ThisBuild += Resolver.sonatypeRepo("snapshots")
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "ba.sake" %% "hepek" % "0.3.1+49-a42b291e-SNAPSHOT"
+      "ba.sake" %% "hepek" % "0.4.0+33-5c5ed64e-SNAPSHOT" changing()
     ),
     (hepek in Compile) := {
       WebKeys.assets.value // run 'assets' after compiling
@@ -19,7 +19,16 @@ lazy val root = (project in file("."))
     // gh pages stuff
     git.remoteRepo := "git@github.com:sake92/hepek-examples.git",
     ghpagesNoJekyll := true,
-    siteSourceDirectory := target.value / "web" / "public" / "main" / "examples"
+    siteSourceDirectory := target.value / "web" / "public" / "main" / "examples",
+    openIndexPage := openIndexPageTask.value
   )
-  .enablePlugins(HepekPlugin, SbtWeb)
-  .enablePlugins(GhpagesPlugin)
+  .enablePlugins(HepekPlugin, SbtWeb, GhpagesPlugin)
+
+  val openIndexPage = taskKey[Unit]("Opens index.html")
+  val openIndexPageTask = Def.taskDyn {
+    Def.task {
+      java.awt.Desktop
+        .getDesktop()
+        .browse(new File(hepekTarget.value + "/examples/index.html").toURI)
+    }
+  }
