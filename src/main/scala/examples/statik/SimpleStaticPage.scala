@@ -6,10 +6,9 @@ import examples.Imports._
 object SimpleStaticPage extends StaticPage {
 
   // override def bootstrapContainer = "container"
-  // override def navbar             = Some(BootstrapNavbarComponents)
 
   override def pageSettings =
-    super.pageSettings.withTitle("awww-some title")
+    super.pageSettings.withTitle("Simple static page")
 
   override def pageContent = div(
     div(cls := "page-header")(
@@ -17,7 +16,7 @@ object SimpleStaticPage extends StaticPage {
     ),
     div(cls := "jumbotron")(
       h2("Hello world!"),
-      p("Some content...")
+      "Some content..."
     )
   )
 

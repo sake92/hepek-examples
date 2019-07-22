@@ -11,7 +11,7 @@ object gridComponents extends Grid {
 }
 
 object formComponents extends Form {
-  override def formType = Form.Type.Horizontal()
+  //override def formType = Form.Type.Horizontal()
 }
 
 object FormExample extends StaticPage {
@@ -111,12 +111,12 @@ object FormExample extends StaticPage {
             inputColor(id := "kolor1")("color", "Color")
           ),
           formFieldset("Button inputs")(
-            inputSubmit(btnSizeLg)("Submit"),
+            inputSubmit(btnSizeLg)("Submit (large button)"),
             inputButton(btnWarning, btnSizeSm)(
               "btnRemove",
-              frag(span(cls := "glyphicon glyphicon-remove"), " Remove")
+              frag(span(cls := "glyphicon glyphicon-remove"), " Remove  (small button)")
             ),
-            inputReset(btnDanger, btnWidthFull)("Reset"),
+            inputReset(btnDanger, btnWidthFull)("Reset (danger button)"),
             inputHidden()("abcHidden")
           )
         ),
