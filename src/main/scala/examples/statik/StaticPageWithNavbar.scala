@@ -35,12 +35,12 @@ object StaticPageWithNavbar extends StaticPage {
   override def stylesInline =
     super.stylesInline :+
       """
-  body {
-    padding-top: 33px; /* move from navbar */
-  }
-  .navbar-brand > span > img {
-    height: 30px; /* make logo smaller */
-  }
-  """
+      body {
+        padding-top: 33px; /* move from navbar */
+      }
+      .navbar-brand > span > img {
+        height: 30px; /* make logo smaller */
+      }
+      """
 
 }
