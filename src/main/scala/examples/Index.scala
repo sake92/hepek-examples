@@ -10,7 +10,7 @@ import examples.math._
 import examples.prismjs.PrismJSExample
 import examples.markdown.MarkdownExample
 import examples.panel.PanelExample
-import ba.sake.hepek.html.component.GridComponents
+import examples.pdf.PdfStaticPage
 
 object Index extends StaticPage with Grid {
 
@@ -22,7 +22,8 @@ object Index extends StaticPage with Grid {
     ("math", List(MathJaxExample, KatexExample)),
     ("forms", List(FormExample)),
     ("markdown", List(MarkdownExample)),
-    ("panel", List(PanelExample))
+    ("panel", List(PanelExample)),
+    ("pdf", List(PdfStaticPage))
   )
 
   override def pageSettings =
@@ -40,26 +41,28 @@ object Index extends StaticPage with Grid {
       h1("Examples"),
       s"Current bundle used: **$leBundle**".md
     ),
-    table(classes.tableClass, classes.tableHoverable, classes.tableResponsive)(
-      thead(th("Topic"), th("Examples")),
-      tbody(
-        examples.map {
-          case (exTitle, exPages) =>
-            tr(
-              td(exTitle),
-              td(
-                exPages
-                  .map { page =>
-                    a(href := relTo(page))(
-                      page.getClass.getSimpleName.replaceAll("\\$", "")
-                    )
-                  }
-                  .flatMap(content => List(br(), content)) // should be "intersperse".. :)
-                  .tail
+    div(classes.tableResponsive)(
+      table(classes.tableClass, classes.tableHoverable)(
+        thead(th("Topic"), th("Examples")),
+        tbody(
+          examples.map {
+            case (exTitle, exPages) =>
+              tr(
+                td(exTitle),
+                td(
+                  exPages
+                    .map { page =>
+                      a(href := relTo(page))(
+                        page.getClass.getSimpleName.replaceAll("\\$", "")
+                      )
+                    }
+                    .flatMap(content => List(br(), content)) // should be "intersperse".. :)
+                    .tail
+                )
               )
-            )
 
-        }
+          }
+        )
       )
     )
   )
