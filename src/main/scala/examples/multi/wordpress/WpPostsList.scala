@@ -43,12 +43,10 @@ case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
         }
       ),
       hr,
-      if (hasPrev)
-        hyperlink(s"./page${resultPage.page - 1}.html")("Prev page")
+      if (hasPrev) hyperlink(s"./page${resultPage.page - 1}.html")("Prev page")
       else frag(),
       if (hasPrev && hasNext) " | " else frag(),
-      if (hasNext)
-        hyperlink(s"./page${resultPage.page + 1}.html")("Next page")
+      if (hasNext) hyperlink(s"./page${resultPage.page + 1}.html")("Next page")
       else frag()
     )
   )
