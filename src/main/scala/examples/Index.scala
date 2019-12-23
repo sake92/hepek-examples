@@ -11,12 +11,14 @@ import examples.prismjs.PrismJSExample
 import examples.markdown.MarkdownExample
 import examples.panel.PanelExample
 import examples.pdf.PdfStaticPage
+import examples.multi.wordpress.WpPostsLists
 
 object Index extends StaticPage with Grid {
 
   val examples = List(
     ("simple", List(TextFile, JsonFile, RelPathExample)),
     ("static page", List(SimpleStaticPage, StaticPageWithNavbar)),
+    ("multi", List(WpPostsLists.rends.head)),
     ("grid", List(GridExample)),
     ("code highlighting", List(PrismJSExample)),
     ("math", List(MathJaxExample, KatexExample)),

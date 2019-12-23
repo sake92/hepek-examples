@@ -9,7 +9,8 @@ resolvers in ThisBuild += Resolver.sonatypeRepo("snapshots")
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "ba.sake" %% "hepek" % "0.4.1+2-27570578-SNAPSHOT" changing ()
+      "ba.sake" %% "hepek" % "0.6.0", //changing (),
+      "com.afrozaar.wordpress" % "wp-api-v2-client-java" % "4.8.3"
     ),
     (hepek in Compile) := {
       WebKeys.assets.value // run 'assets' after compiling
