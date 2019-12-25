@@ -10,6 +10,7 @@ object PanelExample extends StaticPage {
     super.pageSettings.withTitle("Panels")
 
   override def pageContent = div(
+    br,
     panel(
       panelType = Type.Primary,
       body = "header + body + footer",

@@ -1,15 +1,17 @@
 import com.typesafe.sbt.web.Import.WebKeys
 
-scalaVersion in ThisBuild := "2.12.8"
+scalaVersion in ThisBuild := "2.13.1"
 
 scalafmtOnCompile in ThisBuild := true
 
 resolvers in ThisBuild += Resolver.sonatypeRepo("snapshots")
+resolvers in ThisBuild += Resolver.bintrayRepo("mpollmeier", "maven")
 
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
       "ba.sake" %% "hepek" % "0.6.0", //changing (),
+      "com.michaelpollmeier" %% "scala-collection-contrib" % "0.2.1",
       "com.afrozaar.wordpress" % "wp-api-v2-client-java" % "4.8.3"
     ),
     (hepek in Compile) := {

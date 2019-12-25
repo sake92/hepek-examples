@@ -1,5 +1,6 @@
 package examples
 
+import scala.collection.decorators._
 import scalatags.Text.all._
 import examples.Imports._
 import examples.simple._
@@ -12,13 +13,14 @@ import examples.markdown.MarkdownExample
 import examples.panel.PanelExample
 import examples.pdf.PdfStaticPage
 import examples.multi.wordpress.WpPostsLists
+import examples.grid1._
 
-object Index extends StaticPage with Grid {
+object Index extends StaticPage {
 
   val examples = List(
-    ("simple", List(TextFile, JsonFile, RelPathExample)),
-    ("static page", List(SimpleStaticPage, StaticPageWithNavbar)),
-    ("multi", List(WpPostsLists.rends.head)),
+    ("single file", List(TextFile, JsonFile, RelPathExample)),
+    ("multiple files", List(WpPostsLists.rends.head)),
+    ("static web page", List(SimpleStaticPage, StaticPageWithNavbar)),
     ("grid", List(GridExample)),
     ("code highlighting", List(PrismJSExample)),
     ("math", List(MathJaxExample, KatexExample)),
@@ -31,17 +33,17 @@ object Index extends StaticPage with Grid {
   override def pageSettings =
     super.pageSettings.withTitle("Hepek examples")
 
-  override def screenRatios = super.screenRatios.withAll(
-    Ratios().withSingle(1, 2, 1)
-  )
-
   val leBundle =
     Imports.getClass().getInterfaces().map(_.getSimpleName).find(_.contains("Bundle")).get
 
   override def pageContent = row(
     div(cls := "page-header")(
       h1("Examples"),
-      s"Current bundle used: **$leBundle**".md
+      s"""
+      Current bundle used: **$leBundle**
+      
+      Source code is [here](https://github.com/sake92/hepek-examples)
+      """.md
     ),
     div(classes.tableResponsive)(
       table(classes.tableClass, classes.tableHoverable)(
@@ -58,11 +60,9 @@ object Index extends StaticPage with Grid {
                         page.getClass.getSimpleName.replaceAll("\\$", "")
                       )
                     }
-                    .flatMap(content => List(br(), content)) // should be "intersperse".. :)
-                    .tail
+                    .intersperse(br())
                 )
               )
-
           }
         )
       )

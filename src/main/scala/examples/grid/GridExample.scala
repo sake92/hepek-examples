@@ -2,13 +2,12 @@ package examples.grid
 
 import scalatags.Text.all._
 import examples.Imports._
-import ba.sake.hepek.html.component.GridComponents.Ratios
 
 object grid extends Grid {
 
   override def screenRatios =
     super.screenRatios
-      .withLg(Ratios().withSingle(1, 3, 1).withHalf(5, 7).withThird(4, 3, 5))
+      .withLg(Ratios().withSingle(1, 4, 1).withHalf(5, 7).withThird(4, 3, 5))
       .withMd(Ratios().withHalf(8, 4).withThird(6, 4, 2))
       .withSm(None) // stack ("normal" behavior) on small
       .withXs(None) // and extra-small screens

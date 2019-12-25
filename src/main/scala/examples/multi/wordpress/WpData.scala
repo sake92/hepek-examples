@@ -29,6 +29,6 @@ object WpData {
         .withPagination(50, 1)
         .build()
     )
-    response.getList.asScala
+    response.getList.asScala.toSeq
   }
 }

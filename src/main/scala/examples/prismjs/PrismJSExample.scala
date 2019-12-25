@@ -1,8 +1,10 @@
 package examples.prismjs
 
+import scala.collection.decorators._
 import scalatags.Text.all._
-import examples.Imports._
 import ba.sake.hepek.prismjs._
+import examples.Imports._
+import examples.grid1._
 
 // this would probably be in separate file
 object chl extends PrismCodeHighlightComponents {}
@@ -17,25 +19,20 @@ object PrismJSExample extends StaticPage with PrismDependencies {
   override def pageSettings =
     super.pageSettings.withTitle("PrismJS")
 
-  // theme, one of these: Default, Coy, Dark, Funky, SolarizedLight, Okaidia, Tomorrow, Twilight
-  // override def prismTheme = Themes.Twilight
-
-  // invisible characters
-  // override def prismShowInvisibles = true
-
-  // language badge
-  // override def prismShowLanguage = false
-
-  // copy button
-  // override def prismCopyToClipboard = false
+  /*override def prismSettings =
+    super.prismSettings
+      .withTheme(Themes.Twilight)
+      .withCopyToClipboard(false)
+      .withShowInvisibles(true)
+      .withShowLanguage(false)*/
 
   override def pageContent =
-    div(cls := "row")(
-      div(cls := "col-md-6 col-md-offset-3")(
-        sections.map { s =>
-          frag(h2(s.name), frag(s.content))
+    row(
+      sections
+        .map { s =>
+          frag(h2(s.name), s.content)
         }
-      )
+        .intersperse(hr())
     )
 
   def sections =

@@ -1,22 +1,33 @@
 package examples.multi.wordpress
 
 import java.nio.file.Paths
-import scala.collection.JavaConverters._
-import scalatags.Text.all._
 import com.afrozaar.wordpress.wpapi.{v2 => wp}
+import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
 import examples.Imports._
+import examples.grid1._
 
-// helper classes
 case class ResultPage[T](page: Int, perPage: Int, items: Seq[T])
 
-object grid2 extends Grid {
-  override def screenRatios =
-    super.screenRatios.withAll(Ratios().withSingle(1, 3, 1))
-}
-import grid2._
+// Posts lists
+object WpPostsLists extends ScalaMultiRenderable {
 
-// 1. Style your page based on WP post data
+  val perPage   = 10
+  val pageCount = WpPosts.rends.length / perPage
+
+  override def rends =
+    WpPosts.rends
+      .grouped(perPage)
+      .zipWithIndex
+      .map {
+        case (wpPosts, i) =>
+          val resultPage = ResultPage(i + 1, perPage, wpPosts)
+          WpPostsList(resultPage)
+      }
+      .toSeq
+}
+
+// Style single page based on posts paging
 case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
 
   override def relPath = Paths.get(s"examples/multi/wordpress/page${resultPage.page}.html")
@@ -43,29 +54,13 @@ case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
         }
       ),
       hr,
-      if (hasPrev) hyperlink(s"./page${resultPage.page - 1}.html")("Prev page")
-      else frag(),
-      if (hasPrev && hasNext) " | " else frag(),
-      if (hasNext) hyperlink(s"./page${resultPage.page + 1}.html")("Next page")
-      else frag()
+      Option.when(hasPrev) {
+        hyperlink(s"./page${resultPage.page - 1}.html")("Prev page")
+      },
+      Option.when(hasPrev && hasNext) { " | " },
+      Option.when(hasNext) {
+        hyperlink(s"./page${resultPage.page + 1}.html")("Next page")
+      }
     )
   )
-}
-
-// 3. Fetch and render posts as you like :)
-object WpPostsLists extends ScalaMultiRenderable {
-
-  val perPage   = 10
-  val pageCount = WpPosts.rends.length / perPage
-
-  override def rends =
-    WpPosts.rends
-      .grouped(perPage)
-      .zipWithIndex
-      .map {
-        case (wpPosts, i) =>
-          val resultPage = ResultPage(i + 1, perPage, wpPosts)
-          WpPostsList(resultPage)
-      }
-      .toSeq
 }

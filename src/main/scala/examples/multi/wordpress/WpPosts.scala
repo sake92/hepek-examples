@@ -1,17 +1,23 @@
 package examples.multi.wordpress
 
 import java.nio.file.Paths
+import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import org.jsoup.Jsoup
 import scalatags.Text.all._
-import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import ba.sake.hepek.path.ScalaMultiRenderable
 import examples.Imports._
 import examples.grid1._
 
+// Render all posts
+object WpPosts extends ScalaMultiRenderable {
+
+  override def rends: Seq[WpPost] = WpData.posts map WpPost
+}
+
 // Template for single post
 case class WpPost(wpPost: wp.model.Post) extends StaticPage {
 
-  // we unescape HTML chars with jsoup
+  // unescape HTML chars with Jsoup
   private val wpPostTitle = Jsoup.parse(wpPost.getTitle().getRendered()).text()
 
   override def relPath = Paths.get(s"examples/multi/wordpress/${wpPost.getSlug()}.html")
@@ -28,10 +34,4 @@ case class WpPost(wpPost: wp.model.Post) extends StaticPage {
       )
     )
   )
-}
-
-// Render  all posts
-object WpPosts extends ScalaMultiRenderable {
-
-  override def rends: Seq[WpPost] = WpData.posts map WpPost
 }
