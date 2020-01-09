@@ -4,8 +4,8 @@ import java.nio.file.Paths
 import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
-import examples.Imports._
-import examples.grid1._
+import examples.Imports._, Classes._
+import grid1._
 
 case class ResultPage[T](page: Int, perPage: Int, items: Seq[T])
 
@@ -38,7 +38,7 @@ case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
   private val hasNext = resultPage.page < WpPostsLists.pageCount
 
   override def pageContent = div(
-    div(cls := "page-header", classes.txtAlignCenter)(
+    div(cls := "page-header", txtAlignCenter)(
       h1(s"Posts page ${resultPage.page}/${WpPostsLists.pageCount}")
     ),
     row(

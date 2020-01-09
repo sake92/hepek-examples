@@ -3,17 +3,15 @@ package examples.grid
 import scalatags.Text.all._
 import examples.Imports._
 
-object grid extends Grid {
+object GridExample extends StaticPage {
 
-  override def screenRatios =
-    super.screenRatios
+  val grid = Grid.withScreenRatios(
+    Grid.screenRatios
       .withLg(Ratios().withSingle(1, 4, 1).withHalf(5, 7).withThird(4, 3, 5))
       .withMd(Ratios().withHalf(8, 4).withThird(6, 4, 2))
       .withSm(None) // stack ("normal" behavior) on small
       .withXs(None) // and extra-small screens
-}
-
-object GridExample extends StaticPage {
+  )
   import grid._
 
   override def pageSettings =

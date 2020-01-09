@@ -13,13 +13,14 @@ import examples.markdown.MarkdownExample
 import examples.panel.PanelExample
 import examples.pdf.PdfStaticPage
 import examples.multi.wordpress.WpPostsLists
-import examples.grid1._
+import examples.multi.basic.MyMultiPages
+import Imports._, grid1._, Classes._
 
 object Index extends StaticPage {
 
   val examples = List(
     ("single file", List(TextFile, JsonFile, RelPathExample)),
-    ("multiple files", List(WpPostsLists.rends.head)),
+    ("multiple files", List(MyMultiPages.rends.head, WpPostsLists.rends.head)),
     ("static web page", List(SimpleStaticPage, StaticPageWithNavbar)),
     ("grid", List(GridExample)),
     ("code highlighting", List(PrismJSExample)),
@@ -45,8 +46,8 @@ object Index extends StaticPage {
       Source code is [here](https://github.com/sake92/hepek-examples)
       """.md
     ),
-    div(classes.tableResponsive)(
-      table(classes.tableClass, classes.tableHoverable)(
+    div(tableResponsive)(
+      table(tableClass, tableHoverable)(
         thead(th("Topic"), th("Examples")),
         tbody(
           examples.map {

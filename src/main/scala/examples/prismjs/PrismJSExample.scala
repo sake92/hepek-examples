@@ -3,8 +3,7 @@ package examples.prismjs
 import scala.collection.decorators._
 import scalatags.Text.all._
 import ba.sake.hepek.prismjs._
-import examples.Imports._
-import examples.grid1._
+import examples.Imports._, grid1._
 
 // this would probably be in separate file
 object chl extends PrismCodeHighlightComponents {}

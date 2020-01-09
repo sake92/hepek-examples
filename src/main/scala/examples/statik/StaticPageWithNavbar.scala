@@ -4,14 +4,10 @@ import scalatags.Text.all._
 import examples.Imports._
 import examples.Index
 
-object customNavbar extends Navbar {
-  import Navbar._
-  // override def navbarStyle = Style.Inverse
-}
-
 object StaticPageWithNavbar extends StaticPage {
 
-  override def navbar = Some(customNavbar) // 1. enable navbar
+  // 1. DIY custom navbar, or just use Navbar...
+  private val myNavbar = Navbar.withStyle(Navbar.Companion.Style.Default)
 
   override def siteSettings = // 2. set site name and image (optional)
     super.siteSettings
@@ -28,9 +24,27 @@ object StaticPageWithNavbar extends StaticPage {
 
   override def pageContent =
     div(
+      myNavbar.simple(
+        brandUrl = staticSiteSettings.indexPage.map(_.ref).getOrElse("#"),
+        brandName = siteSettings.name.map(" " + _),
+        brandIconUrl = siteSettings.faviconInverted,
+        right = navbarRight
+      ),
       h2("Hello world, again!"),
       p("Some content...")
     )
+
+  private def navbarRight = {
+    val aLink  = SimpleStaticPage.ref
+    val aTitle = SimpleStaticPage.pageSettings.title
+    Seq(
+      hyperlink(aLink)(aTitle),
+      myNavbar.simpleNestedLink(
+        raw("Nested <span class='caret'></span>"),
+        Seq(hyperlink(aLink)(aTitle))
+      )
+    )
+  }
 
   override def stylesInline =
     super.stylesInline :+

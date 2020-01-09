@@ -5,8 +5,7 @@ import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import org.jsoup.Jsoup
 import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
-import examples.Imports._
-import examples.grid1._
+import examples.Imports._, grid1._, Classes._
 
 // Render all posts
 object WpPosts extends ScalaMultiRenderable {
@@ -25,7 +24,7 @@ case class WpPost(wpPost: wp.model.Post) extends StaticPage {
   override def pageSettings = super.pageSettings.withTitle(wpPostTitle.toString)
 
   override def pageContent = div(
-    div(cls := "page-header", classes.txtAlignCenter)(
+    div(cls := "page-header", txtAlignCenter)(
       h1(wpPostTitle)
     ),
     row(

@@ -5,19 +5,21 @@ import ba.sake.hepek.bootstrap3.statik.BootstrapStaticBundle
 import ba.sake.hepek.bulma.statik.BulmaStaticBundle
 import ba.sake.hepek.w3css.statik.W3CssStaticBundle
 import ba.sake.hepek.html.component.GridComponents
+import ba.sake.hepek.bootstrap3.statik.BootstrapStaticPage
 
 // try to use different Bundle :)
-object Imports extends BootstrapStaticBundle with BasicComponents
-//object Imports extends W3CssStaticBundle with BasicComponents
-//object Imports extends BulmaStaticBundle with BasicComponents
+trait MyBundle extends BootstrapStaticBundle
+//trait MyBundle extends W3CssStaticBundle
+//trait MyBundle extends BulmaStaticBundle
 
-import Imports._
+object Imports extends MyBundle {
 
-object grid1 extends Grid { // default grid to import globally..
-  override def screenRatios =
-    super.screenRatios
+  // default grid to import globally..
+  val grid1 = Grid.withScreenRatios(
+    Grid.screenRatios
       .withLg(Ratios().withSingle(1, 4, 1))
       .withMd(Ratios().withSingle(1, 4, 1))
       .withSm(None) // stack on small
       .withXs(None) // and extra-small screens
+  )
 }
