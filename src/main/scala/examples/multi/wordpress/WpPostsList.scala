@@ -4,8 +4,7 @@ import java.nio.file.Paths
 import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
-import examples.Imports._, Classes._
-import grid1._
+import examples.Imports._, grid._, Classes._
 
 case class ResultPage[T](page: Int, perPage: Int, items: Seq[T])
 

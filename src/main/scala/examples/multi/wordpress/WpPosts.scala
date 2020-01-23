@@ -5,7 +5,7 @@ import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import org.jsoup.Jsoup
 import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
-import examples.Imports._, grid1._, Classes._
+import examples.Imports._, grid._, Classes._
 
 // Render all posts
 object WpPosts extends ScalaMultiRenderable {

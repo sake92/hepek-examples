@@ -15,7 +15,7 @@ trait MyBundle extends BootstrapStaticBundle
 object Imports extends MyBundle {
 
   // default grid to import globally..
-  val grid1 = Grid.withScreenRatios(
+  val grid = Grid.withScreenRatios(
     Grid.screenRatios
       .withLg(Ratios().withSingle(1, 4, 1))
       .withMd(Ratios().withSingle(1, 4, 1))

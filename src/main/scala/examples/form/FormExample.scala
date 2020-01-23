@@ -1,14 +1,13 @@
 package examples.form
 
 import scalatags.Text.all._
-import examples.Imports._, grid1._
+import examples.Imports._, grid._, Classes._
 
 object FormExample extends StaticPage {
 
-  val customForm = Form
-    //.withFormType(Form.Companion.Type.Horizontal()) // try this! :)
+  // play with this! :)
+  val customForm = Form.withFormType(Form.Companion.Type.Horizontal())
   import customForm._
-  import Classes._
 
   override def pageSettings =
     super.pageSettings.withTitle("Form example")

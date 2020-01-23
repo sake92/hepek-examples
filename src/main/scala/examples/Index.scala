@@ -14,7 +14,7 @@ import examples.panel.PanelExample
 import examples.pdf.PdfStaticPage
 import examples.multi.wordpress.WpPostsLists
 import examples.multi.basic.MyMultiPages
-import Imports._, grid1._, Classes._
+import Imports._, grid._, Classes._
 
 object Index extends StaticPage {
 
@@ -35,7 +35,14 @@ object Index extends StaticPage {
     super.pageSettings.withTitle("Hepek examples")
 
   val leBundle =
-    Imports.getClass().getInterfaces().map(_.getSimpleName).find(_.contains("Bundle")).get
+    Imports
+      .getClass()
+      .getInterfaces()
+      .flatMap { direct =>
+        direct.getInterfaces().map(_.getSimpleName)
+      }
+      .find(_.contains("Bundle"))
+      .getOrElse("unknown")
 
   override def pageContent = row(
     div(cls := "page-header")(

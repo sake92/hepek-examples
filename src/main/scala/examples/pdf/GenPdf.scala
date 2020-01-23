@@ -7,9 +7,7 @@ import ba.sake.hepek.prismjs.PrismDependencies
 import ba.sake.hepek.prismjs.PrismCodeHighlightComponents
 import ba.sake.hepek.prismjs.Themes
 import ba.sake.hepek.pdf.PdfGenerator
-
-object Imports extends BootstrapStaticBundle
-import Imports._
+import examples.Imports._
 
 object chl extends PrismCodeHighlightComponents
 
@@ -20,15 +18,18 @@ object PdfStaticPage extends StaticPage with PrismDependencies {
       .withTheme(Themes.Okaidia)
       .withLanguages(List("core", "clike", "java", "scala"))
 
-  override def pageContent = frag(
-    h2("PDF Example"),
-    p("Please run `sbt pdfGenerate`, Netlify doesn't have a Chrome installed... :D"),
-    chl.scala("""
+  override def pageContent =
+    """
+    ## PDF Example
+    Please run `sbt pdfGenerate`, Netlify doesn't have a Chrome installed... :D
+    
+    ```scala
     val x = 4
     println(x)
-    """),
-    a(href := "example.pdf")("Click here to see PDF")
-  )
+    ```
+
+    [Click here to see PDF](example.pdf)
+    """.md
 }
 
 object GenPdf {
