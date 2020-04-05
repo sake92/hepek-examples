@@ -10,12 +10,12 @@ object SimpleStaticPage extends StaticPage {
 
   override def pageContent = div(
     """
-    # Example Page Header
+      # Example Page Header
 
-    ---
-    ## Hello world!
+      ---
+      ## Hello world!
 
-    "Some content..."
+      "Some content..."
     """.md
   )
 

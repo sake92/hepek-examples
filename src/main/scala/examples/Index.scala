@@ -2,14 +2,13 @@ package examples
 
 import scala.collection.decorators._
 import scalatags.Text.all._
-import examples.Imports._
 import examples.simple._
 import examples.statik._
 import examples.grid.GridExample
 import examples.form.FormExample
 import examples.math._
-import examples.prismjs.PrismJSExample
 import examples.markdown.MarkdownExample
+import examples.prismjs.PrismJSExample
 import examples.panel.PanelExample
 import examples.pdf.PdfStaticPage
 import examples.multi.wordpress.WpPostsLists
@@ -38,9 +37,9 @@ object Index extends StaticPage {
     div(cls := "page-header")(
       h1("Examples"),
       s"""
-      Current bundle used: **${Imports.Bundle.getClass.getSimpleName}**
-      
-      Source code is [here](https://github.com/sake92/hepek-examples)
+        Current bundle used: **${Imports.Bundle.getClass.getSimpleName}**
+        
+        Source code is [here](https://github.com/sake92/hepek-examples)
       """.md
     ),
     div(tableResponsive)(

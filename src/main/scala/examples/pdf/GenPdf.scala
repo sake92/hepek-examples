@@ -9,8 +9,6 @@ import ba.sake.hepek.prismjs.Themes
 import ba.sake.hepek.pdf.PdfGenerator
 import examples.Imports.Bundle._
 
-object chl extends PrismCodeHighlightComponents
-
 object PdfStaticPage extends StaticPage with PrismDependencies {
 
   override def prismSettings =
@@ -20,15 +18,15 @@ object PdfStaticPage extends StaticPage with PrismDependencies {
 
   override def pageContent =
     """
-    ## PDF Example
-    Please run `sbt pdfGenerate`, Netlify doesn't have a Chrome installed... :D
-    
-    ```scala
-    val x = 4
-    println(x)
-    ```
+      ## PDF Example
+      Please run `sbt pdfGenerate`, Netlify doesn't have a Chrome installed... :D
+      
+      ```scala
+      val x = 4
+      println(x)
+      ```
 
-    [Click here to see PDF](example.pdf)
+      [Click here to see PDF](example.pdf)
     """.md
 }
 

@@ -6,13 +6,12 @@ import ba.sake.hepek.prismjs._
 import examples.Imports.Bundle._, Grid._
 
 // this would probably be in separate file
-object chl extends PrismCodeHighlightComponents {}
+object chl extends PrismCodeHighlightComponents
 
 object chlCustom extends PrismCodeHighlightComponents {
   override def showLineNumbers = false
 }
 
-// this will be rendered
 object PrismJSExample extends StaticPage with PrismDependencies {
 
   override def pageSettings =
