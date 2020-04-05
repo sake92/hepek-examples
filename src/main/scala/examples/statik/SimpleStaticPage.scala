@@ -1,7 +1,7 @@
 package examples.statik
 
 import scalatags.Text.all._
-import examples.Imports._
+import examples.Imports.Bundle._
 
 object SimpleStaticPage extends StaticPage {
 

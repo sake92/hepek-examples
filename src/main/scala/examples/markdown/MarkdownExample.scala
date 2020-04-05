@@ -1,7 +1,7 @@
 package examples.markdown
 
 import scalatags.Text.all._
-import examples.Imports._
+import examples.Imports.Bundle._
 import examples.Index
 
 object MarkdownExample extends StaticPage {

@@ -14,7 +14,7 @@ import examples.panel.PanelExample
 import examples.pdf.PdfStaticPage
 import examples.multi.wordpress.WpPostsLists
 import examples.multi.basic.MyMultiPages
-import Imports._, grid._, Classes._
+import Imports.Bundle._, Grid._, Classes._
 
 object Index extends StaticPage {
 

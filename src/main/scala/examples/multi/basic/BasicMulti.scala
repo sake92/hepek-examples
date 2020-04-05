@@ -3,7 +3,7 @@ package examples.multi.basic
 import java.nio.file.Paths
 import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
-import examples.Imports._
+import examples.Imports.Bundle._
 
 object MyMultiPages extends ScalaMultiRenderable {
   override def rends =

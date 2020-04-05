@@ -1,7 +1,7 @@
 package examples.form
 
 import scalatags.Text.all._
-import examples.Imports._, grid._, Classes._
+import examples.Imports.Bundle._, Grid._, Classes._
 
 object FormExample extends StaticPage {
 

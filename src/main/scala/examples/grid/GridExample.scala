@@ -1,7 +1,7 @@
 package examples.grid
 
 import scalatags.Text.all._
-import examples.Imports._
+import examples.Imports.Bundle._
 
 object GridExample extends StaticPage {
 

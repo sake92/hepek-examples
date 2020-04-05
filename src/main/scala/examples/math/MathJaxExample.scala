@@ -1,7 +1,7 @@
 package examples.math
 
 import scalatags.Text.all._
-import examples.Imports._
+import examples.Imports.Bundle._
 import ba.sake.hepek.mathjax.MathjaxDependencies
 
 object MathJaxExample extends StaticPage with MathjaxDependencies {

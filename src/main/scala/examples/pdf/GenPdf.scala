@@ -7,7 +7,7 @@ import ba.sake.hepek.prismjs.PrismDependencies
 import ba.sake.hepek.prismjs.PrismCodeHighlightComponents
 import ba.sake.hepek.prismjs.Themes
 import ba.sake.hepek.pdf.PdfGenerator
-import examples.Imports._
+import examples.Imports.Bundle._
 
 object chl extends PrismCodeHighlightComponents
 
