@@ -34,21 +34,11 @@ object Index extends StaticPage {
   override def pageSettings =
     super.pageSettings.withTitle("Hepek examples")
 
-  val leBundle =
-    Imports
-      .getClass()
-      .getInterfaces()
-      .flatMap { direct =>
-        direct.getInterfaces().map(_.getSimpleName)
-      }
-      .find(_.contains("Bundle"))
-      .getOrElse("unknown")
-
   override def pageContent = row(
     div(cls := "page-header")(
       h1("Examples"),
       s"""
-      Current bundle used: **$leBundle**
+      Current bundle used: **${Imports.Bundle.getClass.getSimpleName}**
       
       Source code is [here](https://github.com/sake92/hepek-examples)
       """.md

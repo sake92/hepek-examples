@@ -6,15 +6,12 @@ import examples.Index
 
 object StaticPageWithNavbar extends StaticPage {
 
-  // 1. DIY custom navbar, or just use Navbar...
-  private val myNavbar = Navbar.withStyle(Navbar.Companion.Style.Default)
-
-  override def siteSettings = // 2. set site name and image (optional)
+  override def siteSettings =
     super.siteSettings
       .withName("Example")
       .withFaviconInverted("https://img.icons8.com/doodle/48/000000/football2.png")
 
-  override def staticSiteSettings = // 3. set index page and main pages for navbar
+  override def staticSiteSettings =
     super.staticSiteSettings
       .withIndexPage(Index)
       .withMainPages(SimpleStaticPage, StaticPageWithNavbar)
@@ -24,7 +21,7 @@ object StaticPageWithNavbar extends StaticPage {
 
   override def pageContent =
     div(
-      myNavbar.simple(
+      Navbar.simple(
         brandUrl = staticSiteSettings.indexPage.map(_.ref).getOrElse("#"),
         brandName = siteSettings.name.map(" " + _),
         brandIconUrl = siteSettings.faviconInverted,
@@ -39,8 +36,8 @@ object StaticPageWithNavbar extends StaticPage {
     val aTitle = SimpleStaticPage.pageSettings.title
     Seq(
       hyperlink(aLink)(aTitle),
-      myNavbar.simpleNestedLink(
-        raw("Nested <span class='caret'></span>"),
+      Navbar.simpleNestedLink(
+        "Nested",
         Seq(hyperlink(aLink)(aTitle))
       )
     )
