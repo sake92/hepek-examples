@@ -43,7 +43,7 @@ object Index extends StaticPage {
       """.md
     ),
     div(tableResponsive)(
-      table(tableClass, tableHoverable)(
+      table(tableClass, tableHoverable, tableWidthFull)(
         thead(th("Topic"), th("Examples")),
         tbody(
           examples.map {

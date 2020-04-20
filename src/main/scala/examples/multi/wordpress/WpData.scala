@@ -8,7 +8,7 @@ object WpClient {
   import wp.config.ClientFactory
   import wp.config.ClientConfig
 
-  private val baseUrl              = "https://howtodoinjava.com"
+  val baseUrl                      = "https://thoughts-on-java.org"
   private val username: String     = null
   private val password: String     = null
   private val usePermalinkEndpoint = false

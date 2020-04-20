@@ -2,8 +2,10 @@ package examples.form
 
 import scalatags.Text.all._
 import examples.Imports.Bundle._, Grid._, Classes._
+import ba.sake.hepek.fontawesome5.FADependencies
+import ba.sake.hepek.fontawesome5.FA
 
-object FormExample extends StaticPage {
+object FormExample extends StaticPage with FADependencies {
 
   // play with this! :)
   val customForm = Form.withFormType(Form.Companion.Type.Horizontal())
@@ -16,25 +18,25 @@ object FormExample extends StaticPage {
     form(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
       row(
         formFieldset("Textual inputs")(
-          inputText(id := "txt1")("name", "Name"),
-          inputText(id := "txt2", disabled)("disabled", "Disabled"),
-          inputText(id := "txt3")(
+          inputText()("name", "Name"),
+          inputText(disabled)("disabled", "Disabled"),
+          inputText()(
             "customized",
             "Customized",
             _transform = field =>
               div(cls := "input-group")(
-                span(cls := "input-group-addon")(i(cls := "glyphicon glyphicon-user")),
+                span(cls := "input-group-addon")(FA.user()),
                 field
               )
           ),
-          inputTextArea(id := "ta1", attr("minlength") := "5")("textArea", "Free text"),
-          inputEmail(id := "em1", multiple)("email", "Email"),
-          inputTel(id := "ph1")("phone", "Phone"),
-          inputPassword(id := "pwd1")("pwd", "Password"),
-          inputUrl(id := "url1")("url", "URL")
+          inputTextArea(attr("minlength") := "5")("textArea", "Free text"),
+          inputEmail(multiple)("email", "Email"),
+          inputTel()("phone", "Phone"),
+          inputPassword()("pwd", "Password"),
+          inputUrl()("url", "URL")
         ),
         formFieldset("Checkbox inputs")(
-          inputCheckbox(id := "m1", checked)("checkbox", "Man?"),
+          inputCheckbox(checked)("checkbox", "Man?"),
           hr,
           inputCheckboxes(
             "progLangs",
@@ -53,36 +55,21 @@ object FormExample extends StaticPage {
           )
         ),
         formFieldset("Select inputs")(
-          inputSelect(id := "selectCar")(
+          inputSelect()(
             "cars",
             Seq(("volvo", "Volvo", Nil), ("bmw", "BMW", Seq(selected))),
             _label = "Cars"
-          ),
-          inputSelectGrouped(multiple, size := "7")(
-            "animals",
-            Seq(
-              "Cats" -> Seq(
-                ("bengal", "Bengal", Nil),
-                ("persian", "Persian", Seq(selected))
-              ),
-              "Dogs" -> Seq(
-                ("goldenRetriever", "Golden retriever", Seq(selected)),
-                ("husky", "Husky", Nil)
-              )
-            ),
-            _label = "Animals"
           )
         ),
         formFieldset("Date/time inputs")(
-          inputTime(id := "time1")("time", "Time"),
-          inputWeek(id := "wk1")("weel", "Week"),
-          inputMonth(id := "mnt1")("month", "Month"),
-          inputDate(id := "date1", min := "1900-01-01", max := "2000-01-01")(
+          inputTime()("time", "Time"),
+          inputWeek()("weel", "Week"),
+          inputMonth()("month", "Month"),
+          inputDate(min := "1900-01-01", max := "2000-01-01")(
             "date",
             "Date of birth"
           ),
           inputDateTimeLocal(
-            id := "dateTime1",
             min := "2000-01-01T00:00",
             max := "2020-01-01T00:00"
           )(
@@ -91,18 +78,18 @@ object FormExample extends StaticPage {
           )
         ),
         formFieldset("Numeric inputs")(
-          inputNumber(id := "num1", min := "1", step := "5")("num", "Number"),
-          inputRange(id := "rng1", min := "10", step := "2", max := "50")("range", "Range")
+          inputNumber(min := "1", step := "5")("num", "Number"),
+          inputRange(min := "10", step := "2", max := "50")("range", "Range")
         ),
         formFieldset("Misc inputs")(
-          inputFile(id := "f1", accept := "image/*")("file", "File"),
-          inputColor(id := "kolor1")("color", "Color")
+          inputFile(accept := "image/*")("file", "File"),
+          inputColor()("color", "Color")
         ),
         formFieldset("Button inputs")(
           inputSubmit(btnSizeLg)("Submit (large button)"),
           inputButton(btnWarning, btnSizeSm)(
             "btnRemove",
-            frag(span(cls := "glyphicon glyphicon-remove"), " Remove  (small button)")
+            frag(FA.times(), " Remove  (small button)")
           ),
           inputReset(btnDanger, btnWidthFull)("Reset (danger button)"),
           inputHidden()("abcHidden")

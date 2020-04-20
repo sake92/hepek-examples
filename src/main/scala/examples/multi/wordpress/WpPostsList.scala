@@ -42,7 +42,7 @@ case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
     ),
     row(
       div(
-        "Posts fetched from public WP API of page https://howtodoinjava.com (hope they don't mind)"
+        s"Posts fetched from public WP API of page ${WpClient.baseUrl} (hope they don't mind)"
       ),
       hr,
       ul(
