@@ -10,7 +10,7 @@ resolvers in ThisBuild += Resolver.bintrayRepo("mpollmeier", "maven")
 lazy val root = (project in file("."))
   .settings(
     libraryDependencies ++= Seq(
-      "ba.sake" %% "hepek" % "0.7.0+2-7f19dd52+20200420-2149-SNAPSHOT" changing (),
+      "ba.sake" %% "hepek" % "0.7.0+5-cd0a4eeb-SNAPSHOT" changing (),
       "com.michaelpollmeier" %% "scala-collection-contrib" % "0.2.1",
       "com.afrozaar.wordpress" % "wp-api-v2-client-java" % "4.8.3"
     ),
