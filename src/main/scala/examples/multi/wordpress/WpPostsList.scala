@@ -38,12 +38,10 @@ case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
 
   override def pageContent = div(
     div(cls := "page-header", txtAlignCenter)(
-      h1(s"Posts page ${resultPage.page}/${WpPostsLists.pageCount}")
+      s"# Posts page ${resultPage.page}/${WpPostsLists.pageCount}".md
     ),
     row(
-      div(
-        s"Posts fetched from public WP API of page ${WpClient.baseUrl} (hope they don't mind)"
-      ),
+      s"Posts fetched from public WP API of page ${WpClient.baseUrl} (hope they don't mind)".md,
       hr,
       ul(
         resultPage.items.map { wpPost =>

@@ -28,7 +28,7 @@ case class WpPost(wpPost: wp.model.Post) extends StaticPage {
       h1(wpPostTitle)
     ),
     row(
-      raw( // raw HTML from WP
+      raw(
         wpPost.getContent().getRendered()
       )
     )

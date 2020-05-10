@@ -2,9 +2,7 @@ package examples.pdf
 
 import java.io.File
 import scalatags.Text.all._
-import ba.sake.hepek.bootstrap3.statik.BootstrapStaticBundle
 import ba.sake.hepek.prismjs.PrismDependencies
-import ba.sake.hepek.prismjs.PrismCodeHighlightComponents
 import ba.sake.hepek.prismjs.Themes
 import ba.sake.hepek.pdf.PdfGenerator
 import examples.Imports.Bundle._

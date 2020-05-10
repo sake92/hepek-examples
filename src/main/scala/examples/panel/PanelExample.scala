@@ -12,15 +12,15 @@ object PanelExample extends StaticPage {
     br,
     Panel.panel(
       panelType = Panel.Companion.Type.Primary,
-      body = "header + body + footer",
       header = Some("Panel header"),
+      body = "header + body + footer",
       footer = Some("Panel footer")
     ),
     hr,
     Panel.panel(
       panelType = Panel.Companion.Type.Warning,
-      body = "header + body",
-      header = Some("Panel header")
+      header = Some("Panel header"),
+      body = "header + body"
     ),
     hr,
     Panel.panel(
