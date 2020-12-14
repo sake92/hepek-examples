@@ -1,0 +1,448 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Key annotations you need to know when working with JPA and Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Key annotations you need to know when working with JPA and Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>When you start learning and using Hibernate and JPA, the number of annotations might be overwhelming. But as long as you rely on the defaults, you can implement your persistence layer using only a small subset of them. </p>
+
+
+
+<p>After you have mastered the basic annotations, you can take a look at additional customization options. You can, for example, customize the join tables of <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">many-to-many associations</a>, use composite primary keys, or <a href="https://thorben-janssen.com/hibernate-tip-bidirectional-one-to-one-with-shared-composite-primary-key/">share a primary key value</a> between 2 associated entities.</p>
+
+
+
+<p>But please be careful with any mapping that tries to handle a significant difference between your table model and your domain model. Quite often, the simpler mappings are better than the complex ones. They provide better performance and are much easier to understand by all developers in your team.</p>
+
+
+
+<p>You only need the more advanced mappings if you need to map a legacy database or use various kinds of performance optimizations. But especially when you are new to JPA and Hibernate, you should ignore these features and focus on the basic concepts.</p>
+
+
+
+<p>So, let&#8217;s take a look at the most important annotations and their attributes. For each annotation, I will explain which attributes you really need and which ones you should better avoid. </p>
+
+
+
+<p>And if you want to dive deeper into JPA and make sure you have a solid understanding of all the basic concepts, I recommend enrolling in my <a href="https://thorben-janssen.com/jpa-for-beginners/">JPA for Beginners</a> online course.</p>
+
+
+
+<!--more-->
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Define_an_Entity_Class"><span class="toc_number toc_depth_1">1</span> Define an Entity Class</a><ul><li><a href="#Entity"><span class="toc_number toc_depth_2">1.1</span> @Entity</a></li><li><a href="#Table"><span class="toc_number toc_depth_2">1.2</span> @Table</a></li></ul></li><li><a href="#Basic_Column_Mappings"><span class="toc_number toc_depth_1">2</span> Basic Column Mappings</a><ul><li><a href="#Column"><span class="toc_number toc_depth_2">2.1</span> @Column</a></li><li><a href="#Id"><span class="toc_number toc_depth_2">2.2</span> @Id</a></li><li><a href="#GeneratedValue"><span class="toc_number toc_depth_2">2.3</span> @GeneratedValue</a></li><li><a href="#Enumerated"><span class="toc_number toc_depth_2">2.4</span> @Enumerated</a></li><li><a href="#Temporal"><span class="toc_number toc_depth_2">2.5</span> @Temporal</a></li><li><a href="#Lob"><span class="toc_number toc_depth_2">2.6</span> @Lob</a></li></ul></li><li><a href="#Association_Mappings"><span class="toc_number toc_depth_1">3</span> Association Mappings</a><ul><li><a href="#ManyToMany"><span class="toc_number toc_depth_2">3.1</span> @ManyToMany</a></li><li><a href="#ManyToOne_and_OneToMany"><span class="toc_number toc_depth_2">3.2</span> @ManyToOne and @OneToMany</a></li><li><a href="#ManyToOne"><span class="toc_number toc_depth_2">3.3</span> @ManyToOne</a></li><li><a href="#OneToMany"><span class="toc_number toc_depth_2">3.4</span> @OneToMany</a></li><li><a href="#OneToOne"><span class="toc_number toc_depth_2">3.5</span> @OneToOne</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2><span id="Define_an_Entity_Class">Define an Entity Class</span></h2>
+
+
+
+<p>JPA entities don&#8217;t need to implement any interface or extend a superclass. They are simple POJOs. But you still need to identify a class as an entity class, and you might want to adapt the default table mapping.</p>
+
+
+
+<h3><span id="Entity">@Entity</span></h3>
+
+
+
+<p>The JPA specification requires the @Entity annotation. It identifies a class as an entity class.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author { ... }</pre>
+
+
+
+<p>You can use the <em>name </em>attribute of the <em>@Entity</em> annotation to define the name of the entity. It has to be unique for the persistence unit, and you use it to reference the entity in your <a href="https://thorben-janssen.com/jpql/">JPQL queries</a>.</p>
+
+
+
+<h3><span id="Table">@Table</span></h3>
+
+
+
+<p>By default, each entity class maps a database table with the same name in the default schema of your database. You can customize this mapping using the <em>name</em>, <em>schema, </em>and <em>catalog</em> attributes of the <em>@Table</em> annotation.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@Table(name = &quot;AUTHORS&quot;, schema = &quot;STORE&quot;)
+public class Author {
+</pre>
+
+
+
+<p>The <em>name</em> attribute enables you to change the name of the database table which your entity maps. The <em>schema</em> attribute specifies the name of the database schema in which the table is located. And the <em>catalog</em> attribute describes the name of the database catalog that stores the metadata information of the table.</p>
+
+
+
+<p>The <em>@Table</em> annotation also defines 2 attributes that enable you to influence the generation of the database table. These are called <em>indexes</em> and <em>uniqueConstraints</em>. I don’t recommend to use them. External script and tools like <a href="https://thorben-janssen.com/database-migration-with-liquibase-getting-started/">Liquibase</a> or <a href="https://thorben-janssen.com/flyway-getting-started/">Flyway</a> are a much better option to create and update your database.</p>
+
+
+
+
+
+
+
+<h2><span id="Basic_Column_Mappings">Basic Column Mappings</span></h2>
+
+
+
+<p>By default, all JPA implementations map each entity attribute to a database column with the same name and a compatible type. The following annotations enable you to perform basic customizations of these mappings. You can, for example, change the name of the column, adapt the type mapping, identify primary key attributes, and generate unique values for them.</p>
+
+
+
+<h3><span id="Column">@Column</span></h3>
+
+
+
+<p>Let&#8217;s start with the <em>@Column</em> annotation. It is an optional annotation that enables you to customize the mapping between the entity attribute and the database column. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    @Column(name = &quot;title&quot;, updatable = false, insertable = true)
+    private String title;
+
+    ...
+}</pre>
+
+
+
+<p>You can use the <em>name </em>attribute to specify the name of the database column which the entity attribute map. The attributes <em>updatable </em>and <em>insertable </em>enable you to exclude the attribute from insert or update statements.</p>
+
+
+
+<p>You should only use the <em>table</em> attribute if you <a href="https://thorben-janssen.com/hibernate-tips-how-to-map-an-entity-to-multiple-tables/">map your entity to 2 database tables</a>. In general, I don&#8217;t recommend to use this mapping. But you sometimes need it to work with a legacy database or as a temporary step during a complex refactoring.</p>
+
+
+
+<p>All other attributes only affect the generated CREATE TABLE statement, and I don&#8217;t recommend to use them. These are:</p>
+
+
+
+<ul><li>The <em>columnDefinition </em>attribute that allows you to define an SQL fragment that&#8217;s used during table definition.</li><li>The&nbsp;<em>length</em>&nbsp;attribute, which defines the length of String-valued database column.</li><li>The attributes <em>scale </em>and <em>precision</em>, which specify the scale and precision of a decimal column.</li><li>The <em>unique</em> attribute that defines a unique constraint on the mapped column.</li></ul>
+
+
+
+<h3><span id="Id">@Id</span></h3>
+
+
+
+<p>JPA and Hibernate require you to specify at least one primary key attribute for each entity. You can do that by annotating an attribute with the <em>@Id</em> annotation.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+    @Id
+    private Long id;
+
+    ...
+}</pre>
+
+
+
+<h3><span id="GeneratedValue">@GeneratedValue</span></h3>
+
+
+
+<p>When we&#8217;re talking about primary keys, we also need to talk about sequences and auto-incremented database columns. These are the 2 most common database features to generate unique primary key values.</p>
+
+
+
+<p>If you annotate your primary key attribute with the <em>@GeneratedValue</em> annotation, you can use a database sequence by setting the strategy attribute to <em>GenerationType.SEQUENCE</em>. Or, if you want to use an auto-incremented database column to generate your primary key values, you need to set the strategy to <em>GenerationType.IDENTITY</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    ...
+}</pre>
+
+
+
+<p>The <em>generator </em>attribute of the <em>@GeneratedValue</em> annotation enables you to reference a custom generator. You can use it to customize a standard generator, e.g., to use a <a href="https://thorben-janssen.com/hibernate-tips-use-custom-sequence/">custom database sequence</a>, or to <a href="https://thorben-janssen.com/custom-sequence-based-idgenerator/">implement your own generator</a>.</p>
+
+
+
+<p>I explain the primary key generation strategies and their performance impacts in more detail in <a href="https://thorben-janssen.com/jpa-generate-primary-keys/">How to generate primary keys with JPA and Hibernate</a>.</p>
+
+
+
+<h3><span id="Enumerated">@Enumerated</span></h3>
+
+
+
+<p>The <em>@Enumerated</em> annotation enables you to define how an <a href="https://thorben-janssen.com/hibernate-enum-mappings/">enum attribute gets persisted</a> in the database. By default, all JPA implementations map the ordinal value of the enum to a numeric database column. </p>
+
+
+
+<p>As I explained in more detail in my guide on enum mappings, the ordinal makes it hard to add or remove values to the enum. The mapping as a String is more robust and much easier to read. You can activate this mapping by <em>EnumType.STRING</em> to the <em>@Enumerated</em> annotation.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+    @Enumerated(EnumType.STRING)
+    private AuthorStatus status;
+
+    ...
+}</pre>
+
+
+
+<h3><span id="Temporal">@Temporal</span></h3>
+
+
+
+<p>If you&#8217;re still using <em>java.util.Date</em> or <em>java.util.Calendar</em> as your attribute types, you need to <a href="https://thorben-janssen.com/hibernate-jpa-date-and-time/">annotate the attribute with <em>@Temporal</em></a>. Using this annotation, you can define if the attribute shall be mapped as an SQL DATE, TIME, or TIMESTAMP.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+	
+    @Temporal(TemporalType.DATE)
+    private Date dateOfBirth;
+
+    ...
+}</pre>
+
+
+
+<p>This mapping works really well, but I recommend using the classes of the <a href="https://thorben-janssen.com/map-date-time-api-jpa-2-2/">Date and Time API</a> instead. These classes are much easier to use in your business code, and they provide all the required mapping information. That means that they don&#8217;t require any annotations.</p>
+
+
+
+<h3><span id="Lob">@Lob</span></h3>
+
+
+
+<p>In Java, there is almost no limit to the size of a <em>String </em>or a <em>byte[]</em>. But that&#8217;s not the case for relational databases. They provide specific data types for large objects. These are BLOB for binary large objects and CLOB for character large objects.</p>
+
+
+
+<p>Using JPA&#8217;s <em>@Lob</em> annotation, you can map a BLOB to a <em>byte[]</em> and a CLOB to a <em>String</em>. Your persistence provider then fetches the whole BLOB or CLOB when it initializes the entity attribute.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+     
+    @Lob
+    private byte[] cover;
+ 
+    ...
+}</pre>
+
+
+
+<p>In addition to that, Hibernate also supports mappings to <em>java.sql.Blob</em> and <em>java.sql.Clob</em>. These are not as easy to use a <em>byte[]</em> or a <em>String, </em>but they can provide better performance. I explained that mapping in great detail in <a href="https://thorben-janssen.com/mapping-blobs-and-clobs-with-hibernate-and-jpa/">Mapping BLOBs and CLOBs with Hibernate and JPA</a>.</p>
+
+
+
+<h2><span id="Association_Mappings">Association Mappings</span></h2>
+
+
+
+<p>You can also map associations between your entities. In the table model, these are modeled as foreign key columns. These associations are mapped as attributes of the type of the associated entity or a <em>Collection </em>of associated entities, in your domain model.</p>
+
+
+
+<p>In both cases, you need to describe the association mapping. You can do that using a <em>@ManyToMany</em>, <em>@ManyToOne</em>, <em>@OneToMany</em>, or <em>@OneToOne</em> annotation.</p>
+
+
+
+<h3><span id="ManyToMany">@ManyToMany</span></h3>
+
+
+
+<p>Many-to-many associations are very common in relational table models. A typical example is an association between books and authors. </p>
+
+
+
+<p>In your domain model, you can map this association in a uni- or bidirectional way using attributes of type <em>List</em>, <em>Set </em>or <em>Map, </em>and a <em>@ManyToMany</em> annotations.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@Table(name = &quot;BOOKS&quot;)
+public class Book {
+
+    @ManyToMany
+    private Set&lt;Author&gt; authors;
+
+    ...
+}</pre>
+
+
+
+<p>Here you can see a typical example of the owning side of the association. You can use it to model a unidirectional many-to-many association. Or you can use it as the owning side of a bidirectional mapping. In both cases, Hibernate uses an association table that contains foreign key columns that reference both ends of the association.</p>
+
+
+
+<p>When you&#8217;re using this annotation, you should also be familiar with <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">JPA&#8217;s FetchTypes</a>. The <em>fetch</em> attribute of the <em>@ManyToMany</em> annotation allows you to define the <em>FetchType </em>that shall be used for this association. The <em>FetchType</em> defines when the persistence provider fetches the referenced entities from the database. By default, a many-to-many association uses the <em>FetchType.LAZY</em>. This tells your persistence provider to fetch the associated entities when you use them. That&#8217;s the most efficient approach, and you shouldn&#8217;t change it.</p>
+
+
+
+<p>By setting the <em>cascade</em> attribute, you can also tell your persistence provider which entity operations it shall cascade to all associated entities. This can make working with graphs of entities much easier. But you should avoid <em>CascadeType.REMOVE</em> for all many-to-many associations. It <a href="https://thorben-janssen.com/avoid-cascadetype-delete-many-assocations/">removes much more data than you would expect</a>.</p>
+
+
+
+<p>If you want to model the association in a bidirectional way, you need to implement a similar mapping on the referenced entity. But this time, you also need to set the <em>mappedBy </em>attribute of the <em>@ManyToMany</em> annotation to the name of the attribute that owns the association. To your persistence provider, this identifies the mapping as a bidirectional one. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+    @ManyToMany(mappedBy = &quot;authors&quot;)
+    private Set&lt;Book&gt; books;
+
+    ...
+}</pre>
+
+
+
+<p>You use the same @ManyToMany annotation to define the referencing side of the association, as you use to specify the owning side of it. So, you can use the same <em>cascade</em> and <em>fetch</em> attributes, as I described before.</p>
+
+
+
+<h3><span id="ManyToOne_and_OneToMany">@ManyToOne and @OneToMany</span></h3>
+
+
+
+<p><a href="https://thorben-janssen.com/best-practices-many-one-one-many-associations-mappings/">Many-to-one and one-to-many associations</a> represent the same association from 2 different perspectives. So, it&#8217;s no surprise that you can use them together to define a bidirectional association. You can also use each of them on their own to create a unidirectional many-to-one or one-to-many association. But you should avoid unidirectional one-to-many associations. Hibernate handles them <a href="https://thorben-janssen.com/hibernate-tips-unidirectional-one-to-many-association-without-junction-table/">very inefficient</a>.</p>
+
+
+
+<h3><span id="ManyToOne">@ManyToOne</span></h3>
+
+
+
+<p>Let&#8217;s take a closer look at the <a href="https://thorben-janssen.com/best-practices-many-one-one-many-associations-mappings/"><em>@ManyToOne</em> annotation</a>. It defines the owning side of a bidirectional many-to-one/one-to-many association. You do that on the entity that maps the database table that contains the foreign key column.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Publisher publisher;
+
+    ...
+}</pre>
+
+
+
+<p>When you&#8217;re using a <em>@ManyToOne</em> annotation, you should be familiar with its <em>fetch </em>and <em>cascade </em>attributes. </p>
+
+
+
+<p>The fetch attribute enables you to define the <em>FetchType </em>that shall be used for this association. The default value is <em>FetchType.EAGER</em>. You should change it to <em>FetchType.LAZY</em> to avoid <a href="https://thorben-janssen.com/tips-to-boost-your-hibernate-performance/">performance issues</a>.</p>
+
+
+
+<p>You can set the <em>cascade </em>attribute to define which operations on this entity shall get cascaded to all associated entities. That gets often used to cascade an operation from a parent to a child entity. So, it&#8217;s mostly used on a <em>@OneToMany</em> association, and I will show it in the next section.</p>
+
+
+
+<p>You can also set the <em>optional </em>attribute to <em>false </em>to indicate that this association is mandatory. </p>
+
+
+
+<h3><span id="OneToMany">@OneToMany</span></h3>
+
+
+
+<p>You can use the <em>@OneToMany</em> annotation to define the referencing side of a bidirectional many-to-one/one-to-many association. As explained before, you shouldn&#8217;t use it to model a unidirectional one-to-many association. <a href="https://thorben-janssen.com/hibernate-tips-unidirectional-one-to-many-association-without-junction-table/">Hibernate handles these associations very inefficiently</a>.</p>
+
+
+
+<p>Similar to the referencing side of a bidirectional many-to-many association, you can reference the name of the attribute that owns the association in the <em>mappedBy </em>attribute. That tells your persistence provider that this is the referencing side of a bidirectional association, and it reuses the association mapping defined by the owning side.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Publisher {
+
+    @OneToMany(mappedBy = &quot;publisher&quot;, cascade = CascadeType.ALL)
+    private Set&lt;Book&gt; books;
+
+    ...
+}</pre>
+
+
+
+<p>I already explained the <em>fetch </em>and <em>cascade </em>attributes for the <em>@ManyToMany</em> and <em>@ManyToOne</em> annotations. You can use them in the same way with the <em>@OneToMany</em> annotation.</p>
+
+
+
+<p>In addition to these 2 attributes, you should also know the <em>orphanRemoval </em>attribute. If you set it to true, Hibernate removes an entity from the database when it gets removed from the association. That&#8217;s often used for parent-child associations in which the child can&#8217;t exist without its parent. A typical example would be the item of an order. The item can&#8217;t exist without the order. So, it makes sense to remove it as soon as the association to the order gets removed.</p>
+
+
+
+<h3><span id="OneToOne">@OneToOne</span></h3>
+
+
+
+<p>One-to-one associations are only rarely used in relational table models. You can map them using a <em>@OneToOne</em> annotation. </p>
+
+
+
+<p>Similar to the previously discussed association mapping, you can model a uni- or bidirectional one-to-one associations. The attribute that&#8217;s defined on the entity that maps the database table that contains the foreign key column owns the association. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Manuscript {
+
+    @OneToOne(fetch = FetchType.LAZY)
+    private Book book;
+
+    ...
+}</pre>
+
+
+
+<p>The <em>@OneToOne</em> annotation supports the <em>fetch, cascade</em>, and <em>optional</em> attributes that I already explained in the previous sections. </p>
+
+
+
+<p>And if you model it as a bidirectional association, you need to set the <em>mappedBy </em>attribute of the referencing side of the association to the attribute name that owns the association.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    @OneToOne(mappedBy = &quot;book&quot;)
+    private Manuscript manuscript;
+
+    ...
+}</pre>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>As you have seen, you only need a relatively small number of annotations to define your domain model. In most cases, you only need to annotate your entity class with <em>@Entity</em> and your primary key attribute with <em>@Id</em> and <em>@GeneratedValue</em>.</p>
+
+
+
+<p>If the names of your entity class or one of its attributes don&#8217;t match the table or column names, you can adjust the mapping using a <em>@Table</em> or <em>@Column</em> annotation. You can also change the type mappings using an <em>@Enumerated</em>, <em>@Temporal</em>, or <em>@Lob</em> annotation.</p>
+
+
+
+<p>One of the key features of any object-relational mapper is the handling of associations. With JPA and Hibernate, you can map one-to-one, one-to-many, many-to-one, and many-to-many associations in a uni- or bidirectional way. All association mappings require an additional annotation that describes the association mapping and that you can use to define the fetching and cascading behavior of it.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Enum Mappings with Hibernate – The Complete Guide</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Enum Mappings with Hibernate – The Complete Guide</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Most developers use enums in their domain models. You can easily map them with Hibernate. They provide a strongly typed way to model an attribute that has one out of a list of defined values. The format of a book is a typical example of such an enum. Supported values could be hardcover, paperback, and ebook.</p>
+
+
+
+<p>With JPA and Hibernate, you can map enums in different ways. You can: </p>
+
+
+
+<ul><li>use the <a href="#standardMapping">standard mappings to a number or a String</a>, </li><li>create a <a href="#customizedMapping">customized mapping to any basic type</a> supported by Hibernate, </li><li>define a <a href="#dbSpecificMapping">custom mapping to a database-specific type</a>, like PostgreSQLs enum type.</li></ul>
+
+
+
+<!--more-->
+
+
+
+<p>In this article, I will show you how to use all 3 of these options to map the following <em>Rating</em> enum. It&#8217;s used in the <em>Review </em>entity to represent the rating of a<em> </em>book.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public enum Rating {
+	ONE, TWO, THREE, FOUR, FIVE
+}
+</pre>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#JPA_Hibernate_Standard_Enum_Mappings"><span class="toc_number toc_depth_1">1</span> JPA &amp; Hibernate Standard Enum Mappings</a></li><li><a href="#Customized_Mapping_to_a_Supported_Basic_Type"><span class="toc_number toc_depth_1">2</span> Customized Mapping to a Supported Basic Type</a><ul><li><a href="#Create_a_Custom_Mapping"><span class="toc_number toc_depth_2">2.1</span> Create a Custom Mapping</a></li><li><a href="#Use_the_AttributeConverter"><span class="toc_number toc_depth_2">2.2</span> Use the AttributeConverter</a></li></ul></li><li><a href="#Customized_Mapping_to_a_Database-Specific_Enum_Type"><span class="toc_number toc_depth_1">3</span> Customized Mapping to a Database-Specific Enum Type</a><ul><li><a href="#Create_a_DB-Specific_Enum_Type"><span class="toc_number toc_depth_2">3.1</span> Create a DB-Specific Enum Type</a></li><li><a href="#Use_Your_Custom_Type"><span class="toc_number toc_depth_2">3.2</span> Use Your Custom Type</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2 id="standardMapping"><span id="JPA_Hibernate_Standard_Enum_Mappings">JPA &amp; Hibernate Standard Enum Mappings</span></h2>
+
+
+
+<p>Enums are a first-class citizen of the Java language and used in most domain models. So, it&#8217;s no surprise that JPA and Hibernate provide a <a href="https://thorben-janssen.com/hibernate-getting-started/">standard mapping</a> for them.</p>
+
+
+
+<div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+https://youtu.be/mT6I11cVXCs</div><p>You can choose between 2 mappings:</p>
+
+
+
+<ol><li>By default, Hibernate maps an enum to a number. It uses the ordinal value, which is the zero-based position of a value within the definition of the enum. So, the enum value that&#8217;s defined first gets mapped to 0, the second one to 1 and so on.<br>This mapping is very efficient, but there is a high risk that adding or removing a value from your enum will change the ordinal of the remaining values.</li><li>You can map the enum value to a <em>String</em>. <br>This mapping is not as efficient, but you can add or remove enum values without any side effects. You just can&#8217;t rename a value without migrating your database.</li></ol>
+
+
+
+<p>You don&#8217;t need to annotate your entity attribute if you want to store the ordinal value of your enum in the database. Here you can see an example of such a mapping.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	private String message;
+
+	private Rating rating;
+	
+	...
+}</pre>
+
+
+
+<p>As you can see in the screenshot, Hibernate then maps the <em>rating</em> attribute to an <em>integer</em>.</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter"><img width="452" height="115" src="https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateDefaultOrdinalMapping.png" alt="" class="wp-image-22636" srcset="https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateDefaultOrdinalMapping.png 452w, https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateDefaultOrdinalMapping-300x76.png 300w, https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateDefaultOrdinalMapping-400x102.png 400w" sizes="(max-width: 452px) 100vw, 452px" /></figure></div>
+
+
+
+<p>If you instead want to persist the String representation of your enum value, you need to annotate your entity attribute with <em>@Enumerated(EnumType.STRING)</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	private String message;
+
+	@Enumerated(EnumType.STRING)
+	private Rating rating;
+	
+	...
+}</pre>
+
+
+
+<p>When you take a look at the database, you can see that Hibernate now persisted the name of the enum value.</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter"><img width="583" height="116" src="https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateStringMapping.png" alt="" class="wp-image-22637" srcset="https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateStringMapping.png 583w, https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateStringMapping-300x60.png 300w, https://thorben-janssen.com/wp-content/uploads/2019/08/HibernateStringMapping-400x80.png 400w" sizes="(max-width: 583px) 100vw, 583px" /></figure></div>
+
+
+
+
+
+
+
+<h2 id="customizedMapping"><span id="Customized_Mapping_to_a_Supported_Basic_Type">Customized Mapping to a Supported Basic Type</span></h2>
+
+
+
+<p>The 2 previously shown standard mappings are good enough for most domain models. But they can make a refactoring of your persistence layer harder than it should be. They are also not flexible enough to handle the mapping used by most legacy data models.</p>
+
+
+
+<div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+https://youtu.be/TIeeRif4ocg</div><p>In all these situations, a <a href="/jpa-21-type-converter-better-way-to">custom mapping to a <em>String </em>or a number</a> is the better choice. It gives you the flexibility to implement the mapping used in your legacy database. You can handle the changes in your mapping instead of migrating the database if you need to refactor your enum.</p>
+
+
+
+<h3><span id="Create_a_Custom_Mapping">Create a Custom Mapping</span></h3>
+
+
+
+<p>Creating a custom mapping is straightforward. You <a href="https://thorben-janssen.com/jpa-21-how-to-implement-type-converter/">implement the&nbsp;<em>AttributeConverter</em>&nbsp;interface</a>, annotate the class with <em>@Converter</em>, and implement the 2 methods that provide the mapping between the entity and the database representation. If you want to use the converter for all attributes of type <em>Rating</em> automatically, you can set the <em>autoApply </em>attribute of the <em>@Converter</em> annotation to <em>true</em>.</p>
+
+
+
+<p>In the following example, I map the&nbsp;<em>Rating</em>&nbsp;enum to an integer.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Converter
+public class RatingAttributeConverter implements AttributeConverter&lt;Rating, Integer&gt; {
+
+	@Override
+	public Integer convertToDatabaseColumn(Rating attribute) {
+		if (attribute == null)
+			return null;
+
+		switch (attribute) {
+		case ONE:
+			return 1;
+
+		case TWO:
+			return 2;
+
+		case THREE:
+			return 3;
+
+		case FOUR:
+			return 4;
+
+		case FIVE:
+			return 5;
+
+		default:
+			throw new IllegalArgumentException(attribute + &quot; not supported.&quot;);
+		}
+	}
+
+	@Override
+	public Rating convertToEntityAttribute(Integer dbData) {
+		if (dbData == null)
+			return null;
+
+		switch (dbData) {
+		case 1:
+			return Rating.ONE;
+
+		case 2:
+			return Rating.TWO;
+
+		case 3:
+			return Rating.THREE;
+
+		case 4:
+			return Rating.FOUR;
+
+		case 5:
+			return Rating.FIVE;
+
+		default:
+			throw new IllegalArgumentException(dbData + &quot; not supported.&quot;);
+		}
+	}
+
+}</pre>
+
+
+
+<p>This mapping is very similar to the mapping as an ordinal value. But this one is easier to read, and you don&#8217;t need to worry about any refactorings.</p>
+
+
+
+<p>Hibernate&#8217;s ordinal mapping would map <em>Rating.ONE</em> to its ordinal value 0, <em>Rating.TWO</em> to the ordinal 1 and so on. By using the RatingConverter, we get the more intuitive mapping of <em>Rating.ONE</em> to 1, <em>Rating.TWO</em> to 2, &#8230;</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter"><img width="454" height="116" src="https://thorben-janssen.com/wp-content/uploads/2019/08/ConverterMapping.png" alt="" class="wp-image-22638" srcset="https://thorben-janssen.com/wp-content/uploads/2019/08/ConverterMapping.png 454w, https://thorben-janssen.com/wp-content/uploads/2019/08/ConverterMapping-300x77.png 300w, https://thorben-janssen.com/wp-content/uploads/2019/08/ConverterMapping-400x102.png 400w" sizes="(max-width: 454px) 100vw, 454px" /></figure></div>
+
+
+
+<h3><span id="Use_the_AttributeConverter">Use the AttributeConverter</span></h3>
+
+
+
+<p>But before you try to use this mapping, you need to put the right annotations on your entity attribute. </p>
+
+
+
+<p>You can&#8217;t use an <em>AttributeConverter </em>on an entity attribute that&#8217;s annotated with <em>@Enumerated</em>. So, you need to remove that annotation from your mapping if you want to use the custom mapping.</p>
+
+
+
+<p>If you didn&#8217;t annotate your converter with <em>@Converter(autoApply=true)</em>, you also need to annotate the entity attribute with <em>@Convert(converter = RatingAttributeConverter.class)</em>. This tells Hibernate to use the referenced converter when it reads or writes this entity attribute.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	private String message;
+
+	@Convert(converter = RatingAttributeConverter.class)
+	private Rating rating;
+	
+	...
+}</pre>
+
+
+
+<p>Hibernate applies the converter transparently whenever you use the <em>Review </em>entity and its <em>rating </em>attribute in your business code, a <a href="https://thorben-janssen.com/jpql/">JPQL</a> or a CriteriaQuery. So, you can use the <em>rating </em>attribute in the same way as any other entity attribute.</p>
+
+
+
+<h2 id="dbSpecificMapping"><span id="Customized_Mapping_to_a_Database-Specific_Enum_Type">Customized Mapping to a Database-Specific Enum Type</span></h2>
+
+
+
+<p>Some databases, like PostgreSQL, offer <a href="https://www.postgresql.org/docs/current/datatype-enum.html">custom data types</a> to store enumerations. These data types are similar to the enum type that we know in Java. They define a set of valid values that can be stored in the database column.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">CREATE TYPE rating_enum AS ENUM (
+    &#039;ONE&#039;, &#039;TWO&#039;, &#039;THREE&#039;, &#039;FOUR&#039;, &#039;FIVE&#039;
+)</pre>
+
+
+
+<p>In the following examples, I use PostgreSQL&#8217;s enum type. But you can use the same approach to support similar types supported by other DBMS.</p>
+
+
+
+<h3><span id="Create_a_DB-Specific_Enum_Type">Create a DB-Specific Enum Type</span></h3>
+
+
+
+<p>Unfortunately, you can&#8217;t use Hibernate&#8217;s default mapping to map your Java enum to a PostgreSQL enum. As explained earlier, Hibernate maps the enum values to an <em>int </em>or a <em>String</em>. But PostgreSQL expects you to set the value as an<em> Object</em>.</p>
+
+
+
+<p>If you want to map your enum to PostgreSQL&#8217;s enum type, you need to implement a <a href="https://thorben-janssen.com/persist-postgresqls-jsonb-data-type-hibernate/">custom mapping</a>. But don&#8217;t worry, if you extend Hibernate&#8217;s <em>EnumType</em>, you just need to override 1 method to set the value as an object. That only requires 4 lines of code.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class EnumTypePostgreSql extends EnumType {
+
+	@Override
+	public void nullSafeSet(PreparedStatement st, Object value, int index,
+			SharedSessionContractImplementor session)
+			throws HibernateException, SQLException {
+		if(value == null) {
+            st.setNull( index, Types.OTHER );
+        }
+        else {
+            st.setObject( index, value.toString(), Types.OTHER );
+        }
+	}
+
+	
+}</pre>
+
+
+
+<p>And to make it even better, you can use your custom type to map any Java enum to a PostgreSQL enum. So, you can use this type for all enums in your project, and you can even add it to one of your internal libraries.</p>
+
+
+
+<h3><span id="Use_Your_Custom_Type">Use Your Custom Type</span></h3>
+
+
+
+<p>You can use the custom type in your entity mappings in 2 ways.</p>
+
+
+
+<p>You can reference the class of your enum type in a <em>@Type</em> annotation on your entity attribute. This is a good approach if you only use the type on one entity attribute.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	private String message;
+
+	@Enumerated(EnumType.STRING)
+	@Type(type = &quot;org.thoughts.on.java.model.EnumTypePostgreSql&quot;)
+	private Rating rating;
+	
+	...
+}</pre>
+
+
+
+<p>When you use this mapping, Hibernate uses the <em>EnumTypePostgreSql </em>to map the <em>Rating </em>value to a PostgreSQL-specific enum type.</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter"><img width="418" height="84" src="https://thorben-janssen.com/wp-content/uploads/2019/08/PostgreSqlMapping.png" alt="" class="wp-image-22640" srcset="https://thorben-janssen.com/wp-content/uploads/2019/08/PostgreSqlMapping.png 418w, https://thorben-janssen.com/wp-content/uploads/2019/08/PostgreSqlMapping-300x60.png 300w, https://thorben-janssen.com/wp-content/uploads/2019/08/PostgreSqlMapping-400x80.png 400w" sizes="(max-width: 418px) 100vw, 418px" /></figure></div>
+
+
+
+<p>If you use the type to map multiple entity attributes, you should register your type using a<em> @TypeDef </em>annotation. You can either add the annotation to one of your entities or put it into a <em>package-info.java</em> file. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@org.hibernate.annotations.TypeDef(name = &quot;enum_postgressql&quot;, typeClass = EnumTypePostgreSql.class)
+
+package org.thoughts.on.java.model;</pre>
+
+
+
+<p>After you&#8217;ve done that, you can reference the type by its logical name in your entity mapping.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	private String message;
+
+	@Enumerated(EnumType.STRING)
+	@Type(type = &quot;enum_postgressql&quot;)
+	private Rating rating;
+	
+	...
+}</pre>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>With Hibernate, you can map enums in 3 ways:</p>
+
+
+
+<ol><li>Hibernate&#8217;s <a href="https://thorben-janssen.com/hibernate-tips-map-enum-database-column/">standard mappings</a> provide a simple way to store enum values in your database. You can choose if you want to persist the <em>String </em>representation of your enum value or if you prefer its ordinal value. The <em>String </em>representation is more robust, while the ordinal value is more efficient.</li><li>If you need to map a legacy database or if you prefer a mapping that you can easily refactor, you should implement your <a href="https://thorben-janssen.com/jpa-21-type-converter-better-way-to/">own mapping using an </a><em><a href="https://thorben-janssen.com/jpa-21-type-converter-better-way-to/">AttributeConverter</a></em>.</li><li> JPA and Hibernate don&#8217;t support any database-specific enum types. If you want to use them in your table model, you need to implement your own enum type by extending Hibernate&#8217;s <em>EnumType</em>.</li></ol></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Database Migration with Spring Boot</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Database Migration with Spring Boot</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>All applications that get deployed to production should use an automated approach to migrate their database. It makes your job a lot easier. It also ensures you don’t miss any changes during the update process. That&#8217;s, of course, also true if you develop your application based on Spring Boot. The integration of Flyway and Liquibase makes it even more comfortable.</p>
+
+
+
+<p>Flyway and Liquibase are two of the most popular Java libraries for version-based database migration. The general idea of this approach is to use a similar versioning and migration tactic as you did for your application code. For each version, you provide the required steps to migrate your database from the previous to the new version. Using Flyway or Liquibase, you can then automatically apply the required migration steps to update your database from any version to the current version.</p>
+
+
+
+<p>A lot can be said about Version-based database migration and Spring Boot. I will focus on the integration of Flyway and Liquibase. To get the most out of this article, you should already be familiar with the following topics or follow the links below to learn more about them:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/database-migration-with-liquibase-getting-started/">Version-based database migration</a> and its advantages, </li><li><a href="https://thorben-janssen.com/what-is-spring-data-jpa-and-why-should-you-use-it/">Spring Data JPA</a> as Spring&#8217;s persistence framework on top of JPA, and </li><li>The database migration tools <a href="https://thorben-janssen.com/flyway-getting-started/">Flyway</a> or <a href="https://thorben-janssen.com/database-migration-with-liquibase-getting-started/">Liquibase</a>.</li></ul>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Using_Flyway_and_Spring_Boot"><span class="toc_number toc_depth_1">1</span> Using Flyway and Spring Boot</a><ul><li><a href="#Adding_Flyway_to_Your_Application"><span class="toc_number toc_depth_2">1.1</span> Adding Flyway to Your Application</a></li><li><a href="#Configuring_Flyway"><span class="toc_number toc_depth_2">1.2</span> Configuring Flyway</a></li><li><a href="#Supporting_Multiple_Databases"><span class="toc_number toc_depth_2">1.3</span> Supporting Multiple Databases</a></li><li><a href="#Supporting_Different_Profiles"><span class="toc_number toc_depth_2">1.4</span> Supporting Different Profiles</a></li><li><a href="#Learn_More_About_Flyway"><span class="toc_number toc_depth_2">1.5</span> Learn More About Flyway</a></li></ul></li><li><a href="#Using_Liquibase_and_Spring_Boot"><span class="toc_number toc_depth_1">2</span> Using Liquibase and Spring Boot</a><ul><li><a href="#Configuring_Liquibase"><span class="toc_number toc_depth_2">2.1</span> Configuring Liquibase</a></li><li><a href="#Supporting_Multiple_Databases-2"><span class="toc_number toc_depth_2">2.2</span> Supporting Multiple Databases</a></li><li><a href="#Supporting_Different_Profiles-2"><span class="toc_number toc_depth_2">2.3</span> Supporting Different Profiles</a></li><li><a href="#Learn_More_About_Liquibase"><span class="toc_number toc_depth_2">2.4</span> Learn More About Liquibase</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">3</span> Conclusion</a></li></ul></div>
+<h2><span id="Using_Flyway_and_Spring_Boot">Using Flyway and Spring Boot</span></h2>
+
+
+
+<p>Let&#8217;s talk about Spring Boot&#8217;s Flyway integration first. Flyway can execute <a href="https://thorben-janssen.com/flyway-getting-started/">SQL scripts</a> or <a href="https://thorben-janssen.com/java-based-database-migrations-callbacks-flyway/">Java classes</a> to perform a migration step. You can run it from the command line, as part of your build process, or integrate it into your application.</p>
+
+
+
+<h3><span id="Adding_Flyway_to_Your_Application">Adding Flyway to Your Application</span></h3>
+
+
+
+<p>Spring Boot automatically integrates Flyway into the startup of your application. You only need to add a dependency to <em>flyway-core</em> to your build process.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;dependency&gt;
+    &lt;groupId&gt;org.flywaydb&lt;/groupId&gt;
+    &lt;artifactId&gt;flyway-core&lt;/artifactId&gt;
+&lt;/dependency&gt;</pre>
+
+
+
+<p>Spring Boot will pick the Flyway version that&#8217;s supported by the current Spring Boot version and add the required code to run Flyway at application startup. Flyway will then use the configured datasource to check the current version of your database, scan the directory <em>classpath:db/migration</em> for migration steps, and migrate the database to the current version.</p>
+
+
+
+<p>As mentioned earlier, you can use SQL scripts or Java classes to define your migration steps. The SQL scripts have to follow the naming pattern <em>V&lt;VERSION&gt;__&lt;NAME&gt;.sql</em>, e.g. <em>V1__create_person_table.sql</em>. And the name of your Java classes has to follow the pattern <em>V&lt;VERSION&gt;__NAME</em>, e.g. <em>V2__extract_address</em>.</p>
+
+
+
+<p>If you want to learn more about Flyway&#8217;s features, how it keeps track of the current database version, and how it finds the required SQL scripts and Java classes, please read this article: <a href="https://thorben-janssen.com/flyway-getting-started/">Getting Started with Flyway and Version-Based Database Migration</a>.</p>
+
+
+
+<h3><span id="Configuring_Flyway">Configuring Flyway</span></h3>
+
+
+
+<p>You can use all of Flyway&#8217;s configuration parameters in Spring&#8217;s <em>application.properties</em> file to adapt the default behavior. You just need to add the prefix &#8220;<em>spring.</em>&#8221; to all parameter names. <a href="https://flywaydb.org/documentation/configfiles">Flyway&#8217;s documentation</a> contains a complete list of all supported configuration parameters.</p>
+
+
+
+<p>In general, Flyway’s default configuration is a good fit for most applications. The Spring Boot integration reduces the number of the required configuration parameters even further. It automatically reuses the <em>spring.datasource.url</em> that you configured for <a href="https://thorben-janssen.com/jpa-features-easier-spring-data-jpa/">Spring Data JPA</a> for your Flyway configuration. If you want Flyway to use a different datasource, you can configure it using the <em>spring.flyway.url</em> property.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">spring.flyway.url=jdbc:derby:c:/dev/flyway-db;create=true</pre>
+
+
+
+<p>There is one more parameter that gets used by most applications. It&#8217;s called <em>spring.flyway.locations.</em> It defines the locations in which Flyway searches for SQL scripts and Java classes.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">spring.flyway.locations=classpath:db/migration/h2
+</pre>
+
+
+
+<h3><span id="Supporting_Multiple_Databases">Supporting Multiple Databases</span></h3>
+
+
+
+<p>The integration into your application and the automated execution of your Flyway migration isn&#8217;t the only usability feature provided by Spring Boot. It also makes it a lot easier to support multiple databases.</p>
+
+
+
+<p>If you’re using Flyway standalone, you should create a separate folder for each database that contains the migration scripts. You then need to provide the correct path to that folder during application startup or when you execute Flyway on the command line.</p>
+
+
+
+<p>The Spring Boot integration makes that a little easier. You still need to create a separate folder with the migration scripts for each database. But if you use the <em>{vendor}</em> placeholder in your <em>spring.flyway.locations </em>configuration, Spring picks the folder that matches your database driver.</p>
+
+
+
+<p>I use that in the following configuration. My pom.xml file contains a dependency to a Derby JDBC driver and the spring.datasource.url defines a connection to a Derby database. Spring Boot recognizes that and replaces the <em>{vendor}</em> placeholder with <em>derby</em>. So, it executes the migration scripts in the&nbsp;<em>classpath:db/migration/derby</em>&nbsp;folder.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;project&gt;
+	&lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+	&lt;parent&gt;
+		&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+		&lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+		&lt;version&gt;2.2.7.RELEASE&lt;/version&gt;
+		&lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt;
+	&lt;/parent&gt;
+	&lt;groupId&gt;com.thorben.janssen&lt;/groupId&gt;
+	&lt;artifactId&gt;flyway-springboot&lt;/artifactId&gt;
+	&lt;version&gt;0.0.1-SNAPSHOT&lt;/version&gt;
+	&lt;name&gt;flyway-springboot&lt;/name&gt;
+	&lt;description&gt;Demo project for Spring Boot using Flyway&lt;/description&gt;
+
+	&lt;dependencies&gt;	
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.apache.derby&lt;/groupId&gt;
+			&lt;artifactId&gt;derby&lt;/artifactId&gt;
+			&lt;scope&gt;runtime&lt;/scope&gt;
+		&lt;/dependency&gt;
+		
+		...
+	&lt;/dependencies&gt;	
+	
+	...
+&lt;/project&gt;
+</pre>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">spring.datasource.url=jdbc:derby:c:/dev/flyway-db;create=true
+
+spring.flyway.locations=classpath:db/migration/{vendor}
+</pre>
+
+
+
+<h3><span id="Supporting_Different_Profiles">Supporting Different Profiles</span></h3>
+
+
+
+<p>Another exciting feature in Spring is the support for different profiles, including dev, test, or prod. As you might have guessed from the names, profiles are often used to define environment-specific behaviors. One of the best ways to use profile-specific configurations is by providing separate configuration files. You can define your default configuration in your <em>application.properties</em> file. Profile-specific settings override these defaults. You specify them in separate configuration files that follow the naming convention <em>application-profile.properties</em>.</p>
+
+
+
+<p>Because this is a standard Spring feature, you can also use it with the Flyway integration. Some teams use this to override the spring.flyway.location property to include an SQL script that adds test data.</p>
+
+
+
+<h3><span id="Learn_More_About_Flyway">Learn More About Flyway</span></h3>
+
+
+
+<p>OK, that&#8217;s all you need to know about Flyway&#8217;s Spring Boot configuration. There is still a lot more to learn about Flyway itself. The following articles give you a great overview of this popular database migration library:</p>
+
+
+
+<ul><li><a href="/flyway-getting-started">Getting Started with Flyway and Version-Based Database Migration</a></li><li><a href="/java-based-database-migrations-callbacks-flyway/">How to Use Java-based Migrations and Callbacks with Flyway</a></li></ul>
+
+
+
+<h2><span id="Using_Liquibase_and_Spring_Boot">Using Liquibase and Spring Boot</span></h2>
+
+
+
+<p>Liquibase is very similar to Flyway. All you need to do is add a dependency to your project and Spring Boot will handle everything else automatically.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;project&gt;
+	&lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+	&lt;parent&gt;
+		&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+		&lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+		&lt;version&gt;2.2.7.RELEASE&lt;/version&gt;
+		&lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt;
+	&lt;/parent&gt;
+	&lt;groupId&gt;com.thorben.janssen&lt;/groupId&gt;
+	&lt;artifactId&gt;liquibase-springboot&lt;/artifactId&gt;
+	&lt;version&gt;0.0.1-SNAPSHOT&lt;/version&gt;
+	&lt;name&gt;liquibase-springboot&lt;/name&gt;
+	&lt;description&gt;Demo project for Spring Boot using Liquibase&lt;/description&gt;
+
+	&lt;dependencies&gt;	
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.liquibase&lt;/groupId&gt;
+			&lt;artifactId&gt;liquibase-core&lt;/artifactId&gt;
+		&lt;/dependency&gt;
+		
+		...
+	&lt;/dependencies&gt;	
+	
+	...
+&lt;/project&gt;
+</pre>
+
+
+
+<p>Spring Boot calls Liquibase during application startup. Liquibase checks which database version is currently deployed. It then gets the available migration steps from&nbsp;<em>classpath:/db/changesets/db.changelog-master.xml,</em>&nbsp;and executes all the required ones.</p>
+
+
+
+<p>All of these features are provided by Liquibase and I explained them in great detail in&nbsp;<a rel="noreferrer noopener" target="_blank" href="https://thorben-janssen.com/database-migration-with-liquibase-getting-started/">Version-Based Database Migration with Liquibase – Getting Started</a>.</p>
+
+
+
+<h3><span id="Configuring_Liquibase">Configuring Liquibase</span></h3>
+
+
+
+<p>Spring Boot&#8217;s Liquibase integration also supports all of Liquibase&#8217;s configuration parameters, as it does for Flyway. You can configure them in your <em>application.properties file</em> if you add the prefix <em>spring.liquibase</em> to each of them. You can find a list of the most commonly used configuration parameters in the <a href="https://docs.liquibase.com/workflows/liquibase-community/creating-config-properties.html">Liquibase documentation</a>.</p>
+
+
+
+<p>The default configuration is a good fit for most projects. Spring Boot even sets the configured spring.datasource as Liquibase’s datasource. Due to that, you don&#8217;t need to configure anything.</p>
+
+
+
+<p>If you want to use a different datasource for the migration, you can set the properties&nbsp;<em>spring.liquibase.url</em>,&nbsp;<em>spring.liquibase.user</em>&nbsp;and&nbsp;<em>spring.liquibase.password</em>. They override the configured&nbsp;<em>spring.datasource</em>. So you only need to provide the ones you want to change, e.g. the username and password.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">spring.liquibase.user=iCanChangeThings
+spring.liquibase.password=$uper$ecr3t</pre>
+
+
+
+<p>And you can change the path to the master changelog file using the property <em>spring.liquibase.change-log</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">spring.liquibase.change-log=classpath:db/changelog/master.xml
+</pre>
+
+
+
+<h3><span id="Supporting_Multiple_Databases-2">Supporting Multiple Databases</span></h3>
+
+
+
+<p>The easiest and recommended approach to supporting multiple databases is to use Liquibase’s XML format to describe your migration steps. Liquibase then generates the required SQL statements for each DBMS. You can find out more about it in my <a href="https://thorben-janssen.com/liquibase-update-existing-database/">Liquibase update guide</a>.</p>
+
+
+
+<h3><span id="Supporting_Different_Profiles-2">Supporting Different Profiles</span></h3>
+
+
+
+<p>As explained earlier, Spring Boot supports different profiles. They enable you to define environment-specific configuration settings. You can configure the differences to the default configuration in profile-specific configuration files that follow the naming convention&nbsp;<em>application-profile.properties</em>.</p>
+
+
+
+<p>Liquibase has a similar concept called contexts. You can use them in your changelog files to bind a changeset to a context. You then need to activate the context by setting the&nbsp;<em>spring.liquibase.contexts</em>&nbsp;configuration property. I recommend using the same name for your Spring profile and Liquibase context and activating it in the profile-specific configuration file. The Spring Boot profile test would then set the following property in the&nbsp;<em>application-test.properties</em>&nbsp;file.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">spring.liquibase.contexts=test</pre>
+
+
+
+<h3><span id="Learn_More_About_Liquibase">Learn More About Liquibase</span></h3>
+
+
+
+<p>As you can see, Spring Boot’s Liquibase integration is very easy to use and requires almost no additional configuration. But if you need to be familiar with Liquibase. Here are a few articles that show you all you need to know about it:</p>
+
+
+
+<ul><li><a href="/database-migration-with-liquibase-getting-started/">Version-Based Database Migration with Liquibase – Getting Started</a></li><li><a href="/liquibase-update-existing-database/">Version-Based Database Migration with Liquibase – Update an Existing Database</a></li><li><a href="/automatic-database-updates-integrating-liquibase">How to Implement Automatic Database Updates by Integrating Liquibase</a></li></ul>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>Version-based database migration is the recommended approach to implement reliable and reproducible database updates. Flyway and Liquibase are the 2 most popular libraries that detect and execute the required update steps. You only need to define the update operations and to integrate one of the libraries into your application.</p>
+
+
+
+<p>Spring Boot makes this integration very simple. You only need to add a dependency for Liquibase or Flyway and put a description of your database update operations in the default folder. Spring Boot then provides a default configuration and triggers the migration. If you want to use a different configuration, you can add your configuration parameters to the <em>application.properties</em> file.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

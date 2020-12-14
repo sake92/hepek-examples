@@ -1,0 +1,216 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Tip: How to control cache invalidation for native queries</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate Tip: How to control cache invalidation for native queries</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p><a href="//www.thorben-janssen.com/tips/">Hibernate Tips</a> is a series of posts in which I describe a quick and easy solution for common Hibernate questions. If you have a question for a future Hibernate Tip, please post a comment below. </p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Question"><span class="toc_number toc_depth_1">1</span> Question:</a></li><li><a href="#Solution"><span class="toc_number toc_depth_1">2</span> Solution:</a><ul><li><a href="#Which_native_queries_invalidate_the_cache"><span class="toc_number toc_depth_2">2.1</span> Which native queries invalidate the cache?</a></li><li><a href="#Only_invalidate_affected_regions"><span class="toc_number toc_depth_2">2.2</span> Only invalidate affected regions</a></li></ul></li><li><a href="#Learn_more"><span class="toc_number toc_depth_1">3</span> Learn more:</a></li><li><a href="#Hibernate_Tips_Book"><span class="toc_number toc_depth_1">4</span> Hibernate Tips Book</a></li></ul></div>
+<h2><span id="Question">Question:</span></h2>
+
+
+
+<p>&#8220;I was told that native queries remove all entities from my 2nd level cache. But you&#8217;re still recommending them. Don&#8217;t they negatively affect the performance?&#8221;</p>
+
+
+
+<!--more-->
+
+
+
+<h2><span id="Solution">Solution:</span></h2>
+
+
+
+<p>Yes, some <a href="https://thorben-janssen.com/jpa-native-queries/">native queries</a> invalidate the 2nd level cache. But no, if you do it correctly, it doesn&#8217;t have any negative performance impacts, and it doesn&#8217;t change my recommendation to use them. </p>
+
+
+
+<p>To answer this question in more detail, we first need to discuss which kinds of native queries invalidate the 2nd level cache before we talk about finetuning this process.</p>
+
+
+
+<h3><span id="Which_native_queries_invalidate_the_cache">Which native queries invalidate the cache?</span></h3>
+
+
+
+<p>Native SQL SELECT statements don&#8217;t affect the 2nd level cache, and you don&#8217;t need to worry about any negative performance impacts. But Hibernate invalidates the 2nd level cache if you <a href="https://thorben-janssen.com/use-native-queries-perform-bulk-updates/">execute an SQL UPDATE or DELETE statement as a native query</a>. This is necessary because the SQL statement changed data in the database, and by that, it might have invalidated entities in the cache. By default, Hibernate doesn&#8217;t know which records were affected. Due to this, Hibernate can only invalidate the entire 2nd level cache.</p>
+
+
+
+<p>Let&#8217;s take a look at an example.</p>
+
+
+
+<p>Before I execute the following test, the <em>Author </em>entity with <em>id </em>1 is already in the 2nd level cache. Then I run an SQL UPDATE statement as a native query in one transaction. In the following transaction, I check if the <em>Author </em>entity is still in the cache.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+log.info(&quot;Before native update&quot;);
+log.info(&quot;Author 1 in Cache? &quot; + em.getEntityManagerFactory().getCache().contains(Author.class, 1L));
+
+Query q = em.createNativeQuery(&quot;UPDATE Book SET title = title || &#039; - changed&#039;&quot;);
+q.executeUpdate();
+
+em.getTransaction().commit();
+em.close();
+
+
+
+em = emf.createEntityManager();
+em.getTransaction().begin();
+
+log.info(&quot;After native update&quot;);
+log.info(&quot;Author 1 in Cache? &quot; + em.getEntityManagerFactory().getCache().contains(Author.class, 1L));
+
+a = em.find(Author.class, 1L);
+log.info(a);
+
+em.getTransaction().commit();
+em.close();</pre>
+
+
+
+<p>If you don&#8217;t provide additional information, Hibernate invalidates the 2nd level cache and removes all entities from it. You can see that in the <a href="https://thorben-janssen.com/hibernate-logging-guide/">log messages</a> written by the 2nd transaction. The <em>Author </em>entity with <em>id </em>1 is no longer in the cache, and Hibernate has to use a query to get it from the database.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">06:32:02,752 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Before native update
+06:32:02,752 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Author 1 in Cache? true
+06:32:02,779 DEBUG [org.hibernate.SQL] - UPDATE Book SET title = title || &#039; - changed&#039;
+06:32:02,782 INFO  [org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    14800 nanoseconds spent acquiring 1 JDBC connections;
+    22300 nanoseconds spent releasing 1 JDBC connections;
+    201400 nanoseconds spent preparing 1 JDBC statements;
+    1356000 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    17500 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+06:32:02,782 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - After native update
+06:32:02,782 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Author 1 in Cache? false
+06:32:02,783 DEBUG [org.hibernate.SQL] - select author0_.id as id1_0_0_, author0_.firstName as firstNam2_0_0_, author0_.lastName as lastName3_0_0_, author0_.version as version4_0_0_ from Author author0_ where author0_.id=?
+06:32:02,784 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Author firstName: Joshua, lastName: Bloch
+06:32:02,785 INFO  [org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    11900 nanoseconds spent acquiring 1 JDBC connections;
+    15300 nanoseconds spent releasing 1 JDBC connections;
+    18500 nanoseconds spent preparing 1 JDBC statements;
+    936400 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    256700 nanoseconds spent performing 1 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    114600 nanoseconds spent performing 1 L2C misses;
+    107100 nanoseconds spent executing 1 flushes (flushing a total of 1 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}</pre>
+
+
+
+<h3><span id="Only_invalidate_affected_regions">Only invalidate affected regions</span></h3>
+
+
+
+<p>But that doesn&#8217;t have to be the case. You can tell Hibernate, which entity classes are affected by the query. You just need to <em><a href="https://thorben-janssen.com/hibernate-tips-access-hibernate-apis-jpa/">unwrap</a> </em>the <em>Query </em>object to get a Hibernate-specific <em>SqlQuery</em>, and call the <em>addSynchronizedEntityClass </em>method with a class reference.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+log.info(&quot;Before native update&quot;);
+log.info(&quot;Author 1 in Cache? &quot; + em.getEntityManagerFactory().getCache().contains(Author.class, 1L));
+
+Query q = em.createNativeQuery(&quot;UPDATE Book SET title = title || &#039; - changed&#039;&quot;);
+q.unwrap(NativeQuery.class).addSynchronizedEntityClass(Book.class);
+q.executeUpdate();
+
+em.getTransaction().commit();
+em.close();
+
+
+
+em = emf.createEntityManager();
+em.getTransaction().begin();
+
+log.info(&quot;After native update&quot;);
+log.info(&quot;Author 1 in Cache? &quot; + em.getEntityManagerFactory().getCache().contains(Author.class, 1L));
+
+a = em.find(Author.class, 1L);
+log.info(a);
+
+em.getTransaction().commit();
+em.close();</pre>
+
+
+
+<p>My SQL UPDATE statement changes records in the <em>Book </em>table which gets mapped by the <em>Book </em>entity. After providing this information to Hibernate, it online invalidates the region of the <em>Book</em> entity and the <em>Author </em>entities stay in the 2nd level cache.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">06:30:51,985 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Before native update
+06:30:51,985 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Author 1 in Cache? true
+06:30:52,011 DEBUG [org.hibernate.SQL] - UPDATE Book SET title = title || &#039; - changed&#039;
+06:30:52,014 INFO  [org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    18400 nanoseconds spent acquiring 1 JDBC connections;
+    19900 nanoseconds spent releasing 1 JDBC connections;
+    86000 nanoseconds spent preparing 1 JDBC statements;
+    1825400 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    19400 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+06:30:52,015 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - After native update
+06:30:52,015 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Author 1 in Cache? true
+06:30:52,015 INFO  [org.thoughts.on.java.model.Test2ndLevelCache] - Author firstName: Joshua, lastName: Bloch
+06:30:52,016 INFO  [org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    10000 nanoseconds spent acquiring 1 JDBC connections;
+    25700 nanoseconds spent releasing 1 JDBC connections;
+    0 nanoseconds spent preparing 0 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    86900 nanoseconds spent performing 1 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    104700 nanoseconds spent executing 1 flushes (flushing a total of 1 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}</pre>
+
+
+
+
+
+
+
+<h2><span id="Learn_more">Learn more:</span></h2>
+
+
+
+<p>If you want to learn more about native queries or Hibernate&#8217;s caches, you will find the following articles interesting:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/jpa-native-queries/">Native Queries &#8211; How to call native SQL queries with JPA</a></li><li><a href="https://thorben-janssen.com/use-native-queries-perform-bulk-updates/">How to use native queries to perform bulk updates</a></li><li><a href="https://thorben-janssen.com/hibernate-tips-use-querycache-avoid-additional-queries/">Hibernate Tips: Use the QueryCache to avoid additional queries</a></li></ul>
+
+
+
+&nbsp;<br />
+<h2><span id="Hibernate_Tips_Book">Hibernate Tips Book</span></h2><br />
+<div><br />
+<br />
+<img style="float: left; max-width: 150px; margin-right: 10px;" src="/wp-content/uploads/2017/04/HibernateTips3D2.png" /><br />
+<div><br />
+<br />
+Get more recipes like this one in my new book <a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Hibernate Tips: More than 70 solutions to common Hibernate problems</a>.<br />
+<br />
+It gives you more than 70 ready-to-use recipes for topics like basic and advanced mappings, logging, Java 8 support, caching, and statically and dynamically defined queries.<br />
+<br />
+<a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Get it now</a>!<br />
+<br />
+</div><br />
+</div></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

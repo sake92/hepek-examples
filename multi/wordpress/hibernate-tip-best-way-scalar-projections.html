@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Tip: Best Way To Work with Scalar Projections</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate Tip: Best Way To Work with Scalar Projections</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p><a href="//www.thorben-janssen.com/tips/">Hibernate Tips</a> is a series of posts in which I describe a quick and easy solution for common Hibernate questions. If you have a question for a future Hibernate Tip, please post a comment below. </p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Question"><span class="toc_number toc_depth_1">1</span> Question:</a></li><li><a href="#Solution"><span class="toc_number toc_depth_1">2</span> Solution:</a><ul><li><a href="#Tuple_interface_8211_The_best_scalar_projection"><span class="toc_number toc_depth_2">2.1</span> Tuple interface &#8211; The best scalar projection</a><ul><li><a href="#Retrieving_a_Tuple_interface_with_JPQL"><span class="toc_number toc_depth_3">2.1.1</span> Retrieving a Tuple interface with JPQL</a></li><li><a href="#Retrieving_a_Tuple_interface_with_a_CriteriaQuery"><span class="toc_number toc_depth_3">2.1.2</span> Retrieving a Tuple interface with a CriteriaQuery</a></li></ul></li></ul></li><li><a href="#Learn_more"><span class="toc_number toc_depth_1">3</span> Learn more:</a></li><li><a href="#Hibernate_Tips_Book"><span class="toc_number toc_depth_1">4</span> Hibernate Tips Book</a></li></ul></div>
+<h2><span id="Question">Question:</span></h2>
+
+
+
+<p>On <a href="https://thorben-janssen.com/optimal-query-and-projection-jpa-hibernate/">my latest article</a>, Steve Ebersole reminded me of the <em>Tuple</em> interface. And to be honest, I don&#8217;t know how I could miss to mention it in that article. The <em>Tuple</em> interface is by far the most comfortable way to work with scalar projections, and I recommend them regularly.</p>
+
+
+
+<p>So, in today&#8217;s Hibernate Tip, I want to show you the best way to work with a scalar value projection returned by your JPQL or CriteriaQuery.</p>
+
+
+
+<!--more-->
+
+
+
+<h2><span id="Solution">Solution:</span></h2>
+
+
+
+<p>Scalar values can be a good projection if you need to read a few columns that you want to process immediately and you don&#8217;t have a matching <a href="https://thorben-janssen.com/dto-projections/">DTO</a> class for them. </p>
+
+
+
+<p>The main problem with this projection is that it&#8217;s very uncomfortable to use. By default, a query that uses a scalar projection returns an <em>Object[]</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Object[]&gt; q = em.createQuery(&quot;SELECT b.title, b.publisher.name FROM Book b WHERE b.id = :id&quot;, Object[].class);
+q.setParameter(&quot;id&quot;, 1L);
+Object[] result = q.getSingleResult();</pre>
+
+
+
+<p>You then need to remember the order and types of the selected database columns and handle the <em>Object[]</em> accordingly.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">log.info(result[0] + &quot; was published by &quot; + result[1]);</pre>
+
+
+
+<h3><span id="Tuple_interface_8211_The_best_scalar_projection"><em>Tuple</em> interface &#8211; The best scalar projection</span></h3>
+
+
+
+<p>The <em>Tuple</em> interface provides a better way to work with scalar projections. You still need to remember which entity attributes you selected. But in contrast to an <em>Object[]</em>, you can access the fields using an alias or a <em>TupleElement</em>, and you can cast the value automatically. </p>
+
+
+
+<p>That&#8217;s still not as comfortable as a DTO projection but much better than working with a basic <em>Object[]</em>.</p>
+
+
+
+<p>Let&#8217;s take a look at a JPQL and a <em>CriteriaQuery</em> that return one or more <em>Tuple</em> interfaces.</p>
+
+
+
+<h4><span id="Retrieving_a_Tuple_interface_with_JPQL">Retrieving a <em>Tuple</em> interface with JPQL</span></h4>
+
+
+
+<p>Creating a <a href="https://thorben-janssen.com/jpql/">JPQL query</a> that returns a <em>Tuple</em> interface is simple. You only need to select one or more entity attributes and add the <em>Tuple.class</em> as the second parameter to the <em>createQuery</em> method.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Tuple&gt; q = em.createQuery(&quot;SELECT b.title as title, b.publisher.name as name FROM Book b WHERE b.id = :id&quot;, Tuple.class);
+q.setParameter(&quot;id&quot;, 1L);
+Tuple result = q.getSingleResult();</pre>
+
+
+
+<p>In the next step, you can use the <em>Tuple</em> interface to access your query results. </p>
+
+
+
+<p>The most basic way to access the selected fields is to reference them by their index. That&#8217;s basically the same approach as you would use if you retrieve the query result as an <em>Object[]</em>. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">log.info(result.get(0) + &quot; was published by &quot; + result.get(1));</pre>
+
+
+
+<p>But there is a better way to work with the <em>Tuple</em> interface. One that makes your code easier much easier to read. In the query, I defined an alias for each select entity attribute. You can use these attributes to retrieve the fields from the <em>Tuple</em> interface.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">log.info(result.get(&quot;title&quot;) + &quot; was published by &quot; + result.get(&quot;name&quot;));</pre>
+
+
+
+<h4><span id="Retrieving_a_Tuple_interface_with_a_CriteriaQuery">Retrieving a Tuple interface with a CriteriaQuery</span></h4>
+
+
+
+<p>Here you can see a simple <em>CriteriaQuery</em> that selects the <em>firstName</em> and <em>lastName</em> attributes of the <em>Author</em> entity.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaQuery&lt;Tuple&gt; q = cb.createTupleQuery();
+Root&lt;Author&gt; author = q.from(Author.class);
+Path&lt;String&gt; firstName = author.get(Author_.firstName);
+Path&lt;String&gt; lastName = author.get(Author_.lastName);
+q.multiselect(firstName, lastName);
+
+TypedQuery&lt;Tuple&gt; query = em.createQuery(q);
+List&lt;Tuple&gt; authorNames = query.getResultList();</pre>
+
+
+
+<p>To create such a query, you first need to get a <em>CriteriaBuilder</em> instance and call the <em>createTupleQuery()</em> method. This gives you a CriteriaQuery that will return one or more <em>Tuple</em> interfaces.</p>
+
+
+
+<p>In the next step, you define your FROM clause and your projection. In this example, I call the <em><a href="https://thorben-janssen.com/hibernate-tips-select-multiple-scalar-values-criteria-query/">multiselect</a></em> method on the <em>CriteriaQuery</em> with 2 <em>Path</em> objects. You could provide them directly to the <em>multiselect</em> method. But storing them in variables enables you to use them to retrieve the selected values from your <em>Tuple</em> interface.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">for (Tuple authorName : authorNames) {
+	log.info(authorName.get(firstName) + &quot; &quot; + authorName.get(lastName));
+}</pre>
+
+
+
+
+
+
+
+<h2><span id="Learn_more">Learn more:</span></h2>
+
+
+
+<p>If you want to learn more about queries and projections, you should read the following articles:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/optimal-query-and-projection-jpa-hibernate/">Using the Optimal Query Approach and Projection for JPA and Hibernate</a></li><li><a href="https://thorben-janssen.com/dto-projections/">Why, When and How to Use DTO Projections with JPA and Hibernate</a></li><li><a href="https://thorben-janssen.com/hibernate-tips-select-multiple-scalar-values-criteria-query/">Hibernate Tips: How to select multiple scalar values in a Criteria Query</a></li><li><a href="https://thorben-janssen.com/jpql/">Ultimate Guide to JPQL Queries with JPA and Hibernate</a></li></ul>
+
+
+
+&nbsp;<br />
+<h2><span id="Hibernate_Tips_Book">Hibernate Tips Book</span></h2><br />
+<div><br />
+<br />
+<img style="float: left; max-width: 150px; margin-right: 10px;" src="/wp-content/uploads/2017/04/HibernateTips3D2.png" /><br />
+<div><br />
+<br />
+Get more recipes like this one in my new book <a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Hibernate Tips: More than 70 solutions to common Hibernate problems</a>.<br />
+<br />
+It gives you more than 70 ready-to-use recipes for topics like basic and advanced mappings, logging, Java 8 support, caching, and statically and dynamically defined queries.<br />
+<br />
+<a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Get it now</a>!<br />
+<br />
+</div><br />
+</div></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

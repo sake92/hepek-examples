@@ -1,0 +1,256 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate &amp; Testcontainers – A Perfect Match For Your Tests?</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate &amp; Testcontainers – A Perfect Match For Your Tests?</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>When writing tests that rely on a database, you are facing 2 challenges:</p>
+
+
+
+<ol><li>You need to write meaningful tests that ensure that your application works correctly.</li><li>You need to provide a test database for each test run.</li></ol>
+
+
+
+<p>I can’t help you with the 1st challenge. You know your application a lot better than I do, and I’m sure you will be able to figure this out.</p>
+
+
+
+<p>But I can show you a simple technical solution to provide a test database for each test run. Using the <a href="https://www.testcontainers.org/">Testcontainers library</a>, you can easily start up a Docker container with your database for your test run.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Adding_Testcontainers_to_Your_Project"><span class="toc_number toc_depth_1">1</span> Adding Testcontainers to Your Project</a></li><li><a href="#Project_Setup"><span class="toc_number toc_depth_1">2</span> Project Setup</a><ul><li><a href="#Working_With_Random_Ports"><span class="toc_number toc_depth_2">2.1</span> Working With Random Ports</a><ul><li><a href="#Option_1_Testcontainers_JDBC_Driver_and_a_Special_JDBC_URL"><span class="toc_number toc_depth_3">2.1.1</span> Option 1: Testcontainers JDBC Driver and a Special JDBC URL</a></li><li><a href="#Option_2_Using_environment_variables_in_JDBC_URL"><span class="toc_number toc_depth_3">2.1.2</span> Option 2: Using environment variables in JDBC URL</a></li></ul></li></ul></li><li><a href="#Tips_to_Speed-up_Your_Tests"><span class="toc_number toc_depth_1">3</span> Tips to Speed-up Your Tests</a><ul><li><a href="#Use_TempFS_For_Faster_Storage"><span class="toc_number toc_depth_2">3.1</span> Use TempFS For Faster Storage</a></li><li><a href="#Run_DB_in_Deamon_Mode"><span class="toc_number toc_depth_2">3.2</span> Run DB in Deamon Mode</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2><span id="Adding_Testcontainers_to_Your_Project">Adding Testcontainers to Your Project</span></h2>
+
+
+
+<p>Before you can add Testcontainers to your project, you need to make sure that you have a working Docker instance running on your system. If you don&#8217;t have that or are not familiar with Docker, please take a look at <a href="https://www.docker.com/">https://www.docker.com/</a>. They provide installers for various OS and host great documentation, including a <a href="https://www.docker.com/get-started">getting started guide</a>.</p>
+
+
+
+<p>Adding the Testcontainers library itself to your project is simple. You only need to add a dependency to a database-specific Testcontainers module to your application. In the example of this post, I want to test my code against a PostgreSQL database. Because of that, I add a dependency to the <em>org.testcontainers.postgresql</em> module to my <em>pom.xml</em> file. There are several other modules available for other DBMS.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;dependency&gt;
+	&lt;groupId&gt;org.testcontainers&lt;/groupId&gt;
+	&lt;artifactId&gt;postgresql&lt;/artifactId&gt;
+	&lt;version&gt;1.14.3&lt;/version&gt;
+	&lt;scope&gt;test&lt;/scope&gt;
+&lt;/dependency&gt;</pre>
+
+
+
+<h2><span id="Project_Setup">Project Setup</span></h2>
+
+
+
+<p>After you&#8217;ve added the required dependency to your project, you can tell Testcontainers to start up a docker container with your test database as part of your test case. I will show you 2 options for that in this article. But before we take a look at them, we need to talk about database ports.</p>
+
+
+
+<p>Most applications and test configurations expect that the database runs at a pre-defined hostname and port. A typical example is the port 5432 of a PostgreSQL database. But you can&#8217;t do that if you’re using Testcontainers. Every time it starts a new docker container with your database, it maps the container-internal port 5432 to a random port on your system.</p>
+
+
+
+<p>When you use Testcontainers for the first time, exposing random ports might seem like a massive annoyance or maybe even a bug. But it isn&#8217;t. It&#8217;s a feature that makes it much easier to test multiple applications in parallel. Because Testcontainers always picks a new port, each test suite will start its own database container on a separate port without affecting any other test that runs in parallel.</p>
+
+
+
+<h3><span id="Working_With_Random_Ports">Working With Random Ports</span></h3>
+
+
+
+<p>As good as using random ports might be for running tests in parallel, it creates a new challenge for your test setup. Instead of starting your application and connecting it to a predefined database host, you now need to adjust the configuration. There are 2 easy ways you can do that using plain Hibernate.</p>
+
+
+
+<h4><span id="Option_1_Testcontainers_JDBC_Driver_and_a_Special_JDBC_URL">Option 1: Testcontainers JDBC Driver and a Special JDBC URL</span></h4>
+
+
+
+<p>The easiest way to automatically connect to the database container started by Testcontainers is to use their JDBC driver. You can do that by changing the <em>javax.persistence.jdbc.driver</em> property in your <em>persistence.xml</em> or your connection pool configuration to <em>org.testcontainers.jdbc.ContainerDatabaseDriver</em>. After you’ve done that, you can provide the specification name of the database container that Testcontainers shall start in the <em>javax.persistence.jdbc.url</em> configuration property.</p>
+
+
+
+<p>I use this approach in the following configuration to start a PostgreSQL database server in version 13. On this server, Testcontainers shall create the <em>recipes</em> database.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+		...
+		
+        &lt;properties&gt;
+            &lt;property name=&quot;javax.persistence.jdbc.driver&quot; value=&quot;org.testcontainers.jdbc.ContainerDatabaseDriver&quot; /&gt;
+            &lt;property name=&quot;javax.persistence.jdbc.url&quot; value=&quot;jdbc:tc:postgresql:13:///recipes&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.user&quot; value=&quot;postgres&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.password&quot; value=&quot;postgres&quot; /&gt;
+			
+			&lt;!-- Create database schema and add data --&gt;
+			&lt;!-- DON&#039;T use this in production! --&gt;
+            &lt;property name=&quot;javax.persistence.schema-generation.database.action&quot; value=&quot;drop-and-create&quot;/&gt;
+            &lt;property name=&quot;javax.persistence.sql-load-script-source&quot; value=&quot;data.sql&quot;/&gt;
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre>
+
+
+
+<p>Using this configuration, Testcontainers will create an empty database, map it to a random port on your system, and connect to it via JDBC. Because you&#8217;re using Testcontainers <em>ContainerDatabaseDriver</em> JDBC driver, you will automatically connect to the database container.</p>
+
+
+
+<p>You will also need to create the table model and maybe add some data to it. There are several ways to do that. Tools like <a href="https://thorben-janssen.com/flyway-getting-started/">Flyway</a> and <a href="/database-migration-with-liquibase-getting-started/">Liquibase</a> provide the most powerful approaches, and I explained them in great detail in previous articles. In this example, I keep it simple and tell Hibernate to <a href="/standardized-schema-generation-data-loading-jpa-2-1">create the required database tables</a> and use the statements in the data.sql file to load an initial set of data.</p>
+
+
+
+<h4><span id="Option_2_Using_environment_variables_in_JDBC_URL">Option 2: Using environment variables in JDBC URL</span></h4>
+
+
+
+<p>If you don&#8217;t want to replace your JDBC driver with the one provided by the Testcontainers project, you can reference a system property as your database port in the configuration. In the following example, I replaced the port of the database with the property <em>db.port</em>. </p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+		...
+		
+        &lt;properties&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.driver&quot; value=&quot;org.postgresql.Driver&quot; /&gt;
+            &lt;property name=&quot;javax.persistence.jdbc.url&quot; value=&quot;jdbc:postgresql://localhost:${db.port}/recipes&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.user&quot; value=&quot;postgres&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.password&quot; value=&quot;postgres&quot; /&gt;
+			
+			&lt;!-- Create database schema and add data --&gt;
+			&lt;!-- DON&#039;T use this in production! --&gt;
+            &lt;property name=&quot;javax.persistence.schema-generation.database.action&quot; value=&quot;drop-and-create&quot;/&gt;
+            &lt;property name=&quot;javax.persistence.sql-load-script-source&quot; value=&quot;data.sql&quot;/&gt;
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre>
+
+
+
+<p>In the 2nd step, you need to start the database container and set the system property before you instantiate your <em>EntityManagerFactory</em>.</p>
+
+
+
+<p>Testcontainers provides a Java API for their supported containers. In this article&#8217;s examples, I use the <em>PostgreSQLContainer </em>class to start a container with a PostgreSQL database server. If you want to use a specific docker container definition, you can provide its name to the constructor of the <em>PostgreSQLContainer </em>class. After you&#8217;ve done that, you can use an API to configure your database container. </p>
+
+
+
+<p>In the following example, I tell Testcontainers to start a <em>postgres:13</em> container, create the <em>recipes</em> database, and create the user <em>postgres </em>with the password <em>postgres</em>. In the next step, I get the port from my <em>postgreSQLContainer</em> object and set it as the <em>db.port</em> system property.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class TestApplication {
+
+    private EntityManagerFactory emf;
+
+    @ClassRule
+    public static PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer&lt;&gt;(&quot;postgres:13&quot;)                                                                           
+                                                                            .withDatabaseName(&quot;recipes&quot;)
+                                                                            .withUsername(&quot;postgres&quot;)
+                                                                            .withPassword(&quot;postgres&quot;);
+
+    @Before
+    public void init() {
+        System.setProperty(&quot;db.port&quot;, postgreSQLContainer.getFirstMappedPort().toString());
+        emf = Persistence.createEntityManagerFactory(&quot;my-persistence-unit&quot;);
+    }
+	
+    ...
+}</pre>
+
+
+
+<p>As you can see, this approach requires a little more work than using Testcontainers JDBC driver. Because of that, I prefer using the JDBC driver instead of starting the container programmatically.</p>
+
+
+
+<h2><span id="Tips_to_Speed-up_Your_Tests">Tips to Speed-up Your Tests</span></h2>
+
+
+
+<p>Starting a new database container for your test case and stopping it afterward makes your tests independent of their environment. But it slows down your test execution and makes it more difficult to analyze unexpected results.</p>
+
+
+
+<h3><span id="Use_TempFS_For_Faster_Storage">Use TempFS For Faster Storage</span></h3>
+
+
+
+<p>If you&#8217;re running your tests on a Linux system, you can benefit from its temporary file storage feature, called <a href="https://en.wikipedia.org/wiki/Tmpfs">TempFS</a>. It&#8217;s a mounted drive that&#8217;s mapped to your memory instead of your hard drive. It provides much better performance, but you also lose your data when the container gets stopped. <a href="https://docs.docker.com/storage/tmpfs/">Docker supports that</a> for its containers on Linux systems.</p>
+
+
+
+<p>You can tell Testcontainers to start the database container using TempFS by adding the parameter <em>TC_TMPFS</em> to the JDBC URL.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+		...
+		
+        &lt;properties&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.driver&quot; value=&quot;org.postgresql.Driver&quot; /&gt;
+            &lt;property name=&quot;javax.persistence.jdbc.url&quot; value=&quot;jdbc:tc:postgresql:13:///recipes?TC_TMPFS=/testtmpfs:rw&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.user&quot; value=&quot;postgres&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.password&quot; value=&quot;postgres&quot; /&gt;
+			
+			&lt;!-- Create database schema and add data --&gt;
+			&lt;!-- DON&#039;T use this in production! --&gt;
+            &lt;property name=&quot;javax.persistence.schema-generation.database.action&quot; value=&quot;drop-and-create&quot;/&gt;
+            &lt;property name=&quot;javax.persistence.sql-load-script-source&quot; value=&quot;data.sql&quot;/&gt;
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre>
+
+
+
+<h3><span id="Run_DB_in_Deamon_Mode">Run DB in Deamon Mode</span></h3>
+
+
+
+<p>If you want to keep your database container up and running after the test got completed, you need to start it in daemon mode. This can be useful if you want to check how your test case changed the data in your database or if you need to analyze unexpected test results.</p>
+
+
+
+<p>To start the container in daemon mode, you need to set the <em>TC_DAEMON</em> parameter in your JDBC URL to <em>true</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+		...
+		
+        &lt;properties&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.driver&quot; value=&quot;org.postgresql.Driver&quot; /&gt;
+            &lt;property name=&quot;javax.persistence.jdbc.url&quot; value=&quot;jdbc:tc:postgresql:13:///recipes?TC_DAEMON=true&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.user&quot; value=&quot;postgres&quot; /&gt;
+			&lt;property name=&quot;javax.persistence.jdbc.password&quot; value=&quot;postgres&quot; /&gt;
+			
+			&lt;!-- Create database schema and add data --&gt;
+			&lt;!-- DON&#039;T use this in production! --&gt;
+            &lt;property name=&quot;javax.persistence.schema-generation.database.action&quot; value=&quot;drop-and-create&quot;/&gt;
+            &lt;property name=&quot;javax.persistence.sql-load-script-source&quot; value=&quot;data.sql&quot;/&gt;
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>Lots of developers use Docker containers to start up a database for a test run. This often requires external scripts, which you programmatically integrate into your test pipeline.</p>
+
+
+
+<p>The Testcontainers library makes that much easier. You can either configure and start your container programmatically or via Testcontainers&#8217; JDBC driver. I recommend using Testcontainers&#8217; JDBC driver. It enables you to define the container via the JDBC URL and automatically connects your application to it.</p>
+
+
+
+<p>In both cases, the database container gets automatically started before your test gets executed and shut down after the test is completed.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

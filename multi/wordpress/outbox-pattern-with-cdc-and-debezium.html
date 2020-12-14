@@ -1,0 +1,450 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Implementing the Outbox Pattern with CDC using Debezium</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Implementing the Outbox Pattern with CDC using Debezium</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>A microservice architecture makes the implementation of a single service easier but introduces new challenges as soon as you need to share data between services. Reliably sharing data and keeping your services independent of each other isn&#8217;t as easy as most developers expect. But using the right patterns, it&#8217;s also not an impossible task. Using the outbox pattern and a Change Data Capture (CDC) implementation provided by Debezium, this gets actually quite simple.</p>
+
+
+
+<p>In <a href="https://thorben-janssen.com/outbox-pattern-hibernate/">one of my previous articles</a>, I already explained the outbox pattern in great details and showed you how to fill the outbox table with Hibernate. So, in this article, I will only provide a quick introduction to the pattern. And after that, I will show you how to use Debezium and CDC to get the data from the outbox table and send it to Apache Kafka.</p>
+
+
+
+<!--more-->
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Requirements_when_sharing_data_between_services"><span class="toc_number toc_depth_1">1</span> Requirements when sharing data between services</a></li><li><a href="#The_Outbox_Pattern"><span class="toc_number toc_depth_1">2</span> The Outbox Pattern</a></li><li><a href="#Setting_up_the_message_relay_service_using_Debezium"><span class="toc_number toc_depth_1">3</span> Setting up the message relay service using Debezium</a><ul><li><a href="#Setting_up_Debezium"><span class="toc_number toc_depth_2">3.1</span> Setting up Debezium</a></li><li><a href="#Setting_up_the_Outbox_Event_Router"><span class="toc_number toc_depth_2">3.2</span> Setting up the Outbox Event Router</a></li><li><a href="#Customizing_the_Event_Routing"><span class="toc_number toc_depth_2">3.3</span> Customizing the Event Routing</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2><span id="Requirements_when_sharing_data_between_services">Requirements when sharing data between services</span></h2>
+
+
+
+<p>But before we dive into the implementation details, let&#8217;s quickly summarize why updating multiple services is gets so complicated. Why can&#8217;t we update all databases, or at least persist an update in our database and send a message to Apache Kafka?</p>
+
+
+
+<p>The main answer to all these questions is: Because we want to be able to develop, deploy, and scale our services independently!</p>
+
+
+
+<p>You can&#8217;t do that if one service has to know the internal database structure of multiple other services. That introduces strong dependencies between these services and makes it extremely hard to implement and deploy any changes.</p>
+
+
+
+<p>And you would need to use global transactions to avoid dual writes and to ensure data consistency when writing to multiple systems, e.g., your database and Apache Kafka. But global transactions are complex and negatively affect performance and scalability of your system.</p>
+
+
+
+<blockquote class="wp-block-quote"><p>Friends don&#8217;t let friends do dual writes!</p><cite>Gunnar Morling</cite></blockquote>
+
+
+
+<p>So, you need a pattern that enables you to use a local transaction to update your database and to trigger a message that gets sent to Apache Kafka. That might sound impossible, but it&#8217;s possible if you use the outbox pattern to split the communication into 2 parts and accept an eventually consistent approach.</p>
+
+
+
+<h2><span id="The_Outbox_Pattern">The Outbox Pattern</span></h2>
+
+
+
+<p>I already <a href="https://thorben-janssen.com/outbox-pattern-hibernate/">explained the outbox pattern</a> in great details on this blog, so let&#8217;s keep this section short. The general idea is simple:</p>
+
+
+
+<p>Similar to an outbox that was used in paper-based offices, you add an outbox table to the database of your microservice. The service writes all the messages it wants to send to the message broker into this table. A message relay service then collects these messages and sends them to the message broker, e.g., Apache Kafka.</p>
+
+
+
+<p>A typical outbox table looks like this:</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter"><img width="361" height="198" src="https://thorben-janssen.com/wp-content/uploads/2019/08/Outbox-Table.png" alt="" class="wp-image-23057" srcset="https://thorben-janssen.com/wp-content/uploads/2019/08/Outbox-Table.png 361w, https://thorben-janssen.com/wp-content/uploads/2019/08/Outbox-Table-300x165.png 300w" sizes="(max-width: 361px) 100vw, 361px" /><figcaption>Outbox table</figcaption></figure></div>
+
+
+
+<p>The <em>type</em>, <em>aggregatetype,</em> and <em>aggregateid</em> columns provide metadata information about the event or message. These are useful to process your event within Apache Kafka or to allow event consumers to filter the event they want to handle.</p>
+
+
+
+<p>The payload column contains the information that shall be sent to the broker. This can be specific information for an event, or it can be the current state of the aggregate on which the event occurred. I prefer to send the current state of the aggregate. This doesn&#8217;t share any internal details of the microservice that created the event and the consuming services get all the information they might need.</p>
+
+
+
+<p>Here you can see an overview diagram of the complete system:</p>
+
+
+
+<figure class="wp-block-image"><img width="1024" height="576" src="https://thorben-janssen.com/wp-content/uploads/2019/04/Outbox-Pattern-1024x576.png" alt="" class="wp-image-22018" srcset="https://thorben-janssen.com/wp-content/uploads/2019/04/Outbox-Pattern-1024x576.png 1024w, https://thorben-janssen.com/wp-content/uploads/2019/04/Outbox-Pattern-300x169.png 300w, https://thorben-janssen.com/wp-content/uploads/2019/04/Outbox-Pattern-768x432.png 768w, https://thorben-janssen.com/wp-content/uploads/2019/04/Outbox-Pattern-400x225.png 400w, https://thorben-janssen.com/wp-content/uploads/2019/04/Outbox-Pattern.png 1280w" sizes="(max-width: 1024px) 100vw, 1024px" /><figcaption>Microservice architecture</figcaption></figure>
+
+
+
+<p>OK, I already explained the left side of the graphic in a <a href="https://thorben-janssen.com/outbox-pattern-hibernate/">previous post</a>. Let&#8217;s focus on the message relay service. It gets the message from the outbox table and sends it to the message broker. </p>
+
+
+
+<p>You could, of course, implement this service yourself. The easiest implementation polls the outbox table in a defined interval, creates an event for each new record and publishes it to a topic in Apache Kafka.</p>
+
+
+
+<p>But Debezium provides a much better way to set up your message relay service. It doesn&#8217;t require you to write any code, and it doesn&#8217;t need to poll the outbox table.</p>
+
+
+
+
+
+
+
+<h2><span id="Setting_up_the_message_relay_service_using_Debezium">Setting up the message relay service using Debezium</span></h2>
+
+
+
+<p>Debezium provides an implementation of the change data capture (CDC) pattern. It&#8217;s built on top of Apache Kafka and provides Kafka connectors that monitor your database and pick up any changes. The approach and implementation of these connectors depend on the database. You can find out more about it in the <a href="https://debezium.io/docs/faq">Debezium FAQ</a>.</p>
+
+
+
+<h3><span id="Setting_up_Debezium">Setting up Debezium</span></h3>
+
+
+
+<p>In this example, I want to use a PostgreSQL database. The Debezium connector takes a snapshot of the database when you start it for the first time. After that is done, it automatically streams all changes to an Apache Kafka instance. You can do that for all the tables in your database, and the changes in each table get streamed to their own topic. To be able to monitor the changes in your PostgreSQL database, you need to <a href="https://debezium.io/docs/connectors/postgresql/">install a decoder plugin</a> on your PostgreSQL server. </p>
+
+
+
+<p>Or, if you just want to give it a try, you can use the docker example images provided by the Debezium team. That&#8217;s what I&#8217;m using for this article. The following docker-compose.yaml file provides the required configuration to start docker containers for a Zookeeper, an Apache Kafka, a PostgreSQL database, and Kafka Connect instance.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">version: &#039;2&#039;
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: debezium/zookeeper:${DEBEZIUM_VERSION}
+    ports:
+     - 2181:2181
+     - 2888:2888
+     - 3888:3888
+  kafka:
+    container_name: kafka
+    image: debezium/kafka:${DEBEZIUM_VERSION}
+    ports:
+     - 9092:9092
+    links:
+     - zookeeper
+    environment:
+     - ZOOKEEPER_CONNECT=zookeeper:2181
+  postgres:
+    container_name: postgres
+    image: debezium/example-postgres:${DEBEZIUM_VERSION}
+    ports:
+     - 5432:5432
+    environment:
+     - POSTGRES_USER=postgres
+     - POSTGRES_PASSWORD=postgres
+  connect:
+    container_name: connect
+    image: debezium/connect:${DEBEZIUM_VERSION}
+    ports:
+     - 8083:8083
+    links:
+     - kafka
+     - postgres
+    environment:
+     - BOOTSTRAP_SERVERS=kafka:9092
+     - GROUP_ID=1
+     - CONFIG_STORAGE_TOPIC=my_connect_configs
+     - OFFSET_STORAGE_TOPIC=my_connect_offsets
+     - STATUS_STORAGE_TOPIC=my_connect_statuses</pre>
+
+
+
+<p>Based on this configuration, you can start all 4 required containers by executing the following command on your command line:</p>
+
+
+
+<pre class="wp-block-preformatted brush: bash; gutter: true">docker-compose up -d</pre>
+
+
+
+<h3><span id="Setting_up_the_Outbox_Event_Router">Setting up the Outbox Event Router</span></h3>
+
+
+
+<p>After starting the docker containers, you can configure the connector with an optional outbox event router. </p>
+
+
+
+<p>The connector connects your database with Apache Kafka. It&#8217;s responsible for getting the changes from your database and publishing an event for each of them to Apache Kafka.  You can add a new connector by sending a POST request to connectors endpoint of your Kafka Connect instance.  If you want to implement your own event transformation and routing, this is the only part you need.</p>
+
+
+
+<p>But I highly recommend taking a look at Debezium&#8217;s outbox event router. It provides a set of configurable transformations and event routing features that enable you to implement the most common outbox use cases. The only thing you need to do to use the outbox event router is to include it in your connector configuration.</p>
+
+
+
+<p>So, let&#8217;s take a look at a simple connector and outbox event router configuration that connects as the user <em>postgres</em> to the <em>bookstore</em> database on localhost:5432.</p>
+
+
+
+<pre class="wp-block-preformatted brush: bash; gutter: true">curl -i -X POST -H &quot;Accept:application/json&quot; -H &quot;Content-Type:application/json&quot; localhost:8083/connectors/ -d &#039;{
+&quot;name&quot;: &quot;bookstore-outbox-connector&quot;, 
+&quot;config&quot;: {
+  &quot;connector.class&quot;: &quot;io.debezium.connector.postgresql.PostgresConnector&quot;,
+  &quot;tasks.max&quot;: &quot;1&quot;,
+  &quot;database.hostname&quot;: &quot;postgres&quot;,
+  &quot;database.port&quot;: &quot;5432&quot;,
+  &quot;database.user&quot;: &quot;postgres&quot;,
+  &quot;database.password&quot;: &quot;postgres&quot;,
+  &quot;database.dbname&quot; : &quot;bookstore&quot;,
+  &quot;database.server.name&quot;: &quot;localhost&quot;,
+  &quot;tombstones.on.delete&quot; : &quot;false&quot;,
+  &quot;table.whitelist&quot; : &quot;store.outboxevent&quot;,
+  &quot;transforms&quot; : &quot;outbox&quot;,
+  &quot;transforms.outbox.type&quot; : &quot;io.debezium.transforms.outbox.EventRouter&quot;}
+}&#039;</pre>
+
+
+
+<p>By default, the PostgreSQL connector would monitor all database tables, create a topic in Apache Kafka for each of them and publishes an event for each database record that got changed. </p>
+
+
+
+<p>That&#8217;s obviously not what you want to do if you&#8217;re implementing the outbox pattern. One of the main ideas of this pattern is that you only expose 1 table as part of your API. In this example, that table is called <em>outboxevent,</em> and it&#8217;s part of the <em>store</em> schema. By setting the <em>table.whitelist</em> attribute to store.outboxevent, you can tell the connector to only monitor that table.</p>
+
+
+
+<p>As promised, this configuration also configures a transformation step. The transformer is called <em>outbox</em>, and it uses the <em>io.debezium.transforms.outbox.EventRouter</em> class. It transforms a message that looks like this:</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">{
+  &quot;schema&quot;:
+    {
+      &quot;type&quot;: &quot;struct&quot;,
+      &quot;fields&quot;:
+        [
+          {
+            &quot;type&quot;: &quot;struct&quot;,
+            &quot;fields&quot;:
+              [
+                {
+                  &quot;type&quot;: &quot;string&quot;,
+                  &quot;optional&quot;: false,
+                  &quot;name&quot;: &quot;io.debezium.data.Uuid&quot;,
+                  &quot;version&quot;: 1,
+                  &quot;field&quot;: &quot;id&quot;,
+                },
+                {
+                  &quot;type&quot;: &quot;string&quot;,
+                  &quot;optional&quot;: false,
+                  &quot;field&quot;: &quot;aggregatetype&quot;,
+                },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;aggregateid&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;type&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;payload&quot; },
+              ],
+            &quot;optional&quot;: true,
+            &quot;name&quot;: &quot;localhost.store.outboxevent.Value&quot;,
+            &quot;field&quot;: &quot;before&quot;,
+          },
+          {
+            &quot;type&quot;: &quot;struct&quot;,
+            &quot;fields&quot;:
+              [
+                {
+                  &quot;type&quot;: &quot;string&quot;,
+                  &quot;optional&quot;: false,
+                  &quot;name&quot;: &quot;io.debezium.data.Uuid&quot;,
+                  &quot;version&quot;: 1,
+                  &quot;field&quot;: &quot;id&quot;,
+                },
+                {
+                  &quot;type&quot;: &quot;string&quot;,
+                  &quot;optional&quot;: false,
+                  &quot;field&quot;: &quot;aggregatetype&quot;,
+                },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;aggregateid&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;type&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;payload&quot; },
+              ],
+            &quot;optional&quot;: true,
+            &quot;name&quot;: &quot;localhost.store.outboxevent.Value&quot;,
+            &quot;field&quot;: &quot;after&quot;,
+          },
+          {
+            &quot;type&quot;: &quot;struct&quot;,
+            &quot;fields&quot;:
+              [
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;version&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;connector&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;name&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;db&quot; },
+                { &quot;type&quot;: &quot;int64&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;ts_usec&quot; },
+                { &quot;type&quot;: &quot;int64&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;txId&quot; },
+                { &quot;type&quot;: &quot;int64&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;lsn&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;schema&quot; },
+                { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;table&quot; },
+                {
+                  &quot;type&quot;: &quot;boolean&quot;,
+                  &quot;optional&quot;: true,
+                  &quot;default&quot;: false,
+                  &quot;field&quot;: &quot;snapshot&quot;,
+                },
+                {
+                  &quot;type&quot;: &quot;boolean&quot;,
+                  &quot;optional&quot;: true,
+                  &quot;field&quot;: &quot;last_snapshot_record&quot;,
+                },
+                { &quot;type&quot;: &quot;int64&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;xmin&quot; },
+              ],
+            &quot;optional&quot;: false,
+            &quot;name&quot;: &quot;io.debezium.connector.postgresql.Source&quot;,
+            &quot;field&quot;: &quot;source&quot;,
+          },
+          { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;op&quot; },
+          { &quot;type&quot;: &quot;int64&quot;, &quot;optional&quot;: true, &quot;field&quot;: &quot;ts_ms&quot; },
+        ],
+      &quot;optional&quot;: false,
+      &quot;name&quot;: &quot;localhost.store.outboxevent.Envelope&quot;,
+    },
+  &quot;payload&quot;:
+    {
+      &quot;before&quot;: null,
+      &quot;after&quot;:
+        {
+          &quot;id&quot;: &quot;49fcc56a-326d-4e63-acdc-6bb6761b0c7e&quot;,
+          &quot;aggregatetype&quot;: &quot;Book&quot;,
+          &quot;aggregateid&quot;: &quot;1&quot;,
+          &quot;type&quot;: &quot;CREATE&quot;,
+          &quot;payload&quot;: &#039;{&quot;id&quot;: 1, &quot;title&quot;: &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;, &quot;chapters&quot;: [{&quot;id&quot;: 2, &quot;content&quot;: &quot;How to map natural IDs&quot;}, {&quot;id&quot;: 3, &quot;content&quot;: &quot;How to map a bidirectional one-to-one association&quot;}]}&#039;,
+        },
+      &quot;source&quot;:
+        {
+          &quot;version&quot;: &quot;0.9.5.Final&quot;,
+          &quot;connector&quot;: &quot;postgresql&quot;,
+          &quot;name&quot;: &quot;localhost&quot;,
+          &quot;db&quot;: &quot;bookstore&quot;,
+          &quot;ts_usec&quot;: 1567054021909000,
+          &quot;txId&quot;: 579,
+          &quot;lsn&quot;: 24053160,
+          &quot;schema&quot;: &quot;store&quot;,
+          &quot;table&quot;: &quot;outboxevent&quot;,
+          &quot;snapshot&quot;: true,
+          &quot;last_snapshot_record&quot;: false,
+          &quot;xmin&quot;: null,
+        },
+      &quot;op&quot;: &quot;r&quot;,
+      &quot;ts_ms&quot;: 1567054021910,
+    },
+}</pre>
+
+
+
+<p>into this:</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">{&quot;schema&quot;:{&quot;type&quot;:&quot;string&quot;,&quot;optional&quot;:false},&quot;payload&quot;:&quot;1&quot;}
+
+{
+  &quot;schema&quot;:
+    {
+      &quot;type&quot;: &quot;struct&quot;,
+      &quot;fields&quot;:
+        [
+          { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;payload&quot; },
+          { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;eventType&quot; },
+        ],
+      &quot;optional&quot;: false,
+    },
+  &quot;payload&quot;:
+    {
+      &quot;payload&quot;: &#039;{&quot;id&quot;: 1, &quot;title&quot;: &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;, &quot;chapters&quot;: [{&quot;id&quot;: 2, &quot;content&quot;: &quot;How to map natural IDs&quot;}, {&quot;id&quot;: 3, &quot;content&quot;: &quot;How to map a bidirectional one-to-one association&quot;}]}&#039;,
+      &quot;eventType&quot;: &quot;CREATE&quot;,
+    },
+}
+</pre>
+
+
+
+<p>As you can see, the transformation drastically simplified the structure of the event. It removed the information about the before state, which is always empty because we&#8217;re adding a new record.</p>
+
+
+
+<p>The transformation also removed the metainformation from the message.   The <em>aggregateid </em>becomes the key of the event and part of the event header. The <em>aggregatetype</em> gets used to identify the topic in Apache Kafka to which the event gets published. By default, each <em>aggregatetype</em> gets its own topic. The default name of the topic starts with <em>outbox.event​.</em> followed by the <em>aggregatetype</em>.</p>
+
+
+
+<h3><span id="Customizing_the_Event_Routing">Customizing the Event Routing</span></h3>
+
+
+
+<p>You can customize the default behavior by using a set of configuration parameters when creating the connector. There are way too many configuration parameters to show all of them in this article. So, let&#8217;s take a look at an example configuration that publishes all events to a topic called <em>bookstore.events</em> and includes the <em>id </em>of the aggregate in the event. If you want to dive deeper into the configuration options, please take a look at the <a href="https://debezium.io/docs/configuration/outbox-event-router/">Debezium documentation</a>.</p>
+
+
+
+<p>You can do that by providing the name of the topic as the <em>route.topic.replacement</em> configuration parameter and by defining the additional field in the <em>table.fields.additional.placement</em> parameter. When you specify the handling of an additional field, you need to provide 3 Strings separated by a &#8220;:&#8221;. The first one is the name of the table column, the second one specifies if the field shall be part of the envelope or header of the event and the third one defines the alias that&#8217;s used in the event.</p>
+
+
+
+<pre class="wp-block-preformatted brush: bash; gutter: true">curl -i -X POST -H &quot;Accept:application/json&quot; -H &quot;Content-Type:application/json&quot; localhost:8083/connectors/ -d &#039;{
+&quot;name&quot;: &quot;bookstore-outbox-connector&quot;, 
+&quot;config&quot;: {
+  &quot;connector.class&quot;: &quot;io.debezium.connector.postgresql.PostgresConnector&quot;,
+  &quot;tasks.max&quot;: &quot;1&quot;,
+  &quot;database.hostname&quot;: &quot;postgres&quot;,
+  &quot;database.port&quot;: &quot;5432&quot;,
+  &quot;database.user&quot;: &quot;postgres&quot;,
+  &quot;database.password&quot;: &quot;postgres&quot;,
+  &quot;database.dbname&quot; : &quot;bookstore&quot;,
+  &quot;database.server.name&quot;: &quot;localhost&quot;,
+  &quot;tombstones.on.delete&quot; : &quot;false&quot;,
+  &quot;table.whitelist&quot; : &quot;store.outboxevent&quot;,
+  &quot;transforms&quot; : &quot;outbox&quot;,
+  &quot;transforms.outbox.type&quot; : &quot;io.debezium.transforms.outbox.EventRouter&quot;,
+  &quot;transforms.outbox.route.topic.replacement&quot; : &quot;bookstore.events&quot;,
+  &quot;transforms.outbox.table.fields.additional.placement&quot; : &quot;aggregateid:envelope:id&quot;}
+}&#039;</pre>
+
+
+
+<p>When you use this connector, you will see that Debezium now publishes the events to the <em>bookstore.events</em> topic and that the event contains the additional <em>id</em> field.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">{
+  &quot;schema&quot;:
+    {
+      &quot;type&quot;: &quot;struct&quot;,
+      &quot;fields&quot;:
+        [
+          { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;payload&quot; },
+          { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;eventType&quot; },
+          { &quot;type&quot;: &quot;string&quot;, &quot;optional&quot;: false, &quot;field&quot;: &quot;id&quot; },
+        ],
+      &quot;optional&quot;: false,
+    },
+  &quot;payload&quot;:
+    {
+      &quot;payload&quot;: &#039;{&quot;id&quot;: 16, &quot;title&quot;: &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;, &quot;chapters&quot;: [{&quot;id&quot;: 17, &quot;content&quot;: &quot;How to map natural IDs&quot;}, {&quot;id&quot;: 18, &quot;content&quot;: &quot;How to map a bidirectional one-to-one association&quot;}]}&#039;,
+      &quot;eventType&quot;: &quot;CREATE&quot;,
+      &quot;id&quot;: &quot;16&quot;,
+    },
+}
+</pre>
+
+
+
+<p>As you can see, Debeziums outbox event router provides a pretty flexible solution to publishing your outbox messages as events to Apache Kafka. The only thing you now need to do is to connect your consumers to the topics and react to the events. But that&#8217;s a topic for another article.</p>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>We have used the outbox pattern to update the database and publish events in Apache Kafka. As you have seen, Debezium provides you a set of connectors and transformers that you just need to configure to publish an event whenever you write a new record to the outbox table. That makes the implementation of the outbox pattern pretty simple.</p>
+
+
+
+<p>But this pattern also requires a lot of additional infrastructures. In a highly available production environment, you need to run and manage multiple instances of Zookeeper, Apache Kafka, and Kafka Connect. That makes the architecture of your system way more complex than it would have been in for a monolithic application.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

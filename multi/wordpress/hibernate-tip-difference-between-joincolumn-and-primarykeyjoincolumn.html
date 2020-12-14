@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Tip: Difference between @JoinColumn and @PrimaryKeyJoinColumn</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate Tip: Difference between @JoinColumn and @PrimaryKeyJoinColumn</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p><a href="//www.thorben-janssen.com/tips/">Hibernate Tips</a> is a series of posts in which I describe a quick and easy solution for common Hibernate questions. If you have a question for a future Hibernate Tip, please post a comment below. </p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Question"><span class="toc_number toc_depth_1">1</span> Question:</a></li><li><a href="#Solution"><span class="toc_number toc_depth_1">2</span> Solution:</a><ul><li><a href="#Using_the_JoinColumn_annotation"><span class="toc_number toc_depth_2">2.1</span> Using the @JoinColumn annotation</a></li><li><a href="#Using_the_PrimaryKeyJoinColumn_annotation"><span class="toc_number toc_depth_2">2.2</span> Using the @PrimaryKeyJoinColumn annotation</a></li></ul></li><li><a href="#Learn_more"><span class="toc_number toc_depth_1">3</span> Learn more:</a></li><li><a href="#Hibernate_Tips_Book"><span class="toc_number toc_depth_1">4</span> Hibernate Tips Book</a></li></ul></div>
+<h2><span id="Question">Question:</span></h2>
+
+
+
+<p><a href="https://www.youtube.com/watch?v=Jmcord4_ghY&amp;lc=Ugz90prGU3g_guZmqRp4AaABAg">Himanshu Srivastava</a> asked today&#8217;s question on my <a href="https://www.youtube.com/channel/UCYeDPubBiFCZXIOgGYoyADw">YouTube channel</a>:</p>
+
+
+
+<p>&#8220;What&#8217;s the difference between<em>@JoinColumn</em> and <em>@PrimaryKeyJoinColumn</em>? <br> Also, should we use <em>@PrimaryKeyJoinColumn</em> or <em>@JoinColumn</em>?&#8221;</p>
+
+
+
+<!--more-->
+
+
+
+<h2><span id="Solution">Solution:</span></h2>
+
+
+
+<p>The <em>@JoinColumn</em> and the <em>@PrimaryKeyJoinColumn</em> might seem very similar, but they are used in 2 different contexts. You can use the <em>@JoinColumn</em> annotation to map the foreign key column of a <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">managed association</a>. The <em>@PrimaryKeyJoinColumn</em> specifies the mapping of the foreign key column of a <a href="https://thorben-janssen.com/hibernate-tips-how-to-map-an-entity-to-multiple-tables/">secondary table</a> or the foreign key column in an <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">inheritance mapping</a> that uses the JOINED strategy.</p>
+
+
+
+<p>So, the annotation you need to use depends on the context in which you want to customize the mapping of the foreign key column. Let&#8217;s take a look at an example mapping for both annotations.</p>
+
+
+
+<h3><span id="Using_the_JoinColumn_annotation">Using the <em>@JoinColumn</em> annotation</span></h3>
+
+
+
+<p>When you add the <em>@JoinColumn</em> annotation to your association mapping, you can define the name of the foreign key column that represents your association in the table model.</p>
+
+
+
+<p>I use it in the following code snippet to tell Hibernate it shall use the column <em>book_key</em> as the foreign key column of the <a href="https://thorben-janssen.com/best-practices-many-one-one-many-associations-mappings/">many-to-one association</a>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	@Column(name = &quot;id&quot;, updatable = false, nullable = false)
+	private Long id;
+
+	private String comment;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = &quot;book_key&quot;)
+	private Book book;
+
+}</pre>
+
+
+
+<p>When you <a href="https://thorben-janssen.com/hibernate-logging-guide/">activate the logging of SQL statements</a> and fetch a <em>Review</em> entity from the database, you can see that Hibernate uses the <em>book_key</em> column to map the association.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">12:48:50,686 DEBUG [org.hibernate.SQL] - 
+    select
+        reviews0_.book_key as book_key3_2_0_,
+        reviews0_.id as id1_2_0_,
+        reviews0_.id as id1_2_1_,
+        reviews0_.book_key as book_key3_2_1_,
+        reviews0_.comment as comment2_2_1_ 
+    from
+        Review reviews0_ 
+    where
+        reviews0_.book_key=?</pre>
+
+
+
+<h3><span id="Using_the_PrimaryKeyJoinColumn_annotation">Using the <em>@PrimaryKeyJoinColumn</em> annotation</span></h3>
+
+
+
+<p>When you use the inheritance mapping strategy JOINED, all columns mapped by the superclass get mapped to one database table, and the specific attributes of a subclass get mapped to a different table. Hibernate has to join these 2 tables, whenever you use the subclass. The <a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">primary key</a> columns of each table are then used as the join columns.</p>
+
+
+
+<p>You can see the superclass of such an inheritance hierarchy in the following code snippet.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+public class Publication {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+
+	@Version
+	private int version;
+
+	...
+}</pre>
+
+
+
+<p>By default, Hibernate expects that the <a href="https://thorben-janssen.com/jpa-generate-primary-keys/">primary key</a> columns of both tables have the same name. If that&#8217;s not the case, you can annotate your subclass with a <em>@PrimaryKeyJoinColumn</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@PrimaryKeyJoinColumn(name = &quot;book_id&quot;)
+public class Book extends Publication {
+
+	private String title;
+	
+	@OneToMany(mappedBy = &quot;book&quot;, cascade = CascadeType.REMOVE)
+	private List&lt;Review&gt; reviews = new ArrayList&lt;Review&gt;();
+
+	...
+}</pre>
+
+
+
+<p>As you can see in the log message, Hibernate maps the primary key of the <em>book</em> table to the <em>book_id</em> column.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">12:48:50,681 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.book_id as id1_1_0_,
+        book0_1_.version as version2_1_0_,
+        book0_.title as title1_0_0_ 
+    from
+        Book book0_ 
+    inner join
+        Publication book0_1_ 
+            on book0_.book_id=book0_1_.id 
+    where
+        book0_.book_id=?</pre>
+
+
+
+
+
+
+
+<h2><span id="Learn_more">Learn more:</span></h2>
+
+
+
+<p>If you want to learn more about foreign key mappings, you should read the following articles:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">Ultimate Guide &#8211; Association Mappings with JPA and Hibernate</a></li><li><a href="https://thorben-janssen.com/hibernate-tips-how-to-map-an-entity-to-multiple-tables/">Hibernate Tips: How to map an entity to multiple tables</a></li></ul>
+
+
+
+&nbsp;<br />
+<h2><span id="Hibernate_Tips_Book">Hibernate Tips Book</span></h2><br />
+<div><br />
+<br />
+<img style="float: left; max-width: 150px; margin-right: 10px;" src="/wp-content/uploads/2017/04/HibernateTips3D2.png" /><br />
+<div><br />
+<br />
+Get more recipes like this one in my new book <a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Hibernate Tips: More than 70 solutions to common Hibernate problems</a>.<br />
+<br />
+It gives you more than 70 ready-to-use recipes for topics like basic and advanced mappings, logging, Java 8 support, caching, and statically and dynamically defined queries.<br />
+<br />
+<a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Get it now</a>!<br />
+<br />
+</div><br />
+</div></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

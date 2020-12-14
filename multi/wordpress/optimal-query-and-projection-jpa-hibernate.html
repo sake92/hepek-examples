@@ -1,0 +1,310 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Using the Optimal Query Approach and Projection for JPA and Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Using the Optimal Query Approach and Projection for JPA and Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Using JPA and Hibernate, you can choose between various ways to query your data, and each of them supports one or more kinds of projections. That provides you with lots of options to implement your persistence layer. But which one fits your use case? And which one should you avoid if you want to optimize your persistence layer for performance?</p>
+
+
+
+<p>To answer these questions, we need to talk about the different ways to define a query. One of them is <a href="https://thorben-janssen.com/jpql/">JPQL</a>, of course. It&#8217;s a query language based on your domain model. But you can also use multiple proprietary and standardized APIs to create a query. Or you can execute <a href="https://thorben-janssen.com/jpa-native-queries/">native SQL queries</a> if you need to use database-specific query features or define very complex queries. In this article, I will explain when you should use which approach.</p>
+
+
+
+<p>But picking the right approach to define your query is not the only thing you need to do to use JPA and Hibernate efficiently. You also need to choose the optimal projection for your use case. JPA and Hibernate enable you to select entities, DTOs, and scalar values. In the following paragraphs, I will explain the differences between these kinds of projections, when to use which one and how to define a query that returns it.</p>
+
+
+
+<!--more-->
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Entity_Projections"><span class="toc_number toc_depth_1">1</span> Entity Projections</a><ul><li><a href="#Select_Entities_by_ID"><span class="toc_number toc_depth_2">1.1</span> Select Entities by ID</a></li><li><a href="#Not_too_Complex_Queries_Selecting_Entities"><span class="toc_number toc_depth_2">1.2</span> Not too Complex Queries Selecting Entities</a></li><li><a href="#Dynamic_Queries_Selecting_Entities"><span class="toc_number toc_depth_2">1.3</span> Dynamic Queries Selecting Entities</a></li><li><a href="#Complex_and_Database-Specific_Queries_Selecting_Entities"><span class="toc_number toc_depth_2">1.4</span> Complex and Database-Specific Queries Selecting Entities</a></li></ul></li><li><a href="#Scalar_Value_Projections"><span class="toc_number toc_depth_1">2</span> Scalar Value Projections</a></li><li><a href="#DTO_Projections"><span class="toc_number toc_depth_1">3</span> DTO Projections</a><ul><li><a href="#Not_too_Complex_Queries_Selecting_DTOs"><span class="toc_number toc_depth_2">3.1</span> Not too Complex Queries Selecting DTOs</a></li><li><a href="#Dynamic_Queries_Selecting_DTOs"><span class="toc_number toc_depth_2">3.2</span> Dynamic Queries Selecting DTOs</a></li><li><a href="#Complex_and_Database-Specific_Queries_Selecting_DTOs"><span class="toc_number toc_depth_2">3.3</span> Complex and Database-Specific Queries Selecting DTOs</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a><ul><li><a href="#Choose_the_Best_Kind_of_Query_for_the_Use_Case"><span class="toc_number toc_depth_2">4.1</span> Choose the Best Kind of Query for the Use Case</a></li><li><a href="#Choose_the_Optimal_Projection"><span class="toc_number toc_depth_2">4.2</span> Choose the Optimal Projection</a></li></ul></li></ul></div>
+<h2><span id="Entity_Projections">Entity Projections</span></h2>
+
+
+
+<p>For most teams, entity projections are the most commonly used ones. But that&#8217;s often not the best approach. Entities might be easy to use and are the best fit for all write operations. But as I showed in a <a href="https://thorben-janssen.com/entities-dtos-use-projection/">previous article</a>, selecting and managing an entity creates an overhead that slows down your application.</p>
+
+
+
+<p>So, if you need to optimize your persistence layer for performance, you should only use entity projections if you need them to implement write operations. In these situations, the persistence provider generates SQL INSERT, UPDATE, and DELETE statements based on the entity lifecycle state transitions. That makes the implementation of your use cases much easier and is worth the overhead. For all other use cases, you should prefer scalar or DTO projections.</p>
+
+
+
+<p>After you decided to use an entity projection, you need to choose how to define the query. With entity projections, you have full flexibility &#8212; all options to define queries with JPA and Hibernate support entity projections.</p>
+
+
+
+<h3><span id="Select_Entities_by_ID">Select Entities by ID</span></h3>
+
+
+
+<p>You could, of course, implement your own query to fetch one or more entities by their primary key. But you don&#8217;t have to. There are more comfortable options available.</p>
+
+
+
+<p>If you&#8217;ve ever used JPA or Hibernate, you know the <em><a href="http://Getting Started">find</a></em><a href="http://Getting Started"> method</a> of the <em>EntityManager</em> interface. It provides an easy to use way to load one entity by its primary key.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Author a = em.find(Author.class, id);</pre>
+
+
+
+<p>On top of this, <a href="https://thorben-janssen.com/fetch-multiple-entities-id-hibernate/">Hibernate provides an API</a> that enables you to load more than one entity by its primary key. You just need to provide a <em>List</em> of ids and Hibernate loads all of them in one query.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">MultiIdentifierLoadAccess&lt;Book&gt; multi = session.byMultipleIds(Book.class);
+List&lt;Book&gt; books = multi.multiLoad(1L, 2L, 3L);</pre>
+
+
+
+
+
+
+
+<h3><span id="Not_too_Complex_Queries_Selecting_Entities">Not too Complex Queries Selecting Entities</span></h3>
+
+
+
+<p><div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+<iframe width="260" height="146" src="https://www.youtube-nocookie.com/embed/zFghAtPii6M" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div><p>If you can statically define a <a href="https://thorben-janssen.com/query-complex-jpa-hibernate/">not too complex query </a>and need to filter by non-primary key attributes in your WHERE condition, you should use a named <a href="https://thorben-janssen.com/jpql/">JPQL query</a>. JPQL is a query language similar to SQL. The main 2 differences are that you can define your query based on your domain model and that JPQL is not as feature-rich as SQL.</p></p>
+
+
+
+<p>You can define named JPQL queries by annotating an entity class with one or more <em>@NamedQuery</em>. Since Hibernate 5 and JPA 2.2, you <a href="https://thorben-janssen.com/benefits-repeatable-annotations-hibernate-5-2/">no longer need to wrap multiple <em>@NamedQuery</em> annotations</a> in a <em>@NamedQueries</em> annotation.</p>
+
+
+
+<p>The syntax of a JPQL query is pretty similar to SQL. The query in the following code snippet selects all <em>Author</em> entities with a given <em>firstname</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@NamedQuery(name = &quot;Author.findAuthorByFirstname&quot;, query = &quot;SELECT a FROM Author a WHERE a.firstname = :firstname&quot;)
+public class Author { ... }</pre>
+
+
+
+<p>You can instantiate this query by calling the <em>createNamedQuery</em> method of your <em>EntityManager</em> with the name of the query. This method returns a <em>Query</em> or <em>TypedQuery</em> interface. You can then use this interface to set bind parameter values and to execute the query.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Author&gt; q = em.createNamedQuery(&quot;Author.findByFirstname&quot;, Author.class);
+q.setParameter(&quot;firstname&quot;, firstname);
+List&lt;Author&gt; authors = q.getResultList();</pre>
+
+
+
+<h3><span id="Dynamic_Queries_Selecting_Entities">Dynamic Queries Selecting Entities</span></h3>
+
+
+
+<p>JPA&#8217;s Criteria API enables you to create your query dynamically at runtime. The required code is not as easy to read as a JPQL query, and executing the query takes a little bit longer. So, you should only use it if you need to adjust your query based on user input dynamically.</p>
+
+
+
+<p>But as hard as the Criteria API might be to read, it&#8217;s still much better than creating a JPQL query by concatenating <em>String</em>s. So, please, if you need to adjust your query based on user input, use the Criteria API!</p>
+
+
+
+<p>Here you can see an example that selects all <em>Author</em> entities with a given <em>firstname</em>. This is the same query as I showed you in the previous JPQL example. As you can see, the code block that uses the Criteria API is longer and harder reader.</p>
+
+
+
+<p>To create a CriteriaQuery, you first need to get a <em>CriteriaBuilder</em> from the <em>EntityManager</em> and create a query that returns the entity class. You can then use this query to define the FROM and WHERE clause. After you&#8217;ve created the <em>CriteriaQuery</em>, you can use it to create a <em>TypedQuery</em>, set the bind parameter values, and execute it.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaQuery&lt;Author&gt; cq = cb.createQuery(Author.class);
+Root&lt;Author&gt; root = cq.from(Author.class);
+
+ParameterExpression&lt;String&gt; paramFirstName = cb.parameter(String.class);
+cq.where(cb.equal(root.get(Author_.firstName), paramFirstName));
+
+TypedQuery&lt;Author&gt; query = em.createQuery(cq);
+query.setParameter(paramFirstName, &quot;Thorben&quot;);
+List&lt;Author&gt; authors = query.getResultList();</pre>
+
+
+
+<p>The Criteria API supports the same features as JPQL. Explaining all of them in details would take too long for this article. If you want to learn more about it, please join my <a href="https://thorben-janssen.com/advanced-hibernate-online-training-wst/">Advanced Hibernate Online Training</a>.</p>
+
+
+
+<h3><span id="Complex_and_Database-Specific_Queries_Selecting_Entities">Complex and Database-Specific Queries Selecting Entities</span></h3>
+
+
+
+<p>If your query gets really complex or if you want to use database-specific features, you need to use a <a href="https://thorben-janssen.com/jpa-native-queries/">native SQL query</a>. Hibernate takes the native query statement and sends it to the database without parsing it. </p>
+
+
+
+<div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+<iframe src="https://www.youtube-nocookie.com/embed/W0-3H4_luOA" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="" width="260" height="146" frameborder="0"></iframe></div><p>Within your query, you can do whatever your database supports. You&#8217;re not limited to the features that Hibernate or any other JPA implementation support. This is important because the feature set of JPQL is pretty limited. So, native SQL queries are often your only option to implement complex query use cases.</p>
+
+
+
+<p>If your native query returns all columns mapped by your entity and if their names are identical to the ones used in the entity mapping, you just need to provide your entity class as the 2nd parameter to the <em>createNativeQuery</em> method. Hibernate will then apply the standard entity mapping to your query result.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = (Book) em.createNativeQuery(&quot;SELECT * FROM book b WHERE id = 1&quot;, Book.class).getSingleResult();</pre>
+
+
+
+<p>You can customize this mapping using a <em>@SqlResultSetMapping</em> annotation. I explained this annotation and how you can use it to define all kinds of mappings in a series of articles:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/result-set-mapping-basics/">Basic SQL ResultSet Mappings</a></li><li><a href="https://thorben-janssen.com/result-set-mapping-complex-mappings/">Complex SQL ResultSet Mappings</a></li><li><a href="https://thorben-janssen.com/result-set-mapping-constructor-result-mappings/">Mapping DTO Projections</a></li><li><a href="https://thorben-janssen.com/result-set-mapping-hibernate-specific-mappings/">Hibernate-specific Mappings</a></li></ul>
+
+
+
+<h2><span id="Scalar_Value_Projections">Scalar Value Projections</span></h2>
+
+
+
+<p>Scalar value projections are my least favorite ones. In almost all situations, I prefer DTO projections, which I will show you in the following section. Scalar value projections can be a good option if you need to read and immediately process 1-5 database columns for which you don&#8217;t have a matching DTO projection.</p>
+
+
+
+<p>The main downside of scalar value projections is that they are very uncomfortable to use. You can use this projection with a JPQL, Criteria, or native SQL query. In all 3 cases, your query returns an <em>Object[]</em>. When you use this array, you need to remember the position of each column and cast the array element to the correct type.</p>
+
+
+
+<p>Here is an example of a JPQL query that uses a scalar value projection.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Object[]&gt; q = em.createQuery(&quot;SELECT b.title, b.publisher.name FROM Book b WHERE b.id = :id&quot;, Object[].class);
+q.setParameter(&quot;id&quot;, 1L);
+Object[] result = q.getSingleResult();</pre>
+
+
+
+<p>Please take a look at the following articles, if you want to use this projection with a Criteria or native SQL query:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/hibernate-tips-select-multiple-scalar-values-criteria-query/">Select scalar values in a Criteria Query</a></li><li><a href="https://thorben-janssen.com/result-set-mapping-complex-mappings/">Complex SQL ResultSet Mappings</a> </li></ul>
+
+
+
+<h2><span id="DTO_Projections">DTO Projections</span></h2>
+
+
+
+<p>From a performance point of view, DTO projections are almost as good as scalar value projections. They provide the <a href="https://thorben-janssen.com/entities-dtos-use-projection/">best performance</a> for read operations. But the strong typing and the descriptive attribute names make this projection so much easier to use.</p>
+
+
+
+<p>You can use DTO projections in JPQL, Criteria, and native SQL queries.</p>
+
+
+
+<h3><span id="Not_too_Complex_Queries_Selecting_DTOs">Not too Complex Queries Selecting DTOs</span></h3>
+
+
+
+<p><a href="https://thorben-janssen.com/jpql/">Named JPQL queries</a> are a good fit for all queries that are not too complex and that you want to define based on your domain model. </p>
+
+
+
+<p>The definition of a JPQL query that uses a DTO projection is pretty simple. You define a constructor call in your SELECT clause using the keyword <em>new</em> followed by the fully qualified name of your DTO class and a list of parameters.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;BookValue&gt; q = em.createQuery(&quot;SELECT new org.thoughts.on.java.model.BookValue(b.id, b.title, b.publisher.name) FROM Book b WHERE b.id = :id&quot;, BookValue.class);
+q.setParameter(&quot;id&quot;, 1L);
+BookValue b = q.getSingleResult();</pre>
+
+
+
+<h3><span id="Dynamic_Queries_Selecting_DTOs">Dynamic Queries Selecting DTOs</span></h3>
+
+
+
+<div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+<iframe src="https://www.youtube-nocookie.com/embed/PWZfpaciFOI" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="" width="260" height="146" frameborder="0"></iframe></div><p>JPA&#8217;s Criteria API enables you to create your query dynamically at runtime. As I explained early, this is a little bit slower than using a JPQL query, and the code is hard to read. So, better use a JPQL query if you can define your query statically.</p>
+
+
+
+<p>You define and execute the CriteriaQuery in almost the same way as the CriteriaQuery I showed you early. The only difference is that you now need to call the <em>construct</em> method on the <em>CriteriaBuilder</em> to define the constructor call.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaQuery&lt;AuthorValue&gt; q = cb.createQuery(AuthorValue.class);
+Root&lt;Author&gt; root = q.from(Author.class);
+q.select(cb.construct(AuthorValue.class, root.get(Author_.firstName), root.get(Author_.lastName)));
+
+TypedQuery&lt;AuthorValue&gt; query = em.createQuery(q);
+List&lt;AuthorValue&gt; authors = query.getResultList();</pre>
+
+
+
+<h3><span id="Complex_and_Database-Specific_Queries_Selecting_DTOs">Complex and Database-Specific Queries Selecting DTOs</span></h3>
+
+
+
+<p>If your query is too complex for JPQL, you can use a native SQL query and an <em>@SqlResultSetMapping</em> using a <em>@ConstructorResult</em> annotation. Hibernate then executes the native query and iterates through the result set. For each record, it calls the constructor defined by the <em>@ConstructorResult</em> annotation.</p>
+
+
+
+<p>Here you can see the definition of a constructor call of the <em>BookValue</em> class. Hibernate will provide the value of the <em>title</em> column as the 1st and the value of the <em>date</em> column as the 2nd parameter.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@SqlResultSetMapping(name = &quot;BookValueMapping&quot;, 
+		classes = @ConstructorResult(
+				targetClass = BookValue.class, 
+				columns = {	@ColumnResult(name = &quot;title&quot;),
+							@ColumnResult(name = &quot;date&quot;)}
+				)
+)
+public class Book { ... }</pre>
+
+
+
+<p>To use this <em>@SqlResultSetMapping</em> with your query, you need to provide its name as the 2nd parameter to the <em>createNativeQuery</em> method.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">BookValue b = (BookValue) em.createNativeQuery(&quot;SELECT b.publishingDate as date, b.title, b.id FROM book b WHERE b.id = 1&quot;, &quot;BookValueMapping&quot;).getSingleResult();</pre>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>When using JPA and Hibernate, you can choose between various ways to read the required information.</p>
+
+
+
+<h3><span id="Choose_the_Best_Kind_of_Query_for_the_Use_Case">Choose the Best Kind of Query for the Use Case</span></h3>
+
+
+
+<p>You can use JPQL queries if they are static and not too complex. The Criteria API enables you to define your query dynamically using a Java API. And if you need to use the full feature set of your database, you need to use a native SQL query.</p>
+
+
+
+<h3><span id="Choose_the_Optimal_Projection">Choose the Optimal Projection</span></h3>
+
+
+
+<p>You should use entity projections only if you need to implement write operations. JPA and Hibernate provide APIs to load one or more entities by their primary key. You can also use entity projections with JPQL, Criteria, and native queries.</p>
+
+
+
+<p>Scalar value projections are not very comfortable to use, and you should better use a DTO projection.</p>
+
+
+
+<p>DTO projections are the best option for read-only operations. They are strongly typed, easy to use, and provide the best performance. You can use them with JPQL, Criteria, and native queries.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

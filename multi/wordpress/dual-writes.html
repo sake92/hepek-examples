@@ -1,0 +1,180 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Dual Writes – The Unknown Cause of Data Inconsistencies</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Dual Writes – The Unknown Cause of Data Inconsistencies</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Since a lot of new applications are built as a system of microservices, dual writes have become a widespread issue. They are one of the most common reasons for data inconsistencies. To make it even worse, I had to learn that a lot of developers don&#8217;t even know what a dual write is.</p>
+
+
+
+<figure class="wp-block-embed-twitter wp-block-embed is-type-rich is-provider-twitter"><div class="wp-block-embed__wrapper">
+<span class="uFLCsR6TWSzZ7DAXY4JgUMVIb"><blockquote class="twitter-tweet" data-width="500" data-dnt="true"><p lang="en" dir="ltr">Doing some research for an article and a new online course: <br><br>Do you know what a Dual Write is and why you need to avoid it?</p>&mdash; Thorben Janssen (@thjanssen123) <a href="https://twitter.com/thjanssen123/status/1219621504532525057?ref_src=twsrc%5Etfw">January 21, 2020</a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script></span>
+</div></figure>
+
+
+
+<p>Dual writes seem to be an easy solution to a complex problem. If you&#8217;re not familiar with distributed systems, you might even wonder why people even worry about it.</p>
+
+
+
+<p>That&#8217;s because everything seems to be totally fine &#8230; until it isn&#8217;t. </p>
+
+
+
+<!--more-->
+
+
+
+<p>So, let&#8217;s talk about dual writes and make sure that you don&#8217;t use them in your applications. And if you want to dive deeper into this topic and learn various patterns that help you to avoid this kind of issue, please take a look at my upcoming <a href="https://thorben-janssen.com/data-and-communication-patterns-for-microservices/">Data and Communication Patterns for Microservices</a> course.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#What_is_a_dual_write"><span class="toc_number toc_depth_1">1</span> What is a dual write?</a></li><li><a href="#Distributed_transactions_are_no_longer_an_option"><span class="toc_number toc_depth_1">2</span> Distributed transactions are no longer an option</a></li><li><a href="#3_8220solutions8221_that_don8217t_work"><span class="toc_number toc_depth_1">3</span> 3 &#8220;solutions&#8221; that don&#8217;t work</a><ul><li><a href="#Post_the_event_in_an_after_commit_listener"><span class="toc_number toc_depth_2">3.1</span> Post the event in an after commit listener</a></li><li><a href="#Post_the_event_before_committing_the_database_transaction"><span class="toc_number toc_depth_2">3.2</span> Post the event before committing the database transaction</a></li></ul></li><li><a href="#How_to_avoid_dual_writes"><span class="toc_number toc_depth_1">4</span> How to avoid dual writes?</a></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">5</span> Conclusion</a></li></ul></div>
+<h2><span id="What_is_a_dual_write">What is a dual write?</span></h2>
+
+
+
+<p>A dual write describes the situation when you change data in 2 systems, e.g., a database and Apache Kafka, without an additional layer that ensures data consistency over both services. That&#8217;s typically the case if you use a local transaction with each of the external systems.</p>
+
+
+
+<p>Here you can see a diagram of an example in which I want to change data in my database and send an event to Apache Kafka:</p>
+
+
+
+<figure class="wp-block-image size-large"><img width="1024" height="687" src="https://thorben-janssen.com/wp-content/uploads/2020/01/DualWrite-1024x687.png" alt="" class="wp-image-23540" srcset="https://thorben-janssen.com/wp-content/uploads/2020/01/DualWrite-1024x687.png 1024w, https://thorben-janssen.com/wp-content/uploads/2020/01/DualWrite-300x201.png 300w, https://thorben-janssen.com/wp-content/uploads/2020/01/DualWrite-768x515.png 768w, https://thorben-janssen.com/wp-content/uploads/2020/01/DualWrite-400x268.png 400w, https://thorben-janssen.com/wp-content/uploads/2020/01/DualWrite.png 1053w" sizes="(max-width: 1024px) 100vw, 1024px" /></figure>
+
+
+
+<p>As long as both operations are successful, everything is OK. Even if the first transaction fails, it&#8217;s still fine. But if you successfully committed the 1st transaction and the 2nd one fails, you are having an issue. Your system is now in an inconsistent state, and there is no easy way to fix it.</p>
+
+
+
+<h2><span id="Distributed_transactions_are_no_longer_an_option">Distributed transactions are no longer an option</span></h2>
+
+
+
+<p>In the past, when we build monoliths, we used distributed transactions to avoid this situation. Distributed transactions use the 2 phase commit protocol. It splits the commit process of the transaction into 2 steps and ensures the ACID principles for all systems.</p>
+
+
+
+<p>But we don&#8217;t use distributed transactions if we&#8217;re building a system of microservices. These transactions require locks and don&#8217;t scale well. They also need all involved systems to be up and running at the same time.</p>
+
+
+
+<p>So what shall you do instead? </p>
+
+
+
+<h2><span id="3_8220solutions8221_that_don8217t_work">3 &#8220;solutions&#8221; that don&#8217;t work</span></h2>
+
+
+
+<p>When I discuss this topic with attendees at a conference talk or during one of my workshops, I often hear one of the following 3 suggestions:</p>
+
+
+
+<ol><li>Yes, we are aware of this issue, and we don&#8217;t have a solution for it. But it&#8217;s not that bad. So far, nothing has happened. Let&#8217;s keep it as it is.</li><li>Let&#8217;s move the interaction with Apache Kafka to an after commit listener.</li><li>Let&#8217;s write the event to the topic in Kafka before you commit the database transaction.</li></ol>
+
+
+
+<p>Well, it should be obvious that suggestion 1 is a rather risky one. It probably works most of the time. But sooner or later, you will create more and more inconsistencies between the data that&#8217;s stored by your services.</p>
+
+
+
+<p>So, let&#8217;s focus on options 2 and 3.</p>
+
+
+
+<h3><span id="Post_the_event_in_an_after_commit_listener">Post the event in an after commit listener</span></h3>
+
+
+
+<p>Publishing the event in an after commit listener is a pretty popular approach. It ensures that the event only gets published if the database transaction was successful. But it&#8217;s difficult to handle the situation that Kafka is down or that any other reason prevents you from publishing the event. </p>
+
+
+
+<p>You already committed the database transaction. So, you can&#8217;t easily revert these changes. Other transactions might have already used and modified that data while you tried to publish the event in Kafka.</p>
+
+
+
+<p>You might try to persist the failure in your database and run regular cleanup jobs that seek to recover the failed events. This might look like a logical solution, but it has a few flaws:</p>
+
+
+
+<ol><li> It only works if you can persist the failed event in your database. If the database transaction fails, or your application or the database crash before you can store the information about the failed event, you will lose it.</li><li>It only works if the event itself didn&#8217;t cause the problem.</li><li>If another operation creates an event for that business object before the cleanup job recovers the failed event, your events get out of order.</li></ol>
+
+
+
+<p>These might seem like hypothetical scenarios, but that&#8217;s what we&#8217;re preparing for. The main idea of local transactions, distributed transactions, and approaches that ensure eventual consistency is to be absolutely sure that you can&#8217;t create any (permanent) inconsistencies. </p>
+
+
+
+<p>An after commit listener can&#8217;t ensure that. So, let&#8217;s take a look at the other option.</p>
+
+
+
+<h3><span id="Post_the_event_before_committing_the_database_transaction">Post the event before committing the database transaction</span></h3>
+
+
+
+<p>This approach gets often suggested after we discussed why the after commit listener doesn&#8217;t work. If publishing the event after the commit creates a problem, you simply publish it before we commit the transaction, right?</p>
+
+
+
+<p>Well, no &#8230; Let me explain &#8230;</p>
+
+
+
+<p>Publishing the event before you commit the transaction enables you to roll back the transaction if you can&#8217;t publish the event. That&#8217;s right.</p>
+
+
+
+<p>But what do you do if your database transaction fails? </p>
+
+
+
+<p>Your operations might violate a unique constraint, or there might have been 2 concurrent updates on the same database record. All database constraints get checked during the commit, and you can&#8217;t be sure that none of them fails. Your database transactions are also isolated from each other so that you can&#8217;t prevent concurrent updates without using locks. But that creates new scalability issues. To make it short, your database transaction might fail and there is nothing you can, or want to do about it.</p>
+
+
+
+<p>If that happens, your event is already published. Other microservices probably already observed it and triggered some business logic. You can&#8217;t take the event back.</p>
+
+
+
+<p>Undo operations fail for the same reasons, as we discussed before. You might be able to build a solution that works most of the time. But you are not able to create something that&#8217;s absolutely failsafe.</p>
+
+
+
+<h2><span id="How_to_avoid_dual_writes">How to avoid dual writes?</span></h2>
+
+
+
+<p>You can choose between a few approaches that help you to avoid dual writes. But you need to be aware that without using a distributed transaction, you can only build an eventually consistent system.</p>
+
+
+
+<p>The general idea is to split the process into multiple steps. Each of these steps only operates with one data store, e.g., the database or Apache Kafka. That enables you to use a local transaction, asynchronous communication between the involved systems and an asynchronous, potentially endless retry mechanism.</p>
+
+
+
+<p>If you only want to replicate data between your services or inform other services that an event has occurred, you can use the outbox pattern with a change data capture implementation like Debezium. I explained this approach in great detail in the following articles:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/outbox-pattern-hibernate/">Implementing the Outbox Pattern with Hibernate</a></li><li><a href="https://thorben-janssen.com/outbox-pattern-with-cdc-and-debezium/">Implementing the Outbox Pattern with CDC using Debezium</a></li></ul>
+
+
+
+<p>And if you need to implement a consistent write operation that involves multiple services, you can use the <a href="https://dzone.com/articles/microservices-using-saga-pattern">SAGA pattern</a>. I will explain it in more detail in one of the following articles.</p>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>Dual writes are often underestimated, and a lot of developers aren&#8217;t even aware of the potential data inconsistencies.</p>
+
+
+
+<p>As explained in this article, writing to 2 or more systems without a distributed transaction or an algorithm that ensures eventual consistency can cause data inconsistencies. If you work with multiple local transactions, you can&#8217;t handle all error scenarios.</p>
+
+
+
+<p>The only way to avoid that is to split the communication into multiple steps and only write to one external system during each step. The SAGA pattern and change data capture implementations, like Debezium, use this approach to ensure consistent write operation to multiple systems or to send events to Apache Kafka.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

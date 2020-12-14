@@ -1,0 +1,295 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Your 2 best options to fix Hibernate’s MultipleBagFetchException</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Your 2 best options to fix Hibernate’s MultipleBagFetchException</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>You probably learned that you should use <em><a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">FetchType.LAZY</a></em> for all of your associations. It ensures that Hibernate initializes an association when you use it and doesn&#8217;t spend any time getting data you don&#8217;t need. </p>
+
+
+
+<p>Unfortunately, this introduces a new issue. You now need to use a <a href="https://thorben-janssen.com/5-ways-to-initialize-lazy-relations-and-when-to-use-them/">JOIN FETCH clause or an EntityGraph</a> to fetch the association if you need it. Otherwise, you will experience the <a href="https://thorben-janssen.com/free-mini-course-find-fix-n1-select-issues-hibernate/">n+1 select issue</a>, which causes severe performance issues or a <em><a href="https://thorben-janssen.com/lazyinitializationexception/">LazyInitializationException</a></em>. If you do that for multiple associations, Hibernate might throw a <em>MultipleBagFetchException</em>.</p>
+
+
+
+<p>In this article, I will explain when Hibernate throws this exception and show you your 2 best options to fix it. One of them is a great fit for associations with a small cardinality and the other one for associations that contain lots of elements. So, let&#8217;s take a look at both of them, and you pick the one that fits your application.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Cause_of_the_MultipleBagFetchException"><span class="toc_number toc_depth_1">1</span> Cause of the MultipleBagFetchException</a></li><li><a href="#Fixing_the_MultipleBagFetchException"><span class="toc_number toc_depth_1">2</span> Fixing the MultipleBagFetchException</a><ul><li><a href="#Option_1_Use_a_Set_instead_of_a_List"><span class="toc_number toc_depth_2">2.1</span> Option 1: Use a Set instead of a List</a><ul><li><a href="#Performance_considerations"><span class="toc_number toc_depth_3">2.1.1</span> Performance considerations</a></li></ul></li><li><a href="#Option_2_Split_it_into_multiple_queries"><span class="toc_number toc_depth_2">2.2</span> Option 2: Split it into multiple queries</a><ul><li><a href="#Performance_considerations-2"><span class="toc_number toc_depth_3">2.2.1</span> Performance considerations</a></li></ul></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">3</span> Conclusion</a></li></ul></div>
+<h2><span id="Cause_of_the_MultipleBagFetchException">Cause of the <em>MultipleBagFetchException</em></span></h2>
+
+
+
+<p>As I explained in a previous article about the <a href="https://thorben-janssen.com/association-mappings-bag-list-set/">most efficient data type for a to-many association</a>, Hibernate&#8217;s internal naming of the collection types is pretty confusing. Hibernate calls it a&nbsp;<em>Bag</em>, if the elements in your <em>java.util.List</em> are unordered. If they are ordered, it&#8217;s called a <em>List</em>. </p>
+
+
+
+<p>So, depending on your mapping, a <em>java.util.List</em> can be treated as a <em>Bag </em>or a <em>List</em>. But don&#8217;t worry, in real life, this isn&#8217;t as confusing as it might seem. Defining the <a href="https://thorben-janssen.com/ordering-vs-sorting-hibernate-use/">order of an association</a> requires an additional annotation and is almost always an overhead. That&#8217;s why you should avoid it and why at least 90% of the association mappings that use a <em>java.util.List</em> and that I&#8217;ve seen in real projects are unordered. So, Hibernate treats them as a <em>Bag</em>.</p>
+
+
+
+<p>Here is a simple domain model in which Hibernate treats the <em>Review</em>s and the <em>Author</em>s of a <em>Book </em>as <em>Bag</em>s.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    @ManyToMany
+    private List authors = new ArrayList();
+     
+    @OneToMany(mappedBy = &quot;book&quot;)
+    private List reviews = new ArrayList();
+     
+    ...     
+}</pre>
+
+
+
+<p>If you try to fetch multiple of these bags in a <a href="https://thorben-janssen.com/jpql/">JPQL query</a>, you create a cartesian product. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT DISTINCT b &quot;
+		+ &quot;FROM Book b &quot;
+			+ &quot;JOIN FETCH b.authors a &quot;
+			+ &quot;JOIN FETCH b.reviews r &quot;
+		+ &quot;WHERE b.id = 1&quot;,
+		Book.class);
+q.setHint(QueryHints.PASS_DISTINCT_THROUGH, false);
+List&lt;Book&gt; b = q.getResultList();</pre>
+
+
+
+<p>This can create performance problems. Hibernate also struggles to differentiate between information that is supposed to be duplicated and information that was duplicated because of the cartesian product. Because of that, Hibernate throws a <em>MultipleBagFetchException</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">java.lang.IllegalArgumentException: org.hibernate.loader.MultipleBagFetchException: cannot simultaneously fetch multiple bags: [org.thoughts.on.java.model.Book.authors, org.thoughts.on.java.model.Book.reviews]</pre>
+
+
+
+<h2><span id="Fixing_the_MultipleBagFetchException">Fixing the <em>MultipleBagFetchException</em></span></h2>
+
+
+
+<p>You can find lots of questions about this exception and various solutions to avoid it. But a lot of them come with unexpected side effects. The only 2 fixes between which you should choose are the ones that I will describe in the following sections. Which one of them is the best for you depends on the size of the cartesian product that your queries might create:</p>
+
+
+
+<ol><li>If all of your associations only contain a small number of elements, the created cartesian product will be relatively small. In these situations, you can change the types of the attributes that map your associations to a <em>java.util.Set</em>. Hibernate can then fetch multiple associations in 1 query.</li><li>If at least one of your associations contains a lot of elements, your cartesian product will become too big to fetch it efficiently in 1 query. You should then use multiple queries that get different parts of the required result.</li></ol>
+
+
+
+<p>As always, <a href="https://thorben-janssen.com/tips-to-boost-your-hibernate-performance/">optimizing the performance</a> of your application requires you to choose between different trade-offs, and there is no one-size-fits-all approach. The performance of each option depends on the size of the cartesian product and the number of queries you&#8217;re executing. For a relatively small cartesian product, getting all information with 1 query provides you with the best performance. If the cartesian product reaches a certain size, you should better split it into multiple queries.</p>
+
+
+
+<p>That&#8217;s why I will show you both options so that you can pick the one that fits your application.</p>
+
+
+
+<h3><span id="Option_1_Use_a_Set_instead_of_a_List">Option 1: Use a Set instead of a List</span></h3>
+
+
+
+<p>The easiest approach to fix the <em>MultipleBagFetchException </em>is to change the type of the attributes that map your <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">to-many associations</a> to a <em>java.util.Set</em>. This is just a small change in your mapping, and you don&#8217;t need to change your business code.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+     
+    @ManyToMany
+    private Set authors = new HashSet();
+     
+    @OneToMany(mappedBy = &quot;book&quot;)
+    private Set reviews = new HashSet();
+     
+    ...
+     
+}</pre>
+
+
+
+<p>As explained earlier, if you now perform the same query as I showed you before to get the <em>Book </em>with all its <em>Author</em>s and <em>Review</em>s, your result set will contain a cartesian product. The size of that product depends on the number of <em>Book</em>s you select and the number of associated <em>Author</em>s and <em>Review</em>s.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT DISTINCT b &quot;
+		+ &quot;FROM Book b &quot;
+			+ &quot;JOIN FETCH b.authors a &quot;
+			+ &quot;JOIN FETCH b.reviews r &quot;
+		+ &quot;WHERE b.id = 1&quot;,
+		Book.class);
+q.setHint(QueryHints.PASS_DISTINCT_THROUGH, false);
+List&lt;Book&gt; b = q.getResultList();</pre>
+
+
+
+<p>Here you can <a href="https://thorben-janssen.com/hibernate-logging-guide/">see the generated SQL query</a>. To get all the requested associations, Hibernate has to select all columns mapped by these entities. In combination with the cartesian product created by the 3 <a href="https://thorben-janssen.com/hibernate-tips-difference-join-left-join-fetch-join/">INNER JOINs</a>, this can become a performance problem.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">19:46:20,785 DEBUG [org.hibernate.SQL] -
+    select
+        book0_.id as id1_1_0_,
+        author2_.id as id1_0_1_,
+        reviews3_.id as id1_4_2_,
+        book0_.publisherid as publishe5_1_0_,
+        book0_.publishingDate as publishi2_1_0_,
+        book0_.title as title3_1_0_,
+        book0_.version as version4_1_0_,
+        author2_.firstName as firstNam2_0_1_,
+        author2_.lastName as lastName3_0_1_,
+        author2_.version as version4_0_1_,
+        authors1_.bookId as bookId1_2_0__,
+        authors1_.authorId as authorId2_2_0__,
+        reviews3_.bookid as bookid3_4_2_,
+        reviews3_.comment as comment2_4_2_,
+        reviews3_.bookid as bookid3_4_1__,
+        reviews3_.id as id1_4_1__
+    from
+        Book book0_
+    inner join
+        BookAuthor authors1_
+            on book0_.id=authors1_.bookId
+    inner join
+        Author author2_
+            on authors1_.authorId=author2_.id
+    inner join
+        Review reviews3_
+            on book0_.id=reviews3_.bookid
+    where
+        book0_.id=1</pre>
+
+
+
+<p>Whenever you write such a query, you also need to keep in mind that Hibernate doesn&#8217;t hide that the result set contains a product. This query returns each <em>Book </em>multiple times. The number of references to the same <em>Book </em>object is calculated by the number of <em>Author</em>s multiplied by the number of <em>Review</em>s. You can avoid that by adding the <em>DISTINCT</em> keyword to your select clause and by setting the <a href="https://thorben-janssen.com/hibernate-tips-apply-distinct-to-jpql-but-not-sql-query/">query hint <em>hibernate.query.passDistinctThrough</em></a> to <em>false</em>.</p>
+
+
+
+<h4><span id="Performance_considerations">Performance considerations</span></h4>
+
+
+
+<p>In this example, my query only selects 1 <em>Book, </em>and most <em>Book</em>s have been written by 1-3 <em>Author</em>s. So, even if the database contains several <em>Review</em>s for this <em>Book</em>, the cartesian product will still be relatively small. </p>
+
+
+
+<p>Based on these assumptions, it might be faster to accept the inefficiency of the cartesian product to reduce the number of queries. This might change if your cartesian product becomes bigger because you select a huge number of <em>Book</em>s or if your average <em>Book </em>has been written by a few dozen <em>Author</em>s.</p>
+
+
+
+<h3><span id="Option_2_Split_it_into_multiple_queries">Option 2: Split it into multiple queries</span></h3>
+
+
+
+<p>Fetching huge cartesian products in 1 query is inefficient. It requires a lot of resources in your database and puts unnecessary load on your network. Hibernate and your JDBC driver also need to spend more resources to handle the query result.</p>
+
+
+
+<p>You can avoid that by performing multiple queries that fetch different parts of the required graph of entities. In the example of this post, I would fetch the <em>Book</em>s with all their <em>Author</em>s in 1 query and the <em>Book</em>s with all their <em>Review</em>s in a 2nd query. If your graph of required entities is more complex, you might need to use more queries or fetch more associations with each of them.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT DISTINCT b &quot;
+		+ &quot;FROM Book b JOIN FETCH b.authors a &quot;
+		+ &quot;WHERE b.id = 1&quot;,
+		Book.class);
+q.setHint(QueryHints.PASS_DISTINCT_THROUGH, false);
+List&lt;Book&gt; books = q.getResultList();
+
+log.info(books.get(0));
+
+q = em.createQuery(&quot;SELECT DISTINCT b &quot;
+		+ &quot;FROM Book b &quot;
+			+ &quot;JOIN FETCH b.reviews r &quot;
+		+ &quot;WHERE b.id = 1&quot;,
+		Book.class);
+q.setHint(QueryHints.PASS_DISTINCT_THROUGH, false);
+books = q.getResultList();
+
+log.info(books.get(0));
+log.info(&quot;Authors: &quot;+books.get(0).getAuthors().size());
+log.info(&quot;Reviews: &quot;+books.get(0).getReviews().size());</pre>
+
+
+
+<p>As I explained in <a href="https://thorben-janssen.com/fetch-association-of-subclass/">last week&#8217;s post</a>, Hibernate ensures that within each <em>Session</em>, there is only 1 entity object that represents a specific record in the database. You can use that to resolve foreign key references efficiently or to let Hibernate merge the results of multiple queries.</p>
+
+
+
+<p>If you take a look at the following log output, you can see that the <em>List</em>s returned by both queries contain exactly the same object. In both cases, the <em>Book</em> objects have the reference <em>@1f</em>. </p>
+
+
+
+<p>When Hibernate processed the result of the 2nd query, it checked for each record if the 1st level cache already contained an object for that <em>Book </em>entity. It then reused that object and added the returned <em>Review </em>to the mapped association.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">19:52:10,600 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_1_0_,
+        author2_.id as id1_0_1_,
+        book0_.publisherid as publishe5_1_0_,
+        book0_.publishingDate as publishi2_1_0_,
+        book0_.title as title3_1_0_,
+        book0_.version as version4_1_0_,
+        author2_.firstName as firstNam2_0_1_,
+        author2_.lastName as lastName3_0_1_,
+        author2_.version as version4_0_1_,
+        authors1_.bookId as bookId1_2_0__,
+        authors1_.authorId as authorId2_2_0__ 
+    from
+        Book book0_ 
+    inner join
+        BookAuthor authors1_ 
+            on book0_.id=authors1_.bookId 
+    inner join
+        Author author2_ 
+            on authors1_.authorId=author2_.id 
+    where
+        book0_.id=1
+19:52:10,633 INFO  [org.thoughts.on.java.model.TestMultipleJoinFetch] - org.thoughts.on.java.model.Book@1f
+19:52:10,645 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_1_0_,
+        reviews1_.id as id1_4_1_,
+        book0_.publisherid as publishe5_1_0_,
+        book0_.publishingDate as publishi2_1_0_,
+        book0_.title as title3_1_0_,
+        book0_.version as version4_1_0_,
+        reviews1_.bookid as bookid3_4_1_,
+        reviews1_.comment as comment2_4_1_,
+        reviews1_.bookid as bookid3_4_0__,
+        reviews1_.id as id1_4_0__ 
+    from
+        Book book0_ 
+    inner join
+        Review reviews1_ 
+            on book0_.id=reviews1_.bookid 
+    where
+        book0_.id=1
+19:52:10,648 INFO  [org.thoughts.on.java.model.TestMultipleJoinFetch] - org.thoughts.on.java.model.Book@1f
+19:52:10,648 INFO  [org.thoughts.on.java.model.TestMultipleJoinFetch] - Authors: 2
+19:52:10,648 INFO  [org.thoughts.on.java.model.TestMultipleJoinFetch] - Reviews: 2</pre>
+
+
+
+<h4><span id="Performance_considerations-2">Performance considerations</span></h4>
+
+
+
+<p>If you use multiple queries to get the required graph of entities, you avoid the creation of a huge cartesian product. This reduces the load on all involved systems and makes it easier to ensure a good performance for all queries. </p>
+
+
+
+<p>But that not necessarily means that this approach is faster than option 1. You now <a href="https://thorben-janssen.com/hibernate-tips-count-executed-queries-session/">perform more queries</a> than before. Each of them requires a database roundtrip and creates some management overhead in the database, e.g., to create an execution plan. Due to that, this option is only faster than option 1, if the size of the cartesian product creates a bigger overhead than the execution of multiple queries.</p>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>As you have seen in this article, you can solve Hibernate&#8217;s <em>MultipleBagFetchException </em>in 2 ways: </p>
+
+
+
+<ul><li>You can change the data type of the attribute that maps the associations and retrieve all information in 1 query. The result of that query is a cartesian product. As long as this product doesn&#8217;t get too big, this approach is simple and efficient.</li><li>You can use multiple queries to fetch the required graph of entities. This avoids a huge cartesian product and is the better approach if you need to fetch a huge amount of data.</li></ul></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

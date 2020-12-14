@@ -1,0 +1,200 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Migrating from Hibernate’s to JPA’s Criteria API</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Migrating from Hibernate’s to JPA’s Criteria API</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>As shown in my previous post, <a href="https://thorben-janssen.com/hibernates-query-apis/">Hibernate offers several APIs to query data from the database</a>. If you want to define your query dynamically at runtime, you can use JPA&#8217;s Criteria API. In the past, Hibernate also offered its own proprietary Criteria API. It has been deprecated in Hibernate 5, and you should avoid it when implementing new use cases. </p>
+
+
+
+<p>Sooner or later, you will also need to replace Hibernate&#8217; Criteria API in your existing use cases. Let&#8217;s talk about the differences compared to JPA&#8217;s Criteria API and the required migration steps.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Same_name_8211_Different_APIs"><span class="toc_number toc_depth_1">1</span> Same name &#8211; Different APIs</a><ul><li><a href="#Advantages_of_Hibernate8217s_Deprecated_Criteria_API"><span class="toc_number toc_depth_2">1.1</span> Advantages of Hibernate&#8217;s Deprecated Criteria API</a></li><li><a href="#Advantages_of_JPA8217s_Criteria_API"><span class="toc_number toc_depth_2">1.2</span> Advantages of JPA&#8217;s Criteria API</a></li></ul></li><li><a href="#Migration_Steps"><span class="toc_number toc_depth_1">2</span> Migration Steps</a><ul><li><a href="#Migrating_a_Basic_Query"><span class="toc_number toc_depth_2">2.1</span> Migrating a Basic Query</a></li><li><a href="#Migrating_JOINS_With_a_WHERE_Clause"><span class="toc_number toc_depth_2">2.2</span> Migrating JOINS With a WHERE Clause</a></li><li><a href="#Migrating_Function_Calls_With_a_GROUP_BY_Clause"><span class="toc_number toc_depth_2">2.3</span> Migrating Function Calls With a GROUP BY Clause</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">3</span> Conclusion</a></li></ul></div>
+<h2><span id="Same_name_8211_Different_APIs">Same name &#8211; Different APIs</span></h2>
+
+
+
+<p>The 2 APIs serve the same purpose. So, it&#8217;s no surprise that they are very similar. The names of the packages, interfaces, and methods obviously differ, but there are a few other differences you need to know.</p>
+
+
+
+<h3><span id="Advantages_of_Hibernate8217s_Deprecated_Criteria_API">Advantages of Hibernate&#8217;s Deprecated Criteria API</span></h3>
+
+
+
+<p>Hibernate&#8217;s Criteria query is a little easier to define and execute. As you will see in the migration chapter, it uses a straightforward approach to create the different parts of the query and execute it. JPA&#8217;s Criteria API, on the other hand, makes heavy use of the CriteriaBuilder interface to create the different parts of your query. It&#8217;s verbosity often makes it a little hard to read.</p>
+
+
+
+<p>Hibernate&#8217;s API enables you to define parts of your query as native SQL snippets. This provides a flexible approach to use the features of your database, even if Hibernate doesn&#8217;t offer direct support for them. Unfortunately, there is no corresponding feature in JPA&#8217;s Criteria API.</p>
+
+
+
+<p>Another feature that a lot of developers miss during the migration is Hibernate&#8217;s <em>Example </em>criterion. It allows you to define your WHERE clause based on an entity object and its attribute values. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book();
+b.setFormat(Format.PAPERBACK);
+b.setTopic(&quot;Java&quot;);
+List results = session.createCriteria(Book.class)
+    .add( Example.create(b) )
+    .list();</pre>
+
+
+
+<p>Using JPA&#8217;s Criteria API, you need to implement the required WHERE clause yourself.</p>
+
+
+
+<h3><span id="Advantages_of_JPA8217s_Criteria_API">Advantages of JPA&#8217;s Criteria API</span></h3>
+
+
+
+<p>JPA&#8217;s Criteria API doesn&#8217;t support all the features you might have used with Hibernate&#8217;s API. But the migration will provide you a few other benefits.</p>
+
+
+
+<p>If you use JPA&#8217;s Criteria API together with its <a href="https://thorben-janssen.com/static-metamodel/">metamodel</a>, you no longer need to reference entity attributes by their name. You can use the attributes of the generated metamodel classes instead. That enables you to define your query in a typesafe way. It not only makes the definition of your query easier; it also makes a refactoring of your entity classes a lot easier.</p>
+
+
+
+<p>JPA&#8217;s <em>CriteriaBuilder </em>provides a method to define bind parameters, which you can use to create your WHERE clause and to set the corresponding values before you execute the queries. In contrast to inline parameters, bind parameters avoid SQL injection vulnerabilities and enable your database to cache the execution plan of your query.</p>
+
+
+
+<h2><span id="Migration_Steps">Migration Steps</span></h2>
+
+
+
+<p>Most migrations are relatively simple, and I will show you a few examples in the following sections. We can group the required steps as follows:</p>
+
+
+
+<ol><li>Get a <em>CriteriaBuilder </em>before working on your query.</li><li>Use <em>CriteriaBuilder </em>instead of Hibernate&#8217;s <em>Session </em>interface to create your <em>CriteriaQuery</em>.</li><li>Call the <em>from</em> method on your <em>CriteriaQuery </em>to start defining your FROM clause.</li><li>Use the <em>join </em>method of the <em>Root </em>interface to define JOIN clauses instead of <em>createCriteria </em>or <em>createAlias</em>.</li><li>Create <em>Expression</em>s using the <em>CriteriaBuilder </em>to define your WHERE clause instead of calling the <em>add </em>method on the <em>Criteria </em>interface. The resulting code is much more verbose and often harder to read than your previous Hibernate-specific Criteria query.</li><li>Call <em>groupBy</em>, <em>having </em>and <em>orderBy</em> on the CriteriaQuery interface to define your GROUP BY, HAVING, and ORDER BY clauses. This approach is very similar to the generated SQL statement. Using Hibernate&#8217;s depr<em>ecated</em> <em>Criteria </em>query, you defined these clauses as part of your projection.</li></ol>
+
+
+
+<h3><span id="Migrating_a_Basic_Query">Migrating a Basic Query</span></h3>
+
+
+
+<p>Let&#8217;s start with a basic query that selects all <em>Book</em> entities from the database.</p>
+
+
+
+<p>Using Hibernate&#8217;s Criteria API, you can define this query in 1 line. You only need to call the <em>createCriteria </em>method on your <em>Session </em>interface with the entity class you want to select. In the next step, you can execute the query by calling the <em>list</em> method. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">List books = s.createCriteria(Book.class).list();</pre>
+
+
+
+<p>JPA&#8217;s Criteria API is much more verbose. You first need to get the <em>CriteriaBuilder</em> and call the <em>createQuery </em>method on it to instantiate your <em>CriteriaQuery</em>. In the next step, you need to call the <em>from </em>method on the <em>CriteriaQuery </em>to define the FROM clause. After you&#8217;ve done that, you can provide the <em>CriteriaQuery </em>to the <em>createQuery </em>method of your <em>EntityManager </em>and execute the returned <em>TypedQuery</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaQuery&lt;Book&gt; cq = cb.createQuery(Book.class);
+cq.from(Book.class);
+
+List&lt;Book&gt; books = em.createQuery(cq).getResultList();</pre>
+
+
+
+<p>JPA&#8217;s more verbose Criteria API might be harder to read, but it provides strong typing. That&#8217;s especially the case if you use JPA&#8217;s Metamodel, as I do in the following examples.</p>
+
+
+
+<h3><span id="Migrating_JOINS_With_a_WHERE_Clause">Migrating JOINS With a WHERE Clause</span></h3>
+
+
+
+<p>This query clearly shows how much less code Hibernate&#8217;s Criteria API required. You first call the<em> createCriteria meth</em>od to get a <em>Criteria </em>object. Using this object, you can create a sub-<em>Criteria</em> that represents the JOIN clause.<em> </em>You can then add one or more <em>Restriction</em>s to this sub-<em>Criteria</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Criteria q = s.createCriteria(Author.class);
+q.createCriteria(&quot;books&quot;).add(Restrictions.like(&quot;title&quot;, &quot;%Hibernate%&quot;));
+List authors = q.list();</pre>
+
+
+
+<p>From an object-oriented perspective, Hibernate&#8217;s deprecated API might be easier to read because you define the filter operations on the <em>Criteria </em>that represents the JOIN clause. But it&#8217;s very different from the actual SQL statement that Hibernate has to generate.</p>
+
+
+
+<p>JPA&#8217;s Criteria API suffers from a similar issue. You can see the structure of the generated SQL statement more clearly in your code. But it&#8217;s still different. At the same time, the verbosity of the Criteria API reduces the readability of your code.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaQuery&lt;Author&gt; cq = cb.createQuery(Author.class);
+Root&lt;Author&gt; root = cq.from(Author.class);
+SetJoin&lt;Author, Book&gt; books = root.join(Author_.books);
+
+ParameterExpression&lt;String&gt; paramTitle = cb.parameter(String.class);
+cq.where(cb.like(books.get(Book_.title), paramTitle));
+
+TypedQuery&lt;Author&gt; q = em.createQuery(cq);
+q.setParameter(paramTitle, &quot;%Hibernate%&quot;);
+List&lt;Author&gt; authors = q.getResultList();</pre>
+
+
+
+<p>This code is similar to the one in the previous migration example. This time, you also need to define the JOIN clause from the <em>Author </em>to the <em>Book</em> table. You can do that using the <em>join </em>method on the <em>Root</em> interface that represents the <em>Author</em> table. By using the <a href="https://thorben-janssen.com/static-metamodel/">metamodel class <em>Author_</em></a>, you can do that in a typesafe way. If you don&#8217;t want to use the metamodel, you can also provide a <em>String</em> that references the attribute by its name.</p>
+
+
+
+<p>The description of the WHERE clause consists of the creation of a <em>ParameterExpression </em>of type <em>String </em>and the definition of the WHERE clause itself. As in the previous example, you need to use the <em>CriteriaBuilder </em>to define the LIKE expression with references to the <em>title </em>attribute of the <em>Book </em>and the <em>ParameterExpression</em>.</p>
+
+
+
+<p>After you&#8217;ve done that, you can instantiate a <em>TypedQuery</em>, set the bind parameter value, and execute it.</p>
+
+
+
+<h3><span id="Migrating_Function_Calls_With_a_GROUP_BY_Clause">Migrating Function Calls With a GROUP BY Clause</span></h3>
+
+
+
+<p>Similar to the previous examples, a query that selects the <em>firstName</em> and <em>lastName </em>of an <em>Author </em>and counts her books requires only a few lines of code if you use Hibernate&#8217;s deprecated Criteria API. But this code is different from the generated SQL statement, and I don&#8217;t find it intuitive to read or write.</p>
+
+
+
+<p>You need to create a <em>projectionList</em> containing the 3 information the query shall return. But instead of defining a GROUP BY clause using the firstName and lastName, you reference each of them as a groupProperty in the projection.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Criteria q = s.createCriteria(Author.class);
+q.setProjection(Projections.projectionList()
+						   .add(Projections.groupProperty(&quot;firstName&quot;))
+						   .add(Projections.groupProperty(&quot;lastName&quot;))
+						   .add(Projections.count(&quot;books&quot;)));
+List authors = q.list();</pre>
+
+
+
+<p>JPA&#8217;s Criteria stays a little closer to the generated SQL statement. You first join the <em>Author </em>with the <em>Book</em> entity. In the next step, you define the selection by providing references to the <em>firstName </em>and <em>lastName </em>attributes of the <em>Author </em>and describing a call of the <em>count </em>function to get the number of <em>books</em>. After that is done, you need to call the <em>groupBy </em>method on the <em>CriteriaQuery </em>interface to create the GROUP BY clause.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaQuery&lt;Tuple&gt; cq = cb.createTupleQuery();
+Root&lt;Author&gt; root = cq.from(Author.class);
+SetJoin&lt;Author, Book&gt; books = root.join(Author_.books);
+cq.multiselect(root.get(Author_.firstName), root.get(Author_.lastName), cb.count(books.get(Book_.id)));
+cq.groupBy(root.get(Author_.firstName), root.get(Author_.lastName));
+
+TypedQuery&lt;Tuple&gt; q = em.createQuery(cq);
+List&lt;Tuple&gt; authors = q.getResultList();</pre>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>As you have seen, JPA&#8217;s and Hibernate&#8217;s Criteria APIs are different. But a migration between the 2 APIs isn&#8217;t incredibly complicated. You should only expect problems if you&#8217;re using Hibernate&#8217;s query by example or SQL snippet features.</p>
+
+
+
+<p>JPA&#8217;s Criteria API is much more verbose than Hibernate&#8217;s deprecated API. That makes the required changes appear much bigger than they actually are. Unfortunately, the verbosity also often reduces the readability of the code. But as I have seen time and time again, developers who are new to JPA&#8217;s Criteria API quickly understand the general concepts. After using it for a few queries, they often use it with confidence to implement complex queries.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

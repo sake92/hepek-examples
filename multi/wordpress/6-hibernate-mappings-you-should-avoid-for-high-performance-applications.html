@@ -1,0 +1,475 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>6 Hibernate Mappings You Should Avoid for High-Performance Applications</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>6 Hibernate Mappings You Should Avoid for High-Performance Applications</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Hibernate provides lots of mapping features that allow you to map complex domain and table models. But the availability of these features doesn&#8217;t mean that you should use them in all of your applications. Some of them might be a great fit for smaller applications that are only used by a few users in parallel. But you should definitely not use them if you need to create a high-performance persistence layer.</p>
+
+
+
+<p>In this article, I will show you 6 mapping features that will slow down your persistence layer. And if you want to dive deeper into these topics, I recommend you sign up for the <a href="https://thorben-janssen.com/hibernate-performance-tuning-online-training-wst/">Hibernate Performance Tuning Online Training</a>.</p>
+
+
+
+<!--more-->
+
+
+
+<p>Let&#8217;s start with some of Hibernate&#8217;s and JPA&#8217;s standard features.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#1_Avoid_FetchTypeEAGER_and_be_cautious_about_to-one_associations"><span class="toc_number toc_depth_1">1</span> 1. Avoid FetchType.EAGER (and be cautious about to-one associations)</a></li><li><a href="#2_Don8217t_map_Many-to-Many_associations_to_a_List"><span class="toc_number toc_depth_1">2</span> 2. Don&#8217;t map Many-to-Many associations to a List</a></li><li><a href="#3_Don8217t_use_bidirectional_One-to-One_mappings"><span class="toc_number toc_depth_1">3</span> 3. Don&#8217;t use bidirectional One-to-One mappings</a></li><li><a href="#4_Avoid_the_Formula_annotation"><span class="toc_number toc_depth_1">4</span> 4. Avoid the @Formula annotation</a></li><li><a href="#5_Don8217t_use_the_OrderBy_annotation"><span class="toc_number toc_depth_1">5</span> 5. Don&#8217;t use the @OrderBy annotation</a></li><li><a href="#6_Avoid_CascadeTypeREMOVE_for_large_associations"><span class="toc_number toc_depth_1">6</span> 6. Avoid CascadeType.REMOVE for large associations</a></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">7</span> Conclusion</a></li></ul></div>
+<h2><span id="1_Avoid_FetchTypeEAGER_and_be_cautious_about_to-one_associations">1. Avoid <em>FetchType.EAGER</em> (and be cautious about to-one associations)</span></h2>
+
+
+
+<p>You probably already read a few articles and recommendations about the <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">FetchTypes</a> supported by JPA and Hibernate. So, I keep this recommendation short.</p>
+
+
+
+<p><em>FetchType.EAGER</em> tells your persistence provider to fetch a managed association as soon as you load the entity. So, it gets loaded from the database, whether or not you use the association in your business code. For most of your use cases, that means that you execute a few unnecessary database queries, which obviously slows down your application.</p>
+
+
+
+<p>You can easily avoid that by using <em>FetchType.LAZY</em>. Hibernate will then only fetch the associated entities if you use the managed relationship in your business code. This is the default behavior for all to-many associations. For to-one associations, you need to set the <em>FetchType </em>in your <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">association mapping</a> explicitly. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	private String comment;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	private Book book;
+	
+	...
+}</pre>
+
+
+
+<p>When you do that, you need to pay special attention to one-to-one associations. As I explained in a recent Hibernate Tip, <a href="https://thorben-janssen.com/hibernate-tip-lazy-loading-one-to-one/">lazy loading of one-to-one associations</a> only works reliably for the entity that maps the foreign key column. I will get into more details on that in section 3.</p>
+
+
+
+
+
+
+
+<h2><span id="2_Don8217t_map_Many-to-Many_associations_to_a_List">2. Don&#8217;t map Many-to-Many associations to a <em>List</em></span></h2>
+
+
+
+<p>Hibernate can map a many-to-many association to a <em>java.util.List</em> or a <em>java.util.Set</em>. Most developers expect that the mapping to a <em>java.util.List</em> is the easier and more efficient one. But that&#8217;s not the case!</p>
+
+
+
+<p>Removing an entry from a <a href="https://thorben-janssen.com/best-practices-for-many-to-many-associations-with-hibernate-and-jpa/">many-to-many association</a> that you mapped to a <em>List</em>, is very inefficient.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">b = em.find(Book.class, 1L);
+		
+b.getAuthors().remove(a);</pre>
+
+
+
+<p>Hibernate will remove all records from the association table before it adds the remaining ones. </p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">06:12:51,636 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_1_0_,
+        book0_.title as title2_1_0_,
+        book0_.version as version3_1_0_ 
+    from
+        Book book0_ 
+    where
+        book0_.id=?
+06:12:51,639 DEBUG [org.hibernate.SQL] - 
+    select
+        authors0_.books_id as books_id1_2_0_,
+        authors0_.authors_id as authors_2_2_0_,
+        author1_.id as id1_0_1_,
+        author1_.firstName as firstNam2_0_1_,
+        author1_.lastName as lastName3_0_1_,
+        author1_.version as version4_0_1_ 
+    from
+        Book_Author authors0_ 
+    inner join
+        Author author1_ 
+            on authors0_.authors_id=author1_.id 
+    where
+        authors0_.books_id=?
+06:12:51,642 DEBUG [org.hibernate.SQL] - 
+    update
+        Book 
+    set
+        title=?,
+        version=? 
+    where
+        id=? 
+        and version=?
+06:12:51,644 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book_Author 
+    where
+        books_id=?
+06:12:51,645 DEBUG [org.hibernate.SQL] - 
+    insert 
+    into
+        Book_Author
+        (books_id, authors_id) 
+    values
+        (?, ?)
+06:12:51,646 DEBUG [org.hibernate.SQL] - 
+    insert 
+    into
+        Book_Author
+        (books_id, authors_id) 
+    values
+        (?, ?)</pre>
+
+
+
+<p>That&#8217;s obviously not the most efficient approach. If you remove only one association from the List, you would expect that Hibernate only deletes the corresponding record from the association table and keeps all other records untouched. You can achieve that by mapping the association as a <em>java.util.Set</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	@Version
+	private int version;
+
+	private String title;
+
+	@ManyToMany
+	private Set&lt;Author&gt; authors = new HashSet&lt;Author&gt;();
+	
+	...
+	
+}</pre>
+
+
+
+<p>If you now remove an associated entity from the <em>Set</em>, Hibernate only executes the expected SQL DELETE statement.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">06:09:32,412 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_1_0_,
+        book0_.title as title2_1_0_,
+        book0_.version as version3_1_0_ 
+    from
+        Book book0_ 
+    where
+        book0_.id=?
+06:09:32,414 DEBUG [org.hibernate.SQL] - 
+    select
+        authors0_.books_id as books_id1_2_0_,
+        authors0_.authors_id as authors_2_2_0_,
+        author1_.id as id1_0_1_,
+        author1_.firstName as firstNam2_0_1_,
+        author1_.lastName as lastName3_0_1_,
+        author1_.version as version4_0_1_ 
+    from
+        Book_Author authors0_ 
+    inner join
+        Author author1_ 
+            on authors0_.authors_id=author1_.id 
+    where
+        authors0_.books_id=?
+06:09:32,417 DEBUG [org.hibernate.SQL] - 
+    update
+        Book 
+    set
+        title=?,
+        version=? 
+    where
+        id=? 
+        and version=?
+06:09:32,420 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book_Author 
+    where
+        books_id=? 
+        and authors_id=?</pre>
+
+
+
+<h2><span id="3_Don8217t_use_bidirectional_One-to-One_mappings">3. Don&#8217;t use bidirectional One-to-One mappings</span></h2>
+
+
+
+<p>I briefly mentioned lazy loading of one-to-one associations in the first section. But it&#8217;s important and tricky enough to get into more details on it.</p>
+
+
+
+<p>For all managed associations, you can use the <em>fetch</em> attribute of the defining annotation to set the <em>FetchType</em>. But even though that includes the <em>@OneToOne</em> annotation, that mapping is a little bit special. That&#8217;s because it&#8217;s the only relationship for which you can define a to-one association on the entity that doesn&#8217;t map the foreign key column.</p>
+
+
+
+<p>If you do that, Hibernate needs to perform a query to check if it has to initialize the attribute with <em>null</em> or a proxy object. And the Hibernate team decided, that if they have to execute a query anyways, it&#8217;s better to fetch the associated entity instead of just checking if it exists and fetching it later. Due to that, lazy loading doesn&#8217;t work for this kind of one-to-one association mapping. But it works perfectly fine on the entity that maps the foreign key column.</p>
+
+
+
+<p>So, what should you do instead? </p>
+
+
+
+<p>You should only model unidirectional one-to-one associations that share the same primary key value on the entity that maps the foreign key column. Bidirectional and unidirectional associations on the entity that doesn&#8217;t model the foreign key column don&#8217;t support any lazy fetching.</p>
+
+
+
+<p>Modeling a <a href="https://thorben-janssen.com/hibernate-tip-lazy-loading-one-to-one/">unidirectional one-to-one association with a shared primary key value</a> is pretty simple. You just need to annotate the association with an additional @MapsId annotation. That tells your persistence provider to use the primary key value of the associated entity as the primary key value of this entity.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Manuscript {
+ 
+    @Id
+    private Long id;
+ 
+    @OneToOne
+    @MapsId
+    @JoinColumn(name = &quot;id&quot;)
+    private Book book;
+ 
+    ...
+}</pre>
+
+
+
+<p>Due to the shared primary key value, you don&#8217;t need a bidirectional association mapping. When you know the primary key value of a <em>Book </em>entity, you also know the primary key value of the associated <em>Manuscript </em>entity. So, you can simply call the <em>find </em>method on your <em>EntityManager </em>to fetch the <em>Manuscript</em> entity.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = em.find(Book.class, 100L);
+Manuscript m = em.find(Manuscript.class, b.getId());</pre>
+
+
+
+<h2><span id="4_Avoid_the_Formula_annotation">4. Avoid the <em>@Formula</em> annotation</span></h2>
+
+
+
+<p>The <em><a href="https://thorben-janssen.com/hibernate-tips-calculate-entity-attributes-formula/">@Formula</a></em><a href="https://thorben-janssen.com/hibernate-tips-calculate-entity-attributes-formula/"> annotation</a> enables you to map the return value of an SQL snippet to a read-only entity attribute. It&#8217;s an interesting feature that you can use in smaller applications that don&#8217;t need to handle lots of parallel requests. But it&#8217;s not a great fit for a high-performance persistence layer.</p>
+
+
+
+<p>Here you can see an example of the <em>@Formula</em> annotation. I use it to calculate the <em>age </em>of an <em>Author </em>based on her/his date of birth.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+	
+	@Version
+	private int version;
+
+	private String firstName;
+
+	private String lastName;
+	
+	private LocalDate dateOfBirth;
+	
+	@Formula(value = &quot;date_part(&#039;year&#039;, age(dateOfBirth))&quot;)
+	private int age;
+	
+	...
+}</pre>
+
+
+
+<p>The main issue with the <em>@Formula</em> annotation is that the provided SQL snippet gets executed every time you fetch the entity. But I have never seen an application that used the read-only attributes every time the entity got fetched.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">06:16:30,054 DEBUG [org.hibernate.SQL] - 
+    select
+        author0_.id as id1_0_0_,
+        author0_.dateOfBirth as dateOfBi2_0_0_,
+        author0_.firstName as firstNam3_0_0_,
+        author0_.lastName as lastName4_0_0_,
+        author0_.version as version5_0_0_,
+        date_part(&#039;year&#039;,
+        age(author0_.dateOfBirth)) as formula0_0_ 
+    from
+        Author author0_ 
+    where
+        author0_.id=?</pre>
+
+
+
+<p>In a smaller application, that isn&#8217;t an issue. Your database can easily execute the more complex SQL statement. But in a high-performance persistence layer that needs to handle lots of parallel requests, you should avoid any unnecessary complexity. In these cases, you can better <a href="https://thorben-janssen.com/hibernate-tips-call-standard-function-jpql-query/">call a database function</a> and use a <a href="https://thorben-janssen.com/dto-projections/">DTO projection</a>.</p>
+
+
+
+<h2><span id="5_Don8217t_use_the_OrderBy_annotation">5. Don&#8217;t use the <em>@OrderBy </em>annotation</span></h2>
+
+
+
+<p>My recommendation for the <em>@OrderBy</em> annotation is basically the same as for the <em>@Formula</em> annotation: It&#8217;s a great feature for smaller applications but not a great fit for a high-performance persistence layer.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+	
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	@Version
+	private int version;
+
+	private String title;
+
+	@ManyToMany
+	@OrderBy(value = &quot;lastName ASC, firstName ASC&quot;)
+	private Set&lt;Author&gt; authors = new HashSet&lt;Author&gt;();
+	
+	...
+}</pre>
+
+
+
+<p>Using the <em><a href="https://thorben-janssen.com/ordering-vs-sorting-hibernate-use/">@OrderBy</a></em><a href="https://thorben-janssen.com/ordering-vs-sorting-hibernate-use/"> annotation</a>, you can define an <em>ORDER BY</em> clause that gets used when Hibernate fetches the associated entities. But not all of your use cases will need to retrieve the association in a specific order. If you don&#8217;t need it, the ordering creates an overhead that you should avoid, if you need to optimize your persistence layer for performance.</p>
+
+
+
+<p>If performance is more important than ease of use of your persistence layer, you should prefer a use case specific <a href="https://thorben-janssen.com/jpql/">JPQL query</a>. By doing that, you can add the ORDER BY clause whenever you need it. In all other use cases, you can fetch the associated entities in an undefined order.</p>
+
+
+
+<h2><span id="6_Avoid_CascadeTypeREMOVE_for_large_associations">6. Avoid CascadeType.REMOVE for large associations</span></h2>
+
+
+
+<p>Cascading tells Hibernate to perform an operation not only on the entity on which you triggered it but also on the associated entities. That makes persist, merge, and remove operations much easier.</p>
+
+
+
+<p>But using <em>CascadeType.REMOVE</em> on a large association is very inefficient. It requires Hibernate to fetch all associated entities, to change the life cycle state of each entity to removed and execute an SQL DELETE statement for each of them. Doing that for a few dozen or more entities can take a considerable amount of time.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">06:32:42,988 DEBUG [org.hibernate.SQL] - 
+    select
+        author0_.id as id1_0_0_,
+        author0_.firstName as firstNam2_0_0_,
+        author0_.lastName as lastName3_0_0_,
+        author0_.version as version4_0_0_ 
+    from
+        Author author0_ 
+    where
+        author0_.id=?
+06:32:43,014 DEBUG [org.hibernate.SQL] - 
+    select
+        books0_.authorId as authorId2_2_0_,
+        books0_.bookId as bookId1_2_0_,
+        book1_.id as id1_1_1_,
+        book1_.publisherid as publishe5_1_1_,
+        book1_.publishingDate as publishi2_1_1_,
+        book1_.title as title3_1_1_,
+        book1_.version as version4_1_1_,
+        publisher2_.id as id1_3_2_,
+        publisher2_.name as name2_3_2_,
+        publisher2_.version as version3_3_2_ 
+    from
+        BookAuthor books0_ 
+    inner join
+        Book book1_ 
+            on books0_.bookId=book1_.id 
+    left outer join
+        Publisher publisher2_ 
+            on book1_.publisherid=publisher2_.id 
+    where
+        books0_.authorId=?
+06:32:43,032 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        BookAuthor 
+    where
+        bookId=?
+06:32:43,034 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        BookAuthor 
+    where
+        bookId=?
+06:32:43,036 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book 
+    where
+        id=? 
+        and version=?
+06:32:43,039 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book 
+    where
+        id=? 
+        and version=?
+06:32:43,042 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Author 
+    where
+        id=? 
+        and version=?</pre>
+
+
+
+<p>Using a <em>CriteriaDelete</em> or a JPQL DELETE statement enables you to remove all associated entities with one statement. That&#8217;s avoids the life cycle state transitions and drastically reduces the number of executed queries. So, it shouldn&#8217;t be a surprise that it&#8217;s also much faster. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">CriteriaBuilder cb = em.getCriteriaBuilder();
+CriteriaDelete&lt;Book&gt; delete = cb.createCriteriaDelete(Book.class);
+Root&lt;Book&gt; book = delete.from(Book.class);
+ParameterExpression&lt;Author&gt; p = cb.parameter(Author.class, &quot;author&quot;);
+delete.where(cb.isMember(p, book.get(Book_.authors)));
+
+Query query = em.createQuery(delete);
+query.setParameter(p, em.find(Author.class, 8L));
+query.executeUpdate();</pre>
+
+
+
+<p>But please keep in mind, that Hibernate doesn&#8217;t trigger any life cycle events for these entities and that it doesn&#8217;t remove entities in your 1st level cache.</p>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>Hibernate provides lots of mapping features that can make implementing and using your persistence layer much easier. But not all of them are an excellent fit for a high-performance persistence layer. </p>
+
+
+
+<p>In general, you should avoid all mappings that are not required for every use case or that make your mapping more complex. 2 typical examples for that are the <em>@Formula</em> and the <em>@OrderBy</em> annotations.</p>
+
+
+
+<p>In addition to that, you should always <a href="https://thorben-janssen.com/hibernate-logging-guide/">monitor the executed SQL statements</a>. It should be evident that the fewer queries your use cases require, the faster they are. So, make sure that Hibernate uses your mappings efficiently.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

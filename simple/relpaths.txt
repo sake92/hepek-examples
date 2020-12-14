@@ -1,0 +1,4 @@
+Relative path from here to TextFile is my-text.txt,
+and path to JsonFile is json/my-json.json.
+
+Neat!

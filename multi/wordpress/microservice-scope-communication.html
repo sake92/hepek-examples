@@ -1,0 +1,114 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Scope + Communication – The magic formula of microservices</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Scope + Communication – The magic formula of microservices</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>For quite some time, finding the right scope of a microservice was proclaimed to solve all problems. If you do it right, implementing your service is supposed to be easy, your services are independent of each other, and you don’t need to worry about any communication between your services.</p>
+
+
+
+<p>Unfortunately, reality didn’t hold up to this promise all too well. Don’t get me wrong, finding the right scope of a service helps. Implementing a few right-sized services is much easier than creating lots of services that are too small and that depend on each other. Unfortunately, that doesn’t mean that all problems are solved or that there is no communication between your services.</p>
+
+
+
+<p>But let&#8217;s take a step back and discuss what &#8220;the right scope&#8221; means and why it&#8217;s so important.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#What_is_the_right_scope_of_a_microservice"><span class="toc_number toc_depth_1">1</span> What is the right scope of a microservice?</a></li><li><a href="#Bounded_contexts_and_microservices_are_connected"><span class="toc_number toc_depth_1">2</span> Bounded contexts and microservices are connected</a><ul><li><a href="#Data_replication"><span class="toc_number toc_depth_2">2.1</span> Data replication</a></li><li><a href="#Coordinate_complex_operations"><span class="toc_number toc_depth_2">2.2</span> Coordinate complex operations</a></li></ul></li><li><a href="#You_need_the_right_scope_and_the_right_communication"><span class="toc_number toc_depth_1">3</span> You need the right scope and the right communication</a></li></ul></div>
+<h2><span id="What_is_the_right_scope_of_a_microservice">What is the right scope of a microservice?</span></h2>
+
+
+
+<p>Finding the right scope of a service is a lot harder than it might seem. It requires a good understanding of your business domain. That’s why most architects agree that a bounded context, as it’s defined by Domain-Driven Design, represents a proper scope of a microservice.</p>
+
+
+
+<p>Interestingly enough, when we talk about a bounded context, we don’t talk about size. We talk about the goal that the model of a bounded context is internally consistent. That means that there is only one exact definition of each concept. If you try to model the whole business domain, that’s often hard to achieve.</p>
+
+
+
+<p>A customer in an order management application, for example, is different from a customer in an online store. The customer in the store browses around and might or might not decide to buy something. We have almost no information about that person. A customer in an order management application, on the other hand, has bought something, and we know the name and their payment information. We also know which other things that person bought before. </p>
+
+
+
+<p>If you try to use the same model of a customer for both subsystems, your definition of a customer loses a lot of precision. If you talk about customers, nobody exactly knows which kind of customer you mean.</p>
+
+
+
+<p>All of that gets a lot easier and less confusing if you split that model into multiple bounded contexts. That enables you to have 2 independent definitions of a customer: one for the order management and one for the online store. Within each context, you can precisely define what a customer is.</p>
+
+
+
+<p>The same is true for monolithic and microservice applications. A monolith is often confusing, and there might be different definitions or implementations of the same concept within the application. That is confusing and makes the monolith hard to understand and maintain. But if you split it into multiple microservices, this gets a lot easier. If you do it right, there are no conflicting implementations or definitions of the same concept within one microservice.</p>
+
+
+
+<h2><span id="Bounded_contexts_and_microservices_are_connected">Bounded contexts and microservices are connected</span></h2>
+
+
+
+<p>As you can see, there is an apparent similarity between microservices and bounded contexts. And that’s not the only one. There is another similarity that often gets ignored. Bounded contexts in DDD can be connected to other services. You’re probably not surprised if I tell you that the same is true for microservices.</p>
+
+
+
+<p>These connections are necessary, and you can’t avoid them. You might use different definitions of a customer in your online store and your order management application. But for each customer in your order management system, there needs to be a corresponding customer in the online store system. And sooner or later, someone will ask you to connect this information.</p>
+
+
+
+<p>Let’s take a closer look at a few situations in which we need to share data between microservices.</p>
+
+
+
+<h3><span id="Data_replication">Data replication</span></h3>
+
+
+
+<p>The most obvious example of services that need to exchange data are services that provide different functionalities on the same information. Typical examples of services that use data owned by other services are management dashboards, recommendation engines, and any other kind of application that needs to aggregate information.</p>
+
+
+
+<p>The functionality provided by these services shouldn’t become part of the services that are owning the data. By doing that, you would implement 2 or more separate bounded contexts within the same application. That will cause the same issues as we had with unstructured monoliths. </p>
+
+
+
+<p>It’s much better to replicate the required information asynchronously instead. As an example, the order, store, and inventory service replicate their data asynchronously, and the management dashboard aggregates them to provide the required statistics to the managers.</p>
+
+
+
+<p>When you implement such a replication, it’s important to ensure that you don’t introduce any direct dependencies between your services. In general, this is achieved by exchanging messages or events via a message broker or an event streaming platform.</p>
+
+
+
+<p>There are various patterns that you can use to replicate data and decouple your services. In my upcoming <a href="https://thorben-janssen.com/data-and-communication-patterns-for-microservices/">Data and Communication Patterns for Microservices</a> course, I recommend using the Outbox Pattern. It’s relatively easy to implement, enables great decoupling of your services, scales well, and ensures a reasonable level of consistency.</p>
+
+
+
+<h3><span id="Coordinate_complex_operations">Coordinate complex operations</span></h3>
+
+
+
+<p>Another example is a set of services that need to work together to perform a complex business operation. In the case of an online store, that might be the order management service, the payment service, and the inventory service. All 3 of them model independent contexts, and there are lots of good reasons to keep them separate.</p>
+
+
+
+<p>But when a customer orders something, all 3 services need to work together. The order management service needs to receive and handle the order. The payment service processes the payment and the inventory service reserves and ships the products.</p>
+
+
+
+<p>Each service can be implemented independently, and it provides its part of the overall functionality. But you need some form of coordination to make sure that each order gets paid before you ship the products or that you only accept orders that you can actually fulfill.</p>
+
+
+
+<p>As you can see, this is another example of services that need to communicate and exchange data. The only alternative would be to merge these services into one and to implement a small monolith. But that&#8217;s something we decided to avoid.</p>
+
+
+
+<p>You can implement such operations using different patterns. If you do it right, you can avoid any direct dependencies between your services. I recommend using one of the 2 forms of the SAGA patterns, which I explain in great detail in my <a href="https://thorben-janssen.com/data-and-communication-patterns-for-microservices/">Data and Communication Patterns for Microservices course</a>.</p>
+
+
+
+<h2><span id="You_need_the_right_scope_and_the_right_communication">You need the right scope and the right communication</span></h2>
+
+
+
+<p>To sum it up, finding the proper scope for each service is important. It makes the implementation of each service easier and avoids any unnecessary communication or dependencies between your services.</p>
+
+
+
+<p>But that’s only the first step. After you carefully defined the scope of your services, there will be some services that are connected to other services. Using the right patterns, you can implement these connections in a reliable and scalable way without introducing direct dependencies between your services.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

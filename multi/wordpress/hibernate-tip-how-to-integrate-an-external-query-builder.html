@@ -1,0 +1,138 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Tip: How to integrate an external query builder</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate Tip: How to integrate an external query builder</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p><a href="//www.thorben-janssen.com/tips/">Hibernate Tips</a> is a series of posts in which I describe a quick and easy solution for common Hibernate questions. If you have a question for a future Hibernate Tip, please post a comment below. </p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Question"><span class="toc_number toc_depth_1">1</span> Question:</a></li><li><a href="#Solution"><span class="toc_number toc_depth_1">2</span> Solution:</a><ul><li><a href="#Executing_native_queries"><span class="toc_number toc_depth_2">2.1</span> Executing native queries</a></li><li><a href="#Creating_a_query_using_jOOQ"><span class="toc_number toc_depth_2">2.2</span> Creating a query using jOOQ</a></li><li><a href="#Integrating_jOOQ_and_Hibernate"><span class="toc_number toc_depth_2">2.3</span> Integrating jOOQ and Hibernate</a></li></ul></li><li><a href="#Learn_more"><span class="toc_number toc_depth_1">3</span> Learn more:</a></li><li><a href="#Hibernate_Tips_Book"><span class="toc_number toc_depth_1">4</span> Hibernate Tips Book</a></li></ul></div>
+<h2><span id="Question">Question:</span></h2>
+
+
+
+<p>&#8220;I don&#8217;t like JPQL. It abstracts from the underlying table model, and it&#8217;s too limited for my use case. <br>Is there any way to integrate an external query builder, like jOOQ, with Hibernate?<br>Does it remove the limitations from JPQL?&#8221;</p>
+
+
+
+<!--more-->
+
+
+
+<h2><span id="Solution">Solution:</span></h2>
+
+
+
+<p>All query builders are a little bit different. The same is true for their integration with Hibernate. Some, like the QueryDSL, provide their own integration, others, like jOOQ, rely on JPA&#8217;s support of native queries.</p>
+
+
+
+<p>Because this reader explicitly asked about jOOQ, and I&#8217;m not sure if QueryDSL gets still supported, I will focus on integrations via JPA&#8217;s native query capabilities.</p>
+
+
+
+<h3><span id="Executing_native_queries">Executing native queries</span></h3>
+
+
+
+<p>JPA and Hibernate allow you to<a href="https://thorben-janssen.com/jpa-native-queries/"> execute any native SQL query as a native query</a>. This enables you to use all features supported by your database and removes the limitations of <a href="https://thorben-janssen.com/jpql/">JPQL</a>. </p>
+
+
+
+<p>A native query gets executed within the current Hibernate context. That means that Hibernate will flush the persistence context before executing the query. It also runs the query using the database connection and transaction that&#8217;s associated with the current Hibernate <em>Session</em>.</p>
+
+
+
+<h3><span id="Creating_a_query_using_jOOQ">Creating a query using jOOQ</span></h3>
+
+
+
+<p>I explained jOOQ and its integration with Hibernate in great detail in:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/getting-started-with-jooq/">Getting Started with jOOQ &#8211; Building SQL Queries in Java</a> and</li><li><a href="https://thorben-janssen.com/hibernate-jooq-a-match-made-in-heaven/">Hibernate &amp; jOOQ &#8211; A Match Made in Heaven</a>. </li></ul>
+
+
+
+<p>So, in this article, I keep the general explanations short. </p>
+
+
+
+<p>Creating a query using jOOQ is pretty simple. You first need to instantiate a <em>Context</em> and you can then use it to implement your query. The great thing about it is that your code almost reads like SQL.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">DSLContext ctx = DSL.using(SQLDialect.POSTGRES);
+ctx.configuration().settings().setRenderNameStyle(RenderNameStyle.AS_IS);
+SelectConditionStep&lt;Record3&lt;String, String, String&gt;&gt; jooqQuery = 
+		ctx.select(AUTHOR.FIRSTNAME, AUTHOR.LASTNAME, BOOK.TITLE)
+			.from(AUTHOR)
+				.leftJoin(BOOK_AUTHOR).on(AUTHOR.ID.eq(BOOK_AUTHOR.AUTHORS_ID))
+				.leftJoin(BOOK).on(BOOK_AUTHOR.BOOKS_ID.eq(BOOK.ID))
+			.where(AUTHOR.FIRSTNAME.like(&quot;Thor%&quot;));</pre>
+
+
+
+<h3><span id="Integrating_jOOQ_and_Hibernate">Integrating jOOQ and Hibernate</span></h3>
+
+
+
+<p>After you&#8217;ve done that, you can create a native query using your <em>EntityManager</em>, set the bind parameter values, and execute the query. In this example, I use a <a href="https://thorben-janssen.com/result-set-mapping-constructor-result-mappings/">SqlResultMapping</a> with the name BookAuthor. It tells Hibernate to instantiate a new BookAuthorValue <a href="https://thorben-janssen.com/dto-projections/">DTO object</a> for each record in the result set.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Query q = em.createNativeQuery(jooqQuery.getSQL(), &quot;BookAuthor&quot;);
+setBindParameterValues(q, jooqQuery);
+List&lt;BookAuthorValue&gt; bookAuthors = q.getResultList();</pre>
+
+
+
+<p>The only part that requires your attention is the handling of bind parameters. Hibernate and jOOQ handle them differently. Hibernate requires you to set all bind parameter values explicitly while jOOQ automatically creates and manages a bind parameter for each inlined parameter. </p>
+
+
+
+<p>You can bridge this small gap by using the following method. It takes all bind parameters of the <em>jooqQuery </em>and sets it on the <em>hibernateQuery</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">private static void setBindParameterValues(Query hibernateQuery, org.jooq.Query jooqQuery) {
+	List&lt;Object&gt; values = jooqQuery.getBindValues();
+	for (int i = 0; i &lt; values.size(); i++) {
+		hibernateQuery.setParameter(i + 1, values.get(i));
+	}
+}</pre>
+
+
+
+<p>And that&#8217;s all you need to do. Hibernate executes the query that you defined with jOOQ as a native query and handles the result accordingly. You can use Hibernate&#8217;s default mappings to map each record to a managed entity, instantiate DTO objects or retrieve an <em>Object[]</em>.</p>
+
+
+
+
+
+
+
+<h2><span id="Learn_more">Learn more:</span></h2>
+
+
+
+<p>If you want to learn more about queries and the integration of jOOQ and Hibernate, please read the following articles:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/jpql/">Ultimate Guide to JPQL Queries with JPA and Hibernate</a> </li><li><a href="https://thorben-janssen.com/jpa-native-queries/">Native Queries &#8211; How to call native SQL queries with JPA</a></li><li><a href="https://thorben-janssen.com/getting-started-with-jooq/">Getting Started with jOOQ &#8211; Building SQL Queries in Java</a> </li><li><a href="https://thorben-janssen.com/optimal-query-and-projection-jpa-hibernate/">Using the Optimal Query Approach and Projection for JPA and Hibernate</a></li><li><a href="https://thorben-janssen.com/dto-projections/">Why, When and How to Use DTO Projections with JPA and Hibernate</a></li></ul>
+
+
+
+&nbsp;<br />
+<h2><span id="Hibernate_Tips_Book">Hibernate Tips Book</span></h2><br />
+<div><br />
+<br />
+<img style="float: left; max-width: 150px; margin-right: 10px;" src="/wp-content/uploads/2017/04/HibernateTips3D2.png" /><br />
+<div><br />
+<br />
+Get more recipes like this one in my new book <a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Hibernate Tips: More than 70 solutions to common Hibernate problems</a>.<br />
+<br />
+It gives you more than 70 ready-to-use recipes for topics like basic and advanced mappings, logging, Java 8 support, caching, and statically and dynamically defined queries.<br />
+<br />
+<a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Get it now</a>!<br />
+<br />
+</div><br />
+</div></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

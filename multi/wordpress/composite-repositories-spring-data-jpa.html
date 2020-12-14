@@ -1,0 +1,152 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Composite Repositories – Extend your Spring Data JPA Repository</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Composite Repositories – Extend your Spring Data JPA Repository</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Almost all applications have at least a few uses cases that require complex database operations. You can’t define them using a few annotations in a Spring Data JPA repository. You need to create a composite repository. </p>
+
+
+
+<p>Whenever <a href="https://thorben-janssen.com/ultimate-guide-derived-queries-with-spring-data-jpa/">derived</a> or <a href="https://thorben-janssen.com/spring-data-jpa-query-annotation/">custom queries</a> are not powerful or flexible enough, you can add your own methods to your repository using a composite repository. It combines the ease of use of Spring Data&#8217;s standard repositories with the flexibility of a custom implementation.</p>
+
+
+
+<p>Composite repositories are easy to implement. You create an interface that defines your custom methods. This is called a fragment interface. You also need to create a custom implementation of that interface and integrate it with one of Spring Data JPA&#8217;s standard repository interfaces.</p>
+
+
+
+<p>But more about that in the <a href="#customRepository">2nd part</a> of this article. Let&#8217;s first discuss the general motivation for composite repositories in more detail.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#How_to_Define_a_Composite_Repository"><span class="toc_number toc_depth_1">1</span> How to Define a Composite Repository</a><ul><li><a href="#How_to_Define_a_Fragment_Repository"><span class="toc_number toc_depth_2">1.1</span> How to Define a Fragment Repository</a></li></ul></li><li><a href="#Using_Multiple_Fragment_Repositories"><span class="toc_number toc_depth_1">2</span> Using Multiple Fragment Repositories</a><ul><li><a href="#Resolving_Ambiguous_Repository_Method_Declarations"><span class="toc_number toc_depth_2">2.1</span> Resolving Ambiguous Repository Method Declarations</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">3</span> Conclusion</a></li></ul></div>
+<h2><span id="How_to_Define_a_Composite_Repository">How to Define a Composite Repository</span></h2>
+
+
+
+<p>The definition of a composite repository looks very similar to a standard repository. You start by extending one of Spring Data JPA’s repository interfaces, e.g., <em>CrudRepository</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public interface AuthorRepository extends CrudRepository&lt;Author, Long&gt;, CustomAuthorRepository {}</pre>
+
+
+
+<p>In addition to that, you also extend your fragment interface. In this example, I called that interface <em>CustomAuthorRepository</em>.</p>
+
+
+
+<h3><span id="How_to_Define_a_Fragment_Repository">How to Define a Fragment Repository</span></h3>
+
+
+
+<p>The fragment repository is a simple interface that defines the methods for which you want to provide your custom implementation. As you have seen in the previous code snippet, the <em>AuthorRepository </em>extends this and other repository interfaces, which provide the rest of the required functionality.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public interface CustomAuthorRepository {
+	public List&lt;AuthorSummaryDTO&gt;  getAuthorsByFirstName(String firstName);
+}</pre>
+
+
+
+<p>In the example of this article, my fragment interface only defines the <em>getAuthorsByFirstName </em>method.</p>
+
+
+
+<p>In addition to the fragment interface, you need to provide an implementation of it. In this implementation, you can use Spring&#8217;s dependency injection to get a reference to the <em>EntityManager </em>and use it to provide the implementation of your repository methods. In this example, I use the Criteria API to get all <em>Author</em>s with a given <em>firstName </em>as a <em>List </em>of <em>AuthorSummaryDTO </em>objects.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class CustomAuthorRepositoryImpl implements CustomAuthorRepository {
+
+	@Autowired
+	private EntityManager entityManager;
+
+	@Override
+	public List&lt;AuthorSummaryDTO&gt; getAuthorsByFirstName(String firstName) {
+		CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+		CriteriaQuery&lt;AuthorSummaryDTO&gt; query = cb.createQuery(AuthorSummaryDTO.class);
+		Root&lt;Author&gt; root = query.from(Author.class);
+		query.select(cb.construct(AuthorSummaryDTO.class, root.get(Author_.firstName), root.get(Author_.lastName)))
+				.where(cb.equal(root.get(Author_.firstName), firstName));
+
+		return entityManager.createQuery(query).getResultList();
+	}
+
+}
+</pre>
+
+
+
+<h2><span id="Using_Multiple_Fragment_Repositories">Using Multiple Fragment Repositories</span></h2>
+
+
+
+<p>Since Spring 5, your repository can extend multiple fragment interfaces. That gives some extra flexibility for complex domain models and persistence layers.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public interface BookRepository extends CrudRepository&lt;Book, Long&gt;, CustomBookRepository, FindAllRepository { }</pre>
+
+
+
+<h3><span id="Resolving_Ambiguous_Repository_Method_Declarations">Resolving Ambiguous Repository Method Declarations</span></h3>
+
+
+
+<p>When you use multiple fragment interfaces to compose your repository, you get into the situation that 2 interfaces define a method with the same name. In the previous code snippet, the <em>BookRepository </em>extends the fragment repositories <em>CustomBookRepository </em>and the <em>FindAllRepository</em>.</p>
+
+
+
+<p>The <em>CustomBookRepository </em>defines the methods <em>findBooksByAuthorId </em>and <em>findAll</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public interface CustomBookRepository {
+
+	public List&lt;AuthorBookSummaryDTO&gt; findBooksByAuthorId(long authorId);
+	
+	public List&lt;Book&gt; findAll();
+}</pre>
+
+
+
+<p>The <em>FindAllRepository </em>only defines a <em>findAll </em>method.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public interface FindAllRepository {
+	public List&lt;Book&gt; findAll();
+}</pre>
+
+
+
+<p>As you can see, both fragments define a <em>findAll </em>method. On an interface-level, this is not a problem. As it&#8217;s the case for all Java interfaces, the 2 methods get merged into one. </p>
+
+
+
+<p>But both fragment repositories can also provide their own, independent implementations. In that case, the order in which you reference the fragment interfaces in your repository definition defines their priority. The implementation of the interface that gets referenced first gets used.</p>
+
+
+
+<p>Let&#8217;s take another look at the definition of the <em>BookRepository </em>interface used in the previous section.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public interface BookRepository extends CrudRepository&lt;Book, Long&gt;, CustomBookRepository, FindAllRepository { }</pre>
+
+
+
+<p>As you can see, the <em>CustomBookRepository </em>is listed before the <em>FindAllRepository</em>. Because of that, the implementation of the <em>CustomBookRepository </em>gets the higher priority. All calls of the <em>findAll </em>method of the <em>BookRepository </em>will be forwarded to the implementation of the <em>CustomBookRepository </em>fragment.</p>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>Spring Data JPA repositories provide many standardized features that are easy to use and solve the most common use cases. Nonetheless, in some situations, you might need to provide your own implementation of a repository method. You can easily do that by using a Composite Repository.</p>
+
+
+
+<p>A Composite Repository extends a standard Spring Data JPA repository interface and one or more fragment interfaces. These are custom interfaces that define the methods for which you want to provide a custom implementation. In addition to the fragment interface, you also need to provide a class that implements that interface. Within that class, you can use Spring&#8217;s dependency injection capabilities to get a reference to the EntityManager and to implement the required logic.</p>
+
+
+
+<p>If multiple fragment interfaces define the same method and provide their own implementations, Spring uses the implementation of the fragment interface that gets referenced first in the composite repository definition.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

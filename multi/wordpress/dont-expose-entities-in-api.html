@@ -1,0 +1,150 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Don’t expose your JPA entities in your REST API</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Don’t expose your JPA entities in your REST API</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Should you expose your entities in your REST API, or should you prefer to serialize and deserialize <a href="https://thorben-janssen.com/dto-projections/">DTO classes</a>?<br>That&#8217;s one of the most commonly asked questions when I&#8217;m talking to developers or when I&#8217;m <a href="https://thorben-janssen.com/project-coaching/">coaching teams</a> who are working on a new application. </p>
+
+
+
+<p>There are two main reasons for these questions and all the discussions that arise from them:</p>
+
+
+
+<ol><li>Entities are POJOs. It often seems like they can get easily serialized and deserialized to JSON documents. If it really works that easily, the implementation of your REST endpoints would become pretty simple.  </li><li>Exposing your entities creates a strong coupling between your API and your persistence model. Any difference between the 2 models introduces extra complexity, and you need to find a way to bridge the gap between them. Unfortunately, there are always differences between your API and your persistence model. The most obvious ones are the handling of associations between your entities.</li></ol>
+
+
+
+<p>There is an obvious conflict. It seems like exposing entities makes implementing your use cases easier, but it also introduces new problems. So, what has a bigger impact on your implementation? And are there any other problems that might not be that obvious? </p>
+
+
+
+<p>I have seen both approaches in several projects, and over the years, I&#8217;ve formed a pretty strong opinion on this. Even though it&#8217;s tempting to expose your entities, you should avoid it for all applications with at least mediocre complexity and for all applications that you need to support for a long time.  Exposing your entities at your API makes it impossible to fulfill a few best practices when designing your API; it reduces the <a href="https://thorben-janssen.com/hibernate-best-practices-for-readable-and-maintainable-code/">readability of your entity classes</a>, slows down your application, and makes it hard to implement a true REST architecture. </p>
+
+
+
+<p>You can avoid all of these issues by designing DTO classes, which you then serialize and deserialize on your API. That requires you to implement a mapping between the DTOs and your internal data structures. But that&#8217;s worth it if you consider all the downsides of exposing entities in your API.</p>
+
+
+
+<p>Let me explain &#8230;</p>
+
+
+
+<!--more-->
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Hide_implementation_details"><span class="toc_number toc_depth_1">1</span> Hide implementation details</a></li><li><a href="#Don8217t_bloat_your_entities_with_additional_annotations"><span class="toc_number toc_depth_1">2</span> Don&#8217;t bloat your entities with additional annotations</a></li><li><a href="#Different_handling_of_associations"><span class="toc_number toc_depth_1">3</span> Different handling of associations</a></li><li><a href="#Design_your_APIs"><span class="toc_number toc_depth_1">4</span> Design your APIs</a></li><li><a href="#Support_multiple_versions_of_your_API"><span class="toc_number toc_depth_1">5</span> Support multiple versions of your API</a></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">6</span> Conclusion</a></li></ul></div>
+<h2><span id="Hide_implementation_details">Hide implementation details</span></h2>
+
+
+
+<p>As a general best practice, your API shouldn&#8217;t expose any implementation details of your application. The structure that you use to persist your data is such a detail. Exposing your entities in your API obviously doesn&#8217;t follow this best practice.</p>
+
+
+
+<p>Almost every time I bring up this argument in a discussion, someone skeptically raises an eyebrow or directly asks if that is really that big of a deal.</p>
+
+
+
+<p>Well, it&#8217;s only a big deal if you want to be able to add, remove or change any attributes of your entities without changing your API or if you&#8217;re going to change the data returned by a REST endpoint without changing your database. </p>
+
+
+
+<p>In other words: Yes, separating your API from your persistence layer is necessary to implement a maintainable application. If you don&#8217;t do it, every change of your REST API will affect your entity model and vice versa. That means your API and your persistence layer can no longer evolve independently of each other. </p>
+
+
+
+
+
+
+
+<h2><span id="Don8217t_bloat_your_entities_with_additional_annotations">Don&#8217;t bloat your entities with additional annotations</span></h2>
+
+
+
+<p>And if you consider to only expose entities when they are a perfect match for the input or return value of a REST endpoint, then please be aware of the additional annotations you will need to add for the JSON serialization and deserialization. </p>
+
+
+
+<p>Most entity mappings already require <a href="https://thorben-janssen.com/mapping-definitions-jpa-hibernate-annotations-xml/">several annotations</a>. Adding additional ones for your JSON mapping makes the entity classes even harder to understand. Better keep it simple and separate the entity class from the class you use to serialize and deserialize your JSON documents.</p>
+
+
+
+<h2><span id="Different_handling_of_associations">Different handling of associations</span></h2>
+
+
+
+<p>Another argument to not expose your entities in your API is the handling of associations between entities. Your persistence layer and your API treat them differently. That&#8217;s especially the case if you&#8217;re implementing a REST API. </p>
+
+
+
+<p>With JPA and Hibernate, you typically use managed associations that are represented by an entity attribute. That enables you to <a href="https://thorben-janssen.com/jpql/">join the entities in your queries</a> easily and to use the entity attribute to traverse the association in your business code. Depending on the configured <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">fetch type</a> and your query, this association is either fully initialized, or lazily fetched on the first access.</p>
+
+
+
+<p>In your REST API, you handle these associations differently. The correct way would be to provide a link for each association. Roy Fielding described that as <a href="https://en.wikipedia.org/wiki/HATEOAS">HATEOAS</a>. It&#8217;s one of the essential parts of a REST architecture. But most teams decide to either not model the associations at all or to only include id references.</p>
+
+
+
+<p>Links and id references provide a similar challenge. When you serialize your entity to a JSON document, you need to fetch the associated entities and create references for each of them. And during deserialization, you need to take the references and fetch entities for them. Depending on the number of required queries, this might slow down your application.</p>
+
+
+
+<p>That&#8217;s why teams often exclude associations during serialization and deserialization. That might be OK for your client applications, but it creates problems if you try to merge an entity that you created by deserializing a JSON object. Hibernate expects that managed associations either reference other entity objects or dynamically created proxy objects or a Hibernate-specific <a href="https://thorben-janssen.com/association-mappings-bag-list-set/"><em>List</em> or <em>Set</em> implementation</a>. But if you deserialize a JSON object and ignore the managed associations on your entity, the associations get set to null. You then either need to set them manually, or Hibernate will delete the association from your database.</p>
+
+
+
+<p>As you can see, managing associations can be tricky. Don&#8217;t get me wrong; these issues can be solved. But that requires extra work, and if you forget just one of them, you will lose some of your data.</p>
+
+
+
+<h2><span id="Design_your_APIs">Design your APIs</span></h2>
+
+
+
+<p>Another drawback of exposing your APIs is that most teams use it as an excuse to not design the response of their REST endpoints. They only return serialized entity objects.</p>
+
+
+
+<p>But if you&#8217;re not implementing a very simple CRUD operation, your clients will most likely benefit from carefully designed responses. Here are a few examples for a basic bookstore application:</p>
+
+
+
+<ul><li>When you return the result of a search for a book, you might only want to return the title and price of the book, the names of its authors and the publisher, and an average customer rating. With a specifically designed JSON document, you can avoid unnecessary information and embed the information of the authors, the publisher, and the average rating instead of providing links to them. </li><li>When the client requests detailed information about a book, the response will most likely be pretty similar to a serialized representation of the entity. But there will be some important differences. Your JSON document might contain the title, blurb, additional description, and other information about the book. But there is some information you don&#8217;t want to share, like the wholesale price or the current inventory of the book. You might also want to exclude the associations to the authors and reviews of this book.</li></ul>
+
+
+
+<p>Creating these different representations based on <a href="https://thorben-janssen.com/entities-dtos-use-projection/">use case specific DTO classes</a> is pretty simple. But doing the same based on a graph of entity objects is much harder and most likely requires some manual mappings.</p>
+
+
+
+<h2><span id="Support_multiple_versions_of_your_API">Support multiple versions of your API</span></h2>
+
+
+
+<p>If your application gets used for a while, you will need to add new REST endpoints and change existing ones. If you can&#8217;t always update all clients at the same time, this will force you to support multiple versions of your API.</p>
+
+
+
+<p>Doing that while exposing your entities in your API is a tough challenge. Your entities then become a mix of currently used and old, deprecated attributes that are <a href="https://thorben-janssen.com/hibernate-tips-map-1-attribute-2-columns/">annotated with <em>@Transient</em></a> so that they don&#8217;t get persisted in the database.</p>
+
+
+
+<p>Supporting multiple versions of an API is much easier if you&#8217;re exposing DTOs. That separates the persistence layer from your API, and you can introduce a migration layer to your application. This layer separates all the operations required to map the calls from your old API to the new one. That allows you to provide a simple and efficient implementation of your current API. And whenever you deactivate the old API, you can remove the migration layer.</p>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>As you can see, there are several reasons why I don&#8217;t like to expose entities in my APIs. But I also agree that none of them creates unsolvable problems. That&#8217;s why there are still so many discussions about this topic.</p>
+
+
+
+<p>If you&#8217;re having this discussion in your team, you need to ask yourself: Do you want to spend the additional effort to fix all these issues to avoid the very basic mapping between entity and DTO classes? </p>
+
+
+
+<p>In my experience, it&#8217;s just not worth the effort. I prefer to separate my API from my persistence layer and implement a few basic entity to DTO mappings. That keeps my code easy to read and gives me the flexibility to change all internal parts of my application without worrying about any clients.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

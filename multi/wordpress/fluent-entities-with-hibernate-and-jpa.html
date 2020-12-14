@@ -1,0 +1,398 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Fluent Entities with Hibernate and JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Fluent Entities with Hibernate and JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p><a href="https://martinfowler.com/bliki/FluentInterface.html">Fluent interfaces</a> are a popular API <a href="https://thorben-janssen.com/tag/pattern/">design pattern</a> in the Java world. The goal of the pattern is to create APIs that are very easy to read, and that define something similar to a domain-specific language. To achieve that, the API heavily relies on method chaining so that the code that uses the API flows and almost reads like prose.</p>
+
+
+
+<p>A basic example of a fluent API might look like this:</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book()
+			.title(&quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;)
+			.publishedOn(LocalDate.of(2017, 04, 01))
+			.writtenBy(authors);</pre>
+
+
+
+<p>As you can see, the code looks more like a description of a <em>Book </em>object and not like a technical piece of code that calls multiple setter methods. </p>
+
+
+
+<p>APIs like these are often used for <a href="https://thorben-janssen.com/dto-projections/">value classes</a> and configuration data. So, it&#8217;s no surprise that a lot of teams would like to use them for entities. </p>
+
+
+
+<p>Unfortunately, that&#8217;s not as easy as you might expect.</p>
+
+
+
+<!--more-->
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#JavaBeans_Convention_vs_Fluent_Interfaces"><span class="toc_number toc_depth_1">1</span> JavaBeans Convention vs. Fluent Interfaces</a></li><li><a href="#JPA-Compliant_Implementation"><span class="toc_number toc_depth_1">2</span> JPA-Compliant Implementation</a></li><li><a href="#Hibernate-Compliant_Implementation"><span class="toc_number toc_depth_1">3</span> Hibernate-Compliant Implementation</a><ul><li><a href="#Fluent_Entities_with_Setter_Methods"><span class="toc_number toc_depth_2">3.1</span> Fluent Entities with Setter Methods</a></li><li><a href="#Fluent_Entities_without_Setter_Methods"><span class="toc_number toc_depth_2">3.2</span> Fluent Entities without Setter Methods</a></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2><span id="JavaBeans_Convention_vs_Fluent_Interfaces">JavaBeans Convention vs. Fluent Interfaces</span></h2>
+
+
+
+<p>The JPA specification requires your entities to follow the JavaBeans Introspector convention.</p>
+
+
+
+<blockquote class="wp-block-quote"><p>In this case, for every persistent property property of type T of the entity, there is a getter method, getProperty, and setter method setProperty. For boolean properties, isProperty may be used as an alternative name for the getter method.[2]<br>For single-valued persistent properties, these method signatures are:<br> • T getProperty()<br> • void setProperty(T t)</p><cite><a href="https://jcp.org/en/jsr/detail?id=338">JSR 338: JavaTM Persistence API, Version 2.2</a> &#8211; Section 2.2 (p. 24)</cite></blockquote>
+
+
+
+<p>So, if you want to create JPA-compliant entities, you need to implement public getter and setter methods for all entity attributes. If you also wish to provide a fluent interface API, you can only add these methods so that both APIs coexist on the same class.</p>
+
+
+
+<p><a href="https://thorben-janssen.com/hibernate-getting-started/">Hibernate</a> is not as strict as the JPA specification, but it still recommends to follow the JavaBeans convention.</p>
+
+
+
+<blockquote class="wp-block-quote"><p>Although Hibernate does not require it, it is recommended to follow the JavaBean conventions and define getters and setters for entity persistent attributes.</p><cite><a href="https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#entity-pojo-accessors">Hibernate User Guide &#8211; Section 2.5.4</a></cite></blockquote>
+
+
+
+<div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+https://youtu.be/6TPDK6MOkz4</div><p>The interesting part in this quote is &#8220;Hibernate does not require it&#8221;. So, if you decide to ignore the JPA specification and potential portability issues, Hibernate allows you to implement a clean, fluent interface API for your entities.</p>
+
+
+
+<p>The decision is up to you. Do you need to support multiple JPA implementations? Then you should provide JPA-compliant getter and setter methods. Otherwise, you can design a cleaner API.</p>
+
+
+
+<p>In the following sections, I will show you a JPA-compliant and a Hibernate-compliant way to implement a fluent interface API.</p>
+
+
+
+
+
+
+
+<h2><span id="JPA-Compliant_Implementation">JPA-Compliant Implementation</span></h2>
+
+
+
+<p>If you want to implement your entities in a JPA-compliant way, you will not be able to design a nice and clean fluent interface API. You can only add the fluent methods to your entity class, and keep the getter and setter methods.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+   @Id
+   @GeneratedValue
+   private Long id;
+   
+   @Version
+   private int version;
+
+   private String title;
+
+   private LocalDate publishingDate;
+
+   @ManyToMany
+   private Set&lt;Author&gt; authors = new HashSet&lt;Author&gt;();
+
+   public Long getId() {
+      return id;
+   }
+
+   public int getVersion() {
+      return version;
+   }
+
+   public String getTitle() {
+      return title;
+   }
+   
+   public void setTitle(String title) {
+      this.title = title;
+   }
+
+   public Book title(String title) {
+      this.title = title;
+      return this;
+   }
+
+   public Set&lt;Author&gt; getAuthors() {
+      return authors;
+   }
+
+   public void setAuthors(Set&lt;Author&gt; authors) {
+      this.authors = authors;
+   }
+
+   public Book writtenBy(Set&lt;Author&gt; authors) {
+      this.authors = authors;
+      return this;
+   }
+
+   public LocalDate getPublishingDate() {
+      return publishingDate;
+   }
+
+   public void setPublishingDate(LocalDate publishingDate) {
+      this.publishingDate = publishingDate;
+   }
+
+   public Book publishedOn(LocalDate publishingDate) {
+      this.publishingDate = publishingDate;
+      return this;
+   }
+}</pre>
+
+
+
+<p>When you use the <em>Book</em> entity in your business code, you can decide which API you want to use.</p>
+
+
+
+<p>You can call the getter and setter methods. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book();
+b.setTitle(&quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;);
+b.setPublishingDate(LocalDate.of(2017, 04, 01));
+b.setAuthors(authors);
+em.persist(b);</pre>
+
+
+
+<p>Or you can use the methods of the fluent interface API. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book()
+			.title(&quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;)
+			.publishedOn(LocalDate.of(2017, 04, 01))
+			.writtenBy(authors);
+em.persist(b);</pre>
+
+
+
+<h2><span id="Hibernate-Compliant_Implementation">Hibernate-Compliant Implementation</span></h2>
+
+
+
+<p>As described earlier, Hibernate recommends providing getter and setter methods that follow the JavaBeans convention. But it doesn&#8217;t require these methods.</p>
+
+
+
+<p>That gives you <a href="https://thorben-janssen.com/hibernate-tips-map-entity-attribute-optional/">higher flexibility when designing the API</a> of your entities. You can decide if you provide a fluent API by changing the setter methods so that they return the entity object or if you provide different methods instead.</p>
+
+
+
+<p>Let&#8217;s take a look at both options.</p>
+
+
+
+<h3><span id="Fluent_Entities_with_Setter_Methods">Fluent Entities with Setter Methods</span></h3>
+
+
+
+<p>Changing the return type of your setter methods is a simple and very flexible approach. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+   @Id
+   @GeneratedValue
+   private Long id;
+   
+   @Version
+   private int version;
+
+   private String title;
+
+   private LocalDate publishingDate;
+
+   @ManyToMany
+   private Set&lt;Author&gt; authors = new HashSet&lt;Author&gt;();
+
+   public Long getId() {
+      return id;
+   }
+
+   public int getVersion() {
+      return version;
+   }
+
+   public String getTitle() {
+      return title;
+   }
+
+   public Book setTitle(String title) {
+      this.title = title;
+      return this;
+   }
+
+   public Set&lt;Author&gt; getAuthors() {
+      return authors;
+   }
+
+   public Book setAuthors(Set&lt;Author&gt; authors) {
+      this.authors = authors;
+      return this;
+   }
+
+   public LocalDate getPublishingDate() {
+      return publishingDate;
+   }
+
+   public Book setPublishingDate(LocalDate publishingDate) {
+      this.publishingDate = publishingDate;
+      return this;
+   }
+}</pre>
+
+
+
+<p>The API of your entity looks almost identical to a JPA-compliant entity. And you can still call all setter methods as you would usually do. That enables you to add the fluent API without changing any existing business code.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book();
+b.setTitle(&quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;);
+b.setPublishingDate(LocalDate.of(2017, 04, 01));
+b.setAuthors(authors);
+em.persist(b);</pre>
+
+
+
+<p>And you can also chain the calls of your setter methods to use them fluently.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book()
+			.setTitle(&quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;)
+			.setPublishingDate(LocalDate.of(2017, 04, 01))
+			.setAuthors(authors);
+em.persist(b);</pre>
+
+
+
+<p>But this code snippet also shows the downside of this approach. Even though you chain the method calls, the code still reads like you&#8217;re calling multiple setter methods. It doesn&#8217;t flow.</p>
+
+
+
+<h3><span id="Fluent_Entities_without_Setter_Methods">Fluent Entities without Setter Methods</span></h3>
+
+
+
+<div class="content-box-gray" style="float: right; width: 260px; text-align: center; margin-left: 10px;">Watch it on YouTube
+https://youtu.be/3RGw86dQnBE</div><p>If you want to take it one step further, you need to annotate your <a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">primary key attribute</a> with <em>@Id</em>. That tells Hibernate to use the <a href="https://thorben-janssen.com/access-strategies-in-jpa-and-hibernate/">field-based access strategy</a>. </p>
+
+
+
+<p>You then don&#8217;t need to provide any setter or getter methods for your entity attributes. That enables you to rename the setter methods to create a real fluent interface.</p>
+
+
+
+<p>In this example, I removed the word <em>set </em>from the <em>setTitle </em>method, changed the name of the <em>setPublishingDate </em>method to <em>publishedOn</em>, and renamed the <em>setAuthors </em>method to <em>writtenBy</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+   @Id
+   @GeneratedValue
+   private Long id;
+   
+   @Version
+   private int version;
+
+   private String title;
+
+   private LocalDate publishingDate;
+
+   @ManyToMany
+   private Set&lt;Author&gt; authors = new HashSet&lt;Author&gt;();
+
+   public Long getId() {
+      return id;
+   }
+
+   public int getVersion() {
+      return version;
+   }
+
+   public String getTitle() {
+      return title;
+   }
+
+   public Book title(String title) {
+      this.title = title;
+      return this;
+   }
+
+   public Set&lt;Author&gt; getAuthors() {
+      return authors;
+   }
+
+   public Book writtenBy(Set&lt;Author&gt; authors) {
+      this.authors = authors;
+      return this;
+   }
+
+   public LocalDate getPublishingDate() {
+      return publishingDate;
+   }
+
+   public Book publishedOn(LocalDate publishingDate) {
+      this.publishingDate = publishingDate;
+      return this;
+   }
+}</pre>
+
+
+
+<p>As you can see in the following code snippet, the new method names drastically improve the readability of the business code. It now almost reads like you&#8217;re describing the <em>Book </em>and it&#8217;s no longer a list of technical calls of setter methods.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = new Book()
+			.title(&quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;)
+			.publishedOn(LocalDate.of(2017, 04, 01))
+			.writtenBy(authors);
+em.persist(b);</pre>
+
+
+
+<p>One thing you need to be aware of when you implement your API like this is that the fluent interface API doesn&#8217;t affect your <a href="https://thorben-janssen.com/jpql/">JPQL queries</a>. You still use the attribute names in your query. That might get a little bit confusing because they no longer match the method names that you use in your business code.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT b FROM Book b WHERE b.publishingDate = :publishingDate&quot;, Book.class);
+q.setParameter(&quot;publishingDate&quot;, LocalDate.of(2017, 04, 01));
+List&lt;Book&gt; books = q.getResultList();</pre>
+
+
+
+
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>The fluent interface <a href="https://thorben-janssen.com/tag/pattern/">pattern</a> makes APIs much easier to read. </p>
+
+
+
+<p>Unfortunately, the JPA specification requires you to <a href="https://thorben-janssen.com/hibernate-getting-started/">provide setter and getter methods</a> for all entity attributes. That prevents you from implementing a clean, fluent API. You can only add the fluent methods in addition to the technical getter and setter methods.</p>
+
+
+
+<p>Hibernate doesn&#8217;t define the method signature of your setter methods as strictly as JPA does. So, you can change the return type of your setter methods to the entity class. That enables you to chain the calls of your setter methods, but the business code still looks very technical and doesn&#8217;t flow.</p>
+
+
+
+<p>If you tell Hibernate to use <a href="https://thorben-janssen.com/access-strategies-in-jpa-and-hibernate/">field-based access</a>, you can rename your setter methods and design a real fluent API. But please keep in mind, that you still need to reference the attribute names in your JPQL query. Some developers find this confusing because the attribute and method names no longer match.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

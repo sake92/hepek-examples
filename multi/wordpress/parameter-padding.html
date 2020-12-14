@@ -1,0 +1,140 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Speed-up your Query with Parameter Padding</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Speed-up your Query with Parameter Padding</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Most databases put a lot of effort into analyzing SQL statements and finding the optimal execution plan. This often makes the difference between a slow and a blazing fast statement. But this analysis can also be rather complex. That&#8217;s why a lot of databases try to cache and reuse the created execution plans.</p>
+
+
+
+<p>Hibernate and <a href="https://thorben-janssen.com/jpa-features-easier-spring-data-jpa/">Spring Data JPA</a> help using this cache efficiently. Because some queries get generated, you don&#8217;t need to worry about creating them always in the same way. You can take it one step further by <a href="/hibernate-best-practices/#3_Use_bind_parameters">using bind parameters</a>. This separates the static from the variable parts of your statement and makes it easier to identify identical queries.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT b FROM Book b WHERE b.title = :title&quot;, Book.class);
+q.setParameter(&quot;title&quot;, &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;);
+q.getResultList();</pre>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">19:46:38,893 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_0_,
+        book0_.title as title2_0_ 
+    from
+        Book book0_ 
+    where
+        book0_.title=?</pre>
+
+
+
+<p>This works well for all bind parameters except for <em>List</em>s used in IN clauses. When using a <em>List </em>as a bind parameter value, Hibernate has to generate a bind parameter for each element in that <em>List</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT b FROM Book b WHERE b.id IN (:ids)&quot;, Book.class);
+q.setParameter(&quot;ids&quot;, Arrays.asList(new Long[]{1L, 2L, 3L}));
+q.getResultList();</pre>
+
+
+
+<p>The varying number of bind parameter values can create a huge number of different statements. Your database needs to analyze and prepare an execution plan for each of them. This reduces the efficiency of its statement cache.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">19:49:05,198 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_0_,
+        book0_.title as title2_0_ 
+    from
+        Book book0_ 
+    where
+        book0_.id in (
+            ? , ? , ?
+        )</pre>
+
+
+
+<h2>IN Clause Parameter Padding</h2>
+
+
+
+<p>In version 5.2.18, Hibernate introduced a simple but very efficient feature to reduce the number of generated statements. It’s called parameter padding. You can activate it by setting the property <em>hibernate.query.in_clause_parameter_padding</em> in your <a href="/jpa-persistence-xml/">persistence.xml</a> to true.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+		
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.query.in_clause_parameter_padding&quot; value=&quot;true&quot; /&gt;
+			
+            ...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre>
+
+
+
+<p>Hibernate then no longer generates SQL statements with the exact number of required bind parameters. It pads the bind parameters to the next power of 2.</p>
+
+
+
+<p>If your <em>List </em>contains 2 elements, Hibernate generates an IN clause with 2 bind parameters. If your <em>List </em>has 3 or 4 items, Hibernate generates an IN clause with 4 bind parameters. And if your <em>List </em>contains 5 to 8 elements, Hibernate generates an IN clause with 8 bind parameters.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">TypedQuery&lt;Book&gt; q = em.createQuery(&quot;SELECT b FROM Book b WHERE b.id IN (:ids)&quot;, Book.class);
+q.setParameter(&quot;ids&quot;, Arrays.asList(new Long[]{1L, 2L, 3L}));
+q.getResultList();</pre>
+
+
+
+<p>If you execute the same test case as before, Hibernate generates a statement with 4 instead of the previously used 3 bind parameter values. </p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">19:53:25,757 DEBUG [org.hibernate.SQL] - 
+    select
+        book0_.id as id1_0_,
+        book0_.title as title2_0_ 
+    from
+        Book book0_ 
+    where
+        book0_.id in (
+            ? , ? , ? , ?
+        )
+19:53:25,760 TRACE [org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter [1] as [BIGINT] - [1]
+19:53:25,761 TRACE [org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter [2] as [BIGINT] - [2]
+19:53:25,761 TRACE [org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter [3] as [BIGINT] - [3]
+19:53:25,761 TRACE [org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter [4] as [BIGINT] - [3]</pre>
+
+
+
+<p>Hibernate then, of course, needs to provide a value for each bind parameter. For each of the padded bind parameters, Hibernate reuses the last element&#8217;s value in the provided&nbsp;<em>List</em>.</p>
+
+
+
+<p>As you can see, this drastically reduces the number of different statements that your database needs to analyze. This improves the effectiveness of the database-internal cache and can improve the performance of your queries.</p>
+
+
+
+<h2>When not to use it</h2>
+
+
+
+<p>Parameter padding might seem like a great feature but there are a few situations in which you should avoid it:</p>
+
+
+
+<ol><li>If your database doesn&#8217;t cache execution plans, you will not benefit from reducing the number of different statements. The additional bind parameters then only increase the complexity of the statement and might slow down the query.</li><li>If your <em>List</em> contains only a very small number of elements, the parameter padding will not have a huge effect and you might consider deactivating it.</li><li>If your <em>List </em>contains a very large number of elements, parameter padding might drastically increase the number of parameters in your IN clause. A <em>List </em>with 129 elements, for example, gets padded to 256 parameters. In these situations, you should check if the overhead of the padded parameters starts to outweigh the benefits of the more efficient database cache.</li></ol>
+
+
+
+<h2>Conclusion</h2>
+
+
+
+<p>When using an IN clause with a varying number of bind parameters, your database can have a hard time caching the required execution plans. </p>
+
+
+
+<p>Since Hibernate 5.2.18, you can reduce the number of queries by setting the <em>hibernate.query.in_clause_parameter_padding</em> property to <em>true</em>. Hibernate then pads the bind parameters in the IN clause to the next power of 2. This reduces the number of different statements, especially if you often call the query with a huge number of elements in the IN clause.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Tip: How to customize the association mappings using a composite key</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate Tip: How to customize the association mappings using a composite key</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p><a href="//www.thorben-janssen.com/tips/">Hibernate Tips</a> is a series of posts in which I describe a quick and easy solution for common Hibernate questions. If you have a question for a future Hibernate Tip, please post a comment below. </p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Question"><span class="toc_number toc_depth_1">1</span> Question:</a></li><li><a href="#Solution"><span class="toc_number toc_depth_1">2</span> Solution:</a><ul><li><a href="#Customize_the_default_column_names"><span class="toc_number toc_depth_2">2.1</span> Customize the default column names</a></li></ul></li><li><a href="#Learn_more"><span class="toc_number toc_depth_1">3</span> Learn more:</a></li><li><a href="#Hibernate_Tips_Book"><span class="toc_number toc_depth_1">4</span> Hibernate Tips Book</a></li></ul></div>
+<h2><span id="Question">Question:</span></h2>
+
+
+
+<p>&#8220;One of my entities uses an <em>@IdentityClass</em> to map a composite primary key, and I need to map a <a href="https://thorben-janssen.com/best-practices-many-one-one-many-associations-mappings/">one-to-many association</a> to it. How can I change the names of the foreign key columns?&#8221;</p>
+
+
+
+<!--more-->
+
+
+
+<h2><span id="Solution">Solution:</span></h2>
+
+
+
+<p>If you don&#8217;t provide any additional information about your <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">association mapping</a>, Hibernate uses default names for the foreign key columns. They follow the pattern <em>&lt;association attribute name&gt;_&lt;primary key attribute name&gt;</em>. That means that <em>books_id</em> is the default name for an association that&#8217;s mapped by the <em>books</em> attribute, and that references an entity with a <a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">primary key</a> column called <em>id</em>.</p>
+
+
+
+<p>This approach is independent of the number of columns that form the primary key of the referenced entity. If it&#8217;s a composite primary key, Hibernate generates a default name for each of the identifying entity attributes.</p>
+
+
+
+<h3><span id="Customize_the_default_column_names">Customize the default column names</span></h3>
+
+
+
+<p>You can adapt this mapping using one or more <em>@JoinColumn</em> annotations. Since Hibernate 5 and JPA 2.2, the <em>@JoinColumn</em> annotation is <a href="https://thorben-janssen.com/benefits-repeatable-annotations-hibernate-5-2/">repeatable</a>, and you can apply multiple of them to your association mapping attribute. If you&#8217;re using an older Hibernate version, you need a <em>@JoinColumn</em> annotation for each column and wrap them in a <em>@JoinColumns</em> annotation.</p>
+
+
+
+<p>Let&#8217;s take a look at a simple example.</p>
+
+
+
+<p>A Product gets identified by the combination of the <em>manufacturerId </em>and a manufacturer-specific <em>productId</em>. As requested in the question, I model the primary key using an <em>@IdClass</em>. If you want to learn more about this primary key mapping or the mapping of composite primary keys in general, please take a look at my <a href="https://thorben-janssen.com/advanced-hibernate-online-training-wst/">Advanced Hibernate Online Training</a>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@IdClass(value = Product.ProductId.class)
+public class Product {
+
+	@Id
+	private Long productId;
+
+	@Id
+	private String manufacturerId;
+
+	@Version
+	private int version;
+
+	private String title;
+
+	// getter and setter methods omitted
+
+	public static class ProductId implements Serializable {
+		
+		private Long productId;
+	
+		private String manufacturerId;
+
+		public ProductId() {
+			super();
+		}
+
+		public ProductId(Long productId, String manufacturerId) {
+			this.productId = productId;
+			this.manufacturerId = manufacturerId;
+		}
+
+		// getter and setter methods omitted
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((manufacturerId == null) ? 0 : manufacturerId.hashCode());
+			result = prime * result + ((productId == null) ? 0 : productId.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ProductId other = (ProductId) obj;
+			if (manufacturerId == null) {
+				if (other.manufacturerId != null)
+					return false;
+			} else if (!manufacturerId.equals(other.manufacturerId))
+				return false;
+			if (productId == null) {
+				if (other.productId != null)
+					return false;
+			} else if (!productId.equals(other.productId))
+				return false;
+			return true;
+		}
+	}
+}</pre>
+
+
+
+<p>The vital part of this Hibernate Tip is the mapping of the <em>Review</em> entity. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Review {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	@ManyToOne
+	@JoinColumn(name = &quot;p_id&quot;, referencedColumnName = &quot;productid&quot;)
+	@JoinColumn(name = &quot;m_id&quot;, referencedColumnName = &quot;manufacturerid&quot;)
+	private Product product;
+
+	private String comment;
+
+	// getter and setter methods omitted
+}</pre>
+
+
+
+<p>The <em>product </em>attribute maps the association to the <em>Product</em> entity. Hibernate&#8217;s default mapping would expect that the columns <em>product_productid</em> and <em>product_manufacturerid</em> on the <em>review </em>table store the foreign key to a record in the <em>product </em>table.</p>
+
+
+
+<p>As described earlier, you can change this mapping by annotating the <em>product </em>attribute with one or more <em>@JoinColumn</em> annotations. I did that in the code snippet to tell Hibernate to use the columns <em>p_id</em> and <em>m_id</em> as the foreign key references to the <em>productid </em>and <em>manufacturerid </em>columns on the <em>product</em> table.</p>
+
+
+
+<p>When I use this entity to persist a new record, you can see that Hibernate uses the column names <em>p_id</em> and <em>m_id</em> instead of the default names.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">17:56:46,584 DEBUG [org.hibernate.SQL] - 
+    insert 
+    into
+        Review
+        (comment, m_id, p_id, id) 
+    values
+        (?, ?, ?, ?)</pre>
+
+
+
+
+
+
+
+<h2><span id="Learn_more">Learn more:</span></h2>
+
+
+
+<p>If you want to learn more about primary key and association mappings, please read the following articles:</p>
+
+
+
+<ul><li><a href="https://thorben-janssen.com/jpa-generate-primary-keys/">How to generate primary key values</a></li><li><a href="https://thorben-janssen.com/generate-uuids-primary-keys-hibernate/">How to generate UUIDs as primary keys with Hibernate</a></li><li><a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">5 Primary Key Mappings for JPA and Hibernate Every Developer Should Know</a></li><li><a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">Ultimate Guide &#8211; Association Mappings with JPA and Hibernate</a></li><li><a href="https://thorben-janssen.com/best-practices-many-one-one-many-associations-mappings/">Best Practices for Many-To-One and One-To-Many Associations Mappings</a></li></ul>
+
+
+
+&nbsp;<br />
+<h2><span id="Hibernate_Tips_Book">Hibernate Tips Book</span></h2><br />
+<div><br />
+<br />
+<img style="float: left; max-width: 150px; margin-right: 10px;" src="/wp-content/uploads/2017/04/HibernateTips3D2.png" /><br />
+<div><br />
+<br />
+Get more recipes like this one in my new book <a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Hibernate Tips: More than 70 solutions to common Hibernate problems</a>.<br />
+<br />
+It gives you more than 70 ready-to-use recipes for topics like basic and advanced mappings, logging, Java 8 support, caching, and statically and dynamically defined queries.<br />
+<br />
+<a href="https://thorben-janssen.com/hibernate-tips-book/?utm_source=BookLaunch&amp;utm_medium=TipPost">Get it now</a>!<br />
+<br />
+</div><br />
+</div></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

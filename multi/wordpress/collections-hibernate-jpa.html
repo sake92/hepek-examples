@@ -1,0 +1,452 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Mapping Collections with Hibernate and JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Mapping Collections with Hibernate and JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>JPA and Hibernate provide 3 main options to map a <em>Collection</em>. If it&#8217;s a <em>Collection </em>of other entities, you can model it as a to-many association. This is the most common mapping. But you can also map it as an <em>@ElementCollection</em> or as a basic type. In this article, I will show you all 3 options and explain their advantages and disadvantages.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Map_a_Collection_as_an_Association"><span class="toc_number toc_depth_1">1</span> Map a Collection as an Association</a><ul><li><a href="#Mapping_Pitfalls_You_Should_Avoid"><span class="toc_number toc_depth_2">1.1</span> Mapping Pitfalls You Should Avoid</a><ul><li><a href="#Don8217t_use_FetchTypeEAGER"><span class="toc_number toc_depth_3">1.1.1</span> Don&#8217;t use FetchType.EAGER</a></li><li><a href="#Prefer_javautilSet_Over_javautilList"><span class="toc_number toc_depth_3">1.1.2</span> Prefer java.util.Set Over java.util.List</a></li><li><a href="#Be_Careful_About_CascadeTypeREMOVE"><span class="toc_number toc_depth_3">1.1.3</span> Be Careful About CascadeType.REMOVE</a></li></ul></li></ul></li><li><a href="#Map_a_Collection_as_an_ElementCollection"><span class="toc_number toc_depth_1">2</span> Map a Collection as an @ElementCollection</a></li><li><a href="#Map_a_Collection_as_a_Basic_Type"><span class="toc_number toc_depth_1">3</span> Map a Collection as a Basic Type</a></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2><span id="Map_a_Collection_as_an_Association">Map a <em>Collection </em>as an Association</span></h2>
+
+
+
+<p>If you&#8217;re not completely new to Hibernate, I&#8217;m sure you have modeled at least 1 one-to-many or many-to-many association. These are the most common <em>Collection</em> mappings because they are easy to implement, fit a relation table model very well, and provide great performance. To model such an association in your domain model, you only need to add an attribute of type<em> java.util.List</em> or <em>java.util.Set</em> to your entity class and annotate it with <em>@ManyToOne</em> or <em>@ManyToMany</em>. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    @ManyToMany
+    private Set&lt;Author&gt; authors = new HashSet&lt;&gt;();
+	
+    ...
+}</pre>
+
+
+
+<p>You can also map your association to a <em>java.util.Map</em>. But that&#8217;s outside of the scope of this article. If you want to learn more about it, please read my article: <a href="https://thorben-janssen.com/map-association-java-util-map/">How to map an association as a java.util.Map</a>.</p>
+
+
+
+<h3><span id="Mapping_Pitfalls_You_Should_Avoid">Mapping Pitfalls You Should Avoid</span></h3>
+
+
+
+<p>I wrote earlier that mapping a Collection as an association is simple. But that doesn&#8217;t mean that there are not several pitfalls you should avoid. Let&#8217;s look at the ones that I see most often during <a href="https://thorben-janssen.com/project-coaching/">code reviews and project coaching</a> engagements.</p>
+
+
+
+<h4><span id="Don8217t_use_FetchTypeEAGER">Don&#8217;t use <em>FetchType.EAGER</em></span></h4>
+
+
+
+<p>The most common one is the usage of the wrong <em>FetchType</em>. <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">As I explained in a previous article</a>, the <em>FetchType </em>defines when Hibernate initializes an association. When you use <em>FetchType.EAGER</em>, it initializes the association when you load the entity. You should avoid this&nbsp;<em>FetchType</em>&nbsp;because it fetches all association elements even if you don&#8217;t use them.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    // Don&#039;t do this
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set&lt;Author&gt; authors = new HashSet&lt;&gt;();
+	
+    ...
+}</pre>
+
+
+
+<p><em>FetchType.LAZY</em> is the default for all to-many association, and it provides much better performance. Hibernate then only fetches the association when you use it in your business code. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Book b = em.find(Book.class, 1L);
+// get associated Author entities from database
+b.getAuthors();</pre>
+
+
+
+<h4><span id="Prefer_javautilSet_Over_javautilList">Prefer <em>java.util.Set</em> Over <em>java.util.List</em></span></h4>
+
+
+
+<p>Another typical mistake is the mapping of a many-to-many association as a <em>java.util.List</em>. A <em>List</em> might seem like the most efficient and obvious mapping in your Java code. But as I <a href="https://thorben-janssen.com/association-mappings-bag-list-set/">showed in great detail before</a>, Hibernate handles this association very inefficiently when you change its elements. Instead of adding only the new or deleting only the removed association between 2 entities, Hibernate removes all of them before inserting all remaining ones. Depending on the association&#8217;s size, this can result in tens or even hundreds of unnecessary database operations and significantly slows down your application.</p>
+
+
+
+<p>So, if your many-to-many association doesn&#8217;t need to support multiple associations between the same entities, better model it as a <em>java.util.Set</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+    @ManyToMany
+    private Set&lt;Author&gt; authors = new HashSet&lt;&gt;();
+	
+    ...
+}</pre>
+
+
+
+<h4><span id="Be_Careful_About_CascadeTypeREMOVE">Be Careful About <em>CascadeType.REMOVE</em></span></h4>
+
+
+
+<p>Cascading applies the lifecycle state change of a parent entity to all its child entities. You can activate it by referencing the type of operation you want to cascade in the <em>cascade </em>attribute of the one-to-many or many-to-many annotation.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+    @ManyToMany(cascade = CascadeType.REMOVE)
+    private Set&lt;Book&gt; books = new HashSet&lt;&gt;();
+	
+    ...
+}</pre>
+
+
+
+<p>This works well for all parent-child associations in which the child depends on its parent. In almost all cases, these are one-to-many associations. A typical example is an order with its order positions.</p>
+
+
+
+<p>Many-to-many associations only rarely represent parent-child associations, and you should better avoid cascading. That&#8217;s especially the case for <em>CascadeType.REMOVE</em>. Using it on both ends of a many-to-many association can <a href="https://thorben-janssen.com/avoid-cascadetype-delete-many-assocations/">bounce the cascade operation back and forth</a> between the 2 tables until all records are removed.</p>
+
+
+
+<p>But that&#8217;s not the only issue. Even if you only use <em>CascadeType.REMOVE</em> on one side of your many-to-many association, you might delete more data than you expected. Let&#8217;s use the example that I showed you before, which activates<em> CascadeType.REMOVE</em> on the <em>books </em>association attribute of the <em>Author </em>entity, </p>
+
+
+
+<p>If you now remove an <em>Author </em>entity, your persistence provider will cascade the operation to all associated Book entities. As a result, all of them will get removed. Unfortunately, that includes all books that have been written by more than one author. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Author a1 = em.find(Author.class, 1L);
+        log.info(&quot;Before remove: &quot;
+                + a1.getBooks().stream().map(b -&gt; b.getTitle()).collect(Collectors.joining(&quot;, &quot;)));
+
+Author a2 = em.find(Author.class, 2L);
+em.remove(a2);
+em.flush();
+em.clear();
+
+a1 = em.find(Author.class, 1L);
+log.info(&quot;After remove: &quot;
+		+ a1.getBooks().stream().map(b -&gt; b.getTitle()).collect(Collectors.joining(&quot;, &quot;)));</pre>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">17:18:17,588 DEBUG [org.hibernate.SQL] - 
+    select
+        author0_.id as id1_0_0_,
+        author0_.name as name2_0_0_ 
+    from
+        Author author0_ 
+    where
+        author0_.id=?
+17:18:17,612 DEBUG [org.hibernate.SQL] - 
+    select
+        books0_.authors_id as authors_2_2_0_,
+        books0_.books_id as books_id1_2_0_,
+        book1_.id as id1_1_1_,
+        book1_.title as title2_1_1_ 
+    from
+        Book_Author books0_ 
+    inner join
+        Book book1_ 
+            on books0_.books_id=book1_.id 
+    where
+        books0_.authors_id=?
+Nov 02, 2020 5:18:17 PM com.thorben.janssen.TestCollectionMapping testCascadeRemove
+INFORMATION: Before remove: A book about everything, Hibernate Tips
+17:18:17,618 DEBUG [org.hibernate.SQL] - 
+    select
+        author0_.id as id1_0_0_,
+        author0_.name as name2_0_0_ 
+    from
+        Author author0_ 
+    where
+        author0_.id=?
+17:18:17,624 DEBUG [org.hibernate.SQL] - 
+    select
+        books0_.authors_id as authors_2_2_0_,
+        books0_.books_id as books_id1_2_0_,
+        book1_.id as id1_1_1_,
+        book1_.title as title2_1_1_ 
+    from
+        Book_Author books0_ 
+    inner join
+        Book book1_ 
+            on books0_.books_id=book1_.id 
+    where
+        books0_.authors_id=?
+17:18:17,642 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book_Author 
+    where
+        books_id=?
+17:18:17,644 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book_Author 
+    where
+        books_id=?
+17:18:17,647 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book 
+    where
+        id=?
+17:18:17,650 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Book 
+    where
+        id=?
+17:18:17,653 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Author 
+    where
+        id=?
+17:18:17,659 DEBUG [org.hibernate.SQL] - 
+    select
+        author0_.id as id1_0_0_,
+        author0_.name as name2_0_0_ 
+    from
+        Author author0_ 
+    where
+        author0_.id=?
+17:18:17,662 DEBUG [org.hibernate.SQL] - 
+    select
+        books0_.authors_id as authors_2_2_0_,
+        books0_.books_id as books_id1_2_0_,
+        book1_.id as id1_1_1_,
+        book1_.title as title2_1_1_ 
+    from
+        Book_Author books0_ 
+    inner join
+        Book book1_ 
+            on books0_.books_id=book1_.id 
+    where
+        books0_.authors_id=?
+Nov 02, 2020 5:18:17 PM com.thorben.janssen.TestCollectionMapping testCascadeRemove
+INFORMATION: After remove: Hibernate Tips
+</pre>
+
+
+
+<h2><span id="Map_a_Collection_as_an_ElementCollection">Map a <em>Collection </em>as an <em>@ElementCollection</em></span></h2>
+
+
+
+<p>An <a href="/hibernate-tips-elementcollection/"><em>@ElementCollection</em> enables you to map a <em>Collection </em>of values</a> that are not an entity itself. This might seem like an easy solution for lists of basic attributes, like the phone numbers of a person. In the database, Hibernate maps the <em>@ElementCollection</em> to a separate table. Each value of the collection gets stored as a separate record.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Author {
+
+    @ElementCollection
+    private List&lt;String&gt; phoneNumbers = new ArrayList&lt;&gt;();
+
+    public List&lt;String&gt; getPhoneNumbers() {
+        return phoneNumbers;
+    }
+
+    public void setPhoneNumbers(List&lt;String&gt; phoneNumbers) {
+        this.phoneNumbers = phoneNumbers;
+    }
+
+    ...
+}</pre>
+
+
+
+<p>But the mapping as an <em>@ElementCollection</em> has a downside: The elements of the collection don&#8217;t have their own identity and lifecycle. They are a part of the surrounding entity. This often becomes a performance issue if you need to change the elements in the collection. Because they don&#8217;t have their own identity, all elements of an <em>@ElementCollection</em> are always read, removed, and written, even if you only add, change, or remove one of them. This makes write operations on an <em>@ElementCollection</em> much more expensive than the same operation on a mapped association.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Author a = em.find(Author.class, 1L);
+a.getPhoneNumbers().add(&quot;345-543&quot;);</pre>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">17:33:20,988 DEBUG [org.hibernate.SQL] - 
+    select
+        author0_.id as id1_0_0_,
+        author0_.name as name2_0_0_ 
+    from
+        Author author0_ 
+    where
+        author0_.id=?
+17:33:21,011 DEBUG [org.hibernate.SQL] - 
+    select
+        phonenumbe0_.Author_id as author_i1_1_0_,
+        phonenumbe0_.phoneNumbers as phonenum2_1_0_ 
+    from
+        Author_phoneNumbers phonenumbe0_ 
+    where
+        phonenumbe0_.Author_id=?
+17:33:21,031 DEBUG [org.hibernate.SQL] - 
+    delete 
+    from
+        Author_phoneNumbers 
+    where
+        Author_id=?
+
+17:33:21,034 DEBUG [org.hibernate.SQL] - 
+    insert 
+    into
+        Author_phoneNumbers
+        (Author_id, phoneNumbers) 
+    values
+        (?, ?)
+17:33:21,038 DEBUG [org.hibernate.SQL] - 
+    insert 
+    into
+        Author_phoneNumbers
+        (Author_id, phoneNumbers) 
+    values
+        (?, ?)
+17:33:21,040 DEBUG [org.hibernate.SQL] - 
+    insert 
+    into
+        Author_phoneNumbers
+        (Author_id, phoneNumbers) 
+    values
+        (?, ?)</pre>
+
+
+
+<p>I, therefore, recommend modeling an additional entity and a one-to-many association instead of an <em>@ElementCollection</em>. This enables you to use lazy loading and to update these values independently of each other. Doing that requires only a minimum amount of code but provides much better performance.</p>
+
+
+
+<h2><span id="Map_a_Collection_as_a_Basic_Type">Map a <em>Collection </em>as a Basic Type</span></h2>
+
+
+
+<p>Hibernate can map a Collection as a basic type that gets mapped to 1 database column. You only rarely see this kind of mapping in a project. There are 3 reasons for that:</p>
+
+
+
+<ol><li>This mapping makes it hard to search for records with a specific collection value.</li><li>Similar to an @ElementCollection, the collection with all its elements becomes part of the entity object itself and has to follow its lifecycle.</li><li>You need to implement your own basic type and type descriptor.</li></ol>
+
+
+
+<p>If you want to use this mapping, the basic type and type descriptor implementations are not complex.</p>
+
+
+
+<p>Your type descriptor needs to extend Hibernate&#8217;s <em>AbstractTypeDescriptor </em>and implement a mapping from and to the <em>String </em>representation you want to store in the database.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class CustomCollectionTypeDescriptor extends AbstractTypeDescriptor&lt;List&gt; {
+
+    public static final String DELIMITER = &quot;-&quot;;
+
+    public CustomCollectionTypeDescriptor() {
+            super(
+                List.class,
+                new MutableMutabilityPlan&lt;List&gt;() {
+                    @Override
+                    protected List deepCopyNotNull(List value) {
+                        return new ArrayList&lt;String&gt;( value );
+                    }
+                }
+            );
+        }
+
+    @Override
+    public String toString(List value) {
+        return ((List&lt;String&gt;) value).stream().collect(Collectors.joining(DELIMITER));
+    }
+
+    @Override
+    public List fromString(String string) {
+        return Arrays.asList(string.split(DELIMITER));
+    }
+
+    @Override
+    public &lt;X&gt; X unwrap(List value, Class&lt;X&gt; type, WrapperOptions options) {
+        return (X) toString(value);
+    }
+
+    @Override
+    public &lt;X&gt; List wrap(X value, WrapperOptions options) {
+        return fromString((String) value);
+    }
+}</pre>
+
+
+
+<p>After you&#8217;ve done that, you can extend Hibernate&#8217;s <em>AbstractSingleColumnStandardBasicType </em>to implement your basic type. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class CustomCollectionType extends AbstractSingleColumnStandardBasicType&lt;List&gt; {
+
+    public CustomCollectionType() {
+            super(
+                VarcharTypeDescriptor.INSTANCE,
+                new CustomCollectionTypeDescriptor()
+            );
+        }
+
+    @Override
+    public String getName() {
+        return &quot;custom_collection_type&quot;;
+    }
+}</pre>
+
+
+
+<p>Please make sure that your <em>getName </em>method returns a unique and expressive name for your type. You will use it in the <em>@TypeDef</em> annotation to register the type and your entity classes to reference it.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@org.hibernate.annotations.TypeDef(name = &quot;custom_collection_type&quot;, typeClass = CustomCollectionType.class)
+package com.thorben.janssen;</pre>
+
+
+
+<p>You can then use your type in your entity mapping by annotating your entity attribute with <em>@Type </em>and a reference to the name of your attribute type.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+    
+    @Type(type = &quot;custom_collection_type&quot;)
+    private List&lt;String&gt; topics = new ArrayList&lt;&gt;();
+	
+	...
+}</pre>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>As you have seen, you have several options to map a Collection with Hibernate. </p>
+
+
+
+<p>The most common approach is to map it as a one-to-many or many-to-many association between 2 entity classes. This mapping is simple and efficient. You can find several articles about it here on the blog:</p>
+
+
+
+<ul><li><a href="/ultimate-guide-association-mappings-jpa-hibernate/">Ultimate Guide &#8211; Association Mappings with JPA and Hibernate</a></li><li><a href="/best-practices-many-one-one-many-associations-mappings">Best Practices for Many-To-One and One-To-Many Associations Mappings</a></li><li><a href="/best-practices-for-many-to-many-associations-with-hibernate-and-jpa/">Best Practices for Many-to-Many Associations with Hibernate and JPA</a></li></ul>
+
+
+
+<p>If you don&#8217;t want to define an entity class to store each collection element in a separate database record, you can use an <em>@ElementCollection</em>. The elements of the collection don&#8217;t have their own identity and lifecycle. Because of that, you can&#8217;t write them independently. This often results in significantly worse performance compared to previously described mapping as a separate entity class.</p>
+
+
+
+<p>You can also map all elements of your collection to the same database field. This requires a custom type that merges all collection elements during write operations and extracts them while reading. This mapping requires the most effort and gets only rarely used.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Ternary Associations – Modelling Associations between 3 Entities</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Ternary Associations – Modelling Associations between 3 Entities</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>An association between 3 entities is called a ternary association. A typical example is an association between an employee, the project they are working on, and their role in that project. If the role is a complex object, you might decide to model this as 3 entity classes. </p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter size-large"><img width="495" height="134" src="https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Class-Diagram-1.png" alt="" class="wp-image-26491" srcset="https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Class-Diagram-1.png 495w, https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Class-Diagram-1-300x81.png 300w, https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Class-Diagram-1-400x108.png 400w" sizes="(max-width: 495px) 100vw, 495px" /></figure></div>
+
+
+
+<p>The association between them is the interesting part. You have 2 main options to model it on your entity classes. You either map the association table as an entity class or as a&nbsp;<em>java.util.Map</em>.</p>
+
+
+
+<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#Table_Model_of_a_Ternary_Association"><span class="toc_number toc_depth_1">1</span> Table Model of a Ternary Association</a></li><li><a href="#Mapping_the_Association_as_an_Entity"><span class="toc_number toc_depth_1">2</span> Mapping the Association as an Entity</a></li><li><a href="#Mapping_the_Association_as_a_Map"><span class="toc_number toc_depth_1">3</span> Mapping the Association as a Map</a></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
+<h2><span id="Table_Model_of_a_Ternary_Association">Table Model of a Ternary Association</span></h2>
+
+
+
+<p>Let&#8217;s first take a quick look at the table model. Each of the 3 entities and the association between them gets stored in its own database table.</p>
+
+
+
+<figure class="wp-block-image size-large"><img width="807" height="324" src="https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Table-Model.png" alt="" class="wp-image-26489" srcset="https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Table-Model.png 807w, https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Table-Model-300x120.png 300w, https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Table-Model-768x308.png 768w, https://thorben-janssen.com/wp-content/uploads/2020/07/Ternary-Association-Table-Model-400x161.png 400w" sizes="(max-width: 807px) 100vw, 807px" /></figure>
+
+
+
+<p>I called the association table <em>project_assignment</em>. It follows the same concept as the association table of a <a href="/ultimate-guide-association-mappings-jpa-hibernate#manyToMany">many-to-many association</a>. It contains the 3 foreign keys of the associated entities and uses all 3 of them as its <a href="/primary-key-mappings-jpa-hibernate#Use_Same_Primary_Key_Values_for_Associated_Entities">derived primary key</a>.</p>
+
+
+
+<h2><span id="Mapping_the_Association_as_an_Entity">Mapping the Association as an Entity</span></h2>
+
+
+
+<p>The easiest approach is to map the association table as an entity. I map it to the <em>ProjectAssignment </em>class. 3 of it attributes are the <a href="/ultimate-guide-association-mappings-jpa-hibernate#manyToOne">many-to-one associations</a> to the <em>Employee</em>, <em>Project,</em> and <em>Role </em>entities. The 4th one, the <em>id </em>attribute, is of type <em>ProjectAssignmentId</em>. This is an embeddable that models the 3 attributes of the primary key.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class ProjectAssignment {
+
+    @EmbeddedId
+    private ProjectAssignmentId id;
+
+    @ManyToOne
+    @MapsId(&quot;projectId&quot;)
+    private Project project;
+
+    @ManyToOne
+    @MapsId(&quot;roleId&quot;)
+    private Role role;
+
+    @ManyToOne
+    @MapsId(&quot;personId&quot;)
+    private Person person;
+
+    @Embeddable
+    public static class ProjectAssignmentId implements Serializable {
+        private Long projectId;
+        private Long roleId;
+        private Long personId;
+
+        public ProjectAssignmentId() {}
+
+        // getter and setter methods
+		
+        // equals and hashCode methods     
+    }
+
+    ...
+}</pre>
+
+
+
+<p>The <em>@MapsId</em> annotations on the association attributes tell Hibernate to use the primary key value of the associated entities as a part of the primary key value of this entity. </p>
+
+
+
+<p>The value of each <em>@MapsId</em> annotation references an attribute of the <em>ProjectAssignmentId </em>embeddable. This is the attribute, to which Hibernate will map the primary key value of the associated entity. That is a typical mapping of a derived primary key. I explain it in great detail in my <a href="/advanced-hibernate-online-training-wst/">Advanced Hibernate Online Training</a>.</p>
+
+
+
+<p>These are all required parts of the mapping. To make the associations easier to use, I recommend to model them bidirectionally. As I explain in my <a href="/ultimate-guide-association-mappings-jpa-hibernate/">Guide to Association Mappings</a>, you can easily do that by adding an attribute of type <em>Set&lt;ProjectAssignment&gt;</em> to each of them. You also need to annotate it with a <em>@OneToMany</em> annotation. Its <em>mappedBy </em>attribute references the name to the attribute on the <em>ProjectAssignment </em>entity that represents this association.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Person {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    @Version
+    private int version;
+
+    private String firstName;
+    
+    private String lastName;
+
+    @OneToMany(mappedBy = &quot;person&quot;)
+    Set&lt;ProjectAssignment&gt; assignments = new HashSet&lt;&gt;();
+
+    ...
+}</pre>
+
+
+
+<h2><span id="Mapping_the_Association_as_a_Map">Mapping the Association as a <em>Map</em></span></h2>
+
+
+
+<p>Hibernate can also map this association as a <em>java.util.Map</em>. As I showed in a <a href="/map-association-java-util-map/">previous article</a>, that mapping is very flexible. In this example, I want to model the association on the <em>Person </em>entity. The <em>Project </em>entity becomes the map key, and the <em>Role </em>entity the value.</p>
+
+
+
+<p>The implementation of such a mapping is straight forward. You need an attribute of type <em>Map&lt;Project, Role&gt;</em> and a few annotations: </p>
+
+
+
+<ul><li>The <em>@OneToMany</em> annotation defines the association. </li><li>The <em>@JoinTable</em> annotation specifies the name of the database table that represents this association.</li><li>The <em>@MapKeyJoinColumn</em> annotation tells Hibernate which column in the join table it shall use as the key of the <em>Map</em>.</li></ul>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Person {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    @Version
+    private int version;
+
+    private String firstName;
+    
+    private String lastName;
+
+    @OneToMany
+    @JoinTable(name=&quot;project_assignment&quot;)
+    @MapKeyJoinColumn(name = &quot;project_id&quot;)
+    private Map&lt;Project, Role&gt; projectRoles = new HashMap&lt;&gt;();
+
+    ...
+}</pre>
+
+
+
+<p>That&#8217;s all you need to do. You can now use the <em>Map</em> in your business code to add new project assignments or get the <em>Role </em>of a <em>Person </em>in a <em>Project</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Person p = new Person();
+p.setFirstName(&quot;Thorben&quot;);
+p.setLastName(&quot;Janssen&quot;);
+em.persist(p);
+
+Project pr = new Project();
+pr.setName(&quot;Hibernate Test Extension&quot;);
+em.persist(pr);
+
+Role r = new Role();
+r.setName(&quot;Developer&quot;);
+em.persist(r);
+
+p.getProjectRoles().put(pr, r);</pre>
+
+
+
+<h2><span id="Conclusion">Conclusion</span></h2>
+
+
+
+<p>You can map a ternary association in multiple ways. The 2 most common ones map the association table to an entity class or a&nbsp;<em>java.util.Map</em>.</p>
+
+
+
+<p>In most projects, I prefer to create an entity class that represents the association table. That mapping is closer to the table model, easier to understand, and more flexible. </p>
+
+
+
+<p>But in some projects, your business logic always accesses the associated elements via their key. In these situations, Hibernate&#8217;s support to represent your association as a <em>java.util.Map</em> makes your job much easier.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>
