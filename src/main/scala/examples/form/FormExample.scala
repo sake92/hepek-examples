@@ -7,7 +7,7 @@ import ba.sake.hepek.fontawesome5.FA
 
 object FormExample extends StaticPage with FADependencies {
 
-  // play with this! :)
+  // play with this!!! :D
   val customForm = Form.withFormType(Form.Companion.Type.Horizontal())
   import customForm._
 
@@ -19,6 +19,7 @@ object FormExample extends StaticPage with FADependencies {
       row(
         formFieldset("Textual inputs")(
           inputText()("name", "Name"),
+          inputText()(_name = "surname", _label = "Surname"), // you can use named args!
           inputText(disabled)("disabled", "Disabled"),
           inputText()(
             "customized",
@@ -38,17 +39,17 @@ object FormExample extends StaticPage with FADependencies {
         formFieldset("Checkbox inputs")(
           inputCheckbox(checked)("checkbox", "Man?"),
           hr,
-          inputCheckboxes(
+          inputCheckboxesSimple(
             "progLangs",
-            Seq(("scala", "Scala", Nil), ("java", "Java", Nil)),
+            Seq(("scala", "Scala"), ("java", "Java")),
             _label = "Favorite languages",
             _isInline = false
           )
         ),
         formFieldset("Radio inputs")(
-          inputRadio(
+          inputRadioSimple(
             "favoriteSuperHero",
-            Seq(("batman", "Batman", Nil), ("superman", "Superman", Nil)),
+            Seq(("batman", "Batman"), ("superman", "Superman")),
             _label = "Super hero",
             _checkedValue = "superman",
             _isInline = false
@@ -79,7 +80,7 @@ object FormExample extends StaticPage with FADependencies {
         ),
         formFieldset("Numeric inputs")(
           inputNumber(min := "1", step := "5")("num", "Number"),
-          inputRange(min := "10", step := "2", max := "50")("range", "Range")
+          inputRange(min := "10", step := "2", max := "50", value := "44")("range", "Range")
         ),
         formFieldset("Misc inputs")(
           inputFile(accept := "image/*")("file", "File"),
@@ -88,7 +89,6 @@ object FormExample extends StaticPage with FADependencies {
         formFieldset("Button inputs")(
           inputSubmit(btnSizeLg)("Submit (large button)"),
           inputButton(btnWarning, btnSizeSm)(
-            "btnRemove",
             frag(FA.times(), " Remove  (small button)")
           ),
           inputReset(btnDanger, btnWidthFull)("Reset (danger button)"),

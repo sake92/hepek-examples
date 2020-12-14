@@ -6,6 +6,7 @@ import ba.sake.hepek.prismjs.PrismDependencies
 import ba.sake.hepek.prismjs.Themes
 import ba.sake.hepek.pdf.PdfGenerator
 import examples.Imports.Bundle._
+import org.openqa.selenium.chrome.ChromeDriver
 
 object PdfStaticPage extends StaticPage with PrismDependencies {
 
@@ -44,7 +45,8 @@ object GenPdf {
         "C:/hepek/chromedriver_win32/chromedriver.exe"
       )
 
-    PdfGenerator
+    val driver = new ChromeDriver()
+    new PdfGenerator(driver)
       .generate(file, targetFolder, List(PdfStaticPage))
   }
 }
