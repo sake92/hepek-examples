@@ -1,10 +1,10 @@
 
-curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz" | gzip -d > cs
+curl -s "https://get.sdkman.io" | bash
 
-chmod +x cs
+source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-./cs setup --jvm 11 --apps sbt-launcher --yes
+sdk install java 11
 
-source ~/.bash_profile
+sdk install sbt 1.9.7
 
 sbt hepek
