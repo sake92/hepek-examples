@@ -23,8 +23,9 @@ EOF
     echo "$USAGE"
 }
 
+apt-get install temurin-11-jdk
+
 INSTALL_DIR=$HOME/bin
-SBT_IVY_HOME='${HOME}/.ivy2'
 XMS=512M
 XMX=1536M
 XSS=1M
@@ -33,11 +34,6 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         -d)
             INSTALL_DIR=$2
-            shift
-            shift
-            ;;
-        --ivy-home)
-            SBT_IVY_HOME=$2
             shift
             shift
             ;;
@@ -94,7 +90,7 @@ fi
 
 read -d '' SCRIPT <<EOF
 #!/bin/sh
-java -Dfile.encoding=utf-8 -Xms${XMS} -Xmx${XMX} -Xss${XSS} -XX:+CMSClassUnloadingEnabled -Dsbt.ivy.home=${SBT_IVY_HOME} -jar \`dirname \$0\`/sbt-launch-${VERSION}.jar "\$@"
+java -Dfile.encoding=utf-8 -Xms${XMS} -Xmx${XMX} -Xss${XSS} -jar \`dirname \$0\`/sbt-launch-${VERSION}.jar "\$@"
 EOF
 echo "$SCRIPT" > sbt
 
