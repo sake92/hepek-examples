@@ -24,14 +24,14 @@ object PrismJSExample extends StaticPage with PrismDependencies {
       .withShowInvisibles(true)
       .withShowLanguage(false)*/
 
-  override def pageContent =
-    row(
-      sections
-        .map { s =>
-          frag(h2(s.name), s.content)
-        }
-        .intersperse(hr())
-    )
+  override def pageContent = {
+    val sectionContents = sections
+      .map { s =>
+        frag(h2(s.name), s.content)
+      }
+      .intersperse(hr())
+    row(sectionContents)
+  }
 
   def sections =
     List(basicsSection, lineNumsSection, highlightLinesSection, cmdSection, markupSection)
@@ -55,8 +55,8 @@ object PrismJSExample extends StaticPage with PrismDependencies {
       ),
       h3(
         "File fetched with AJAX(",
-        hyperlink(
-          "https://github.com/sake92/hepek-core/blob/master/src/main/java/ba/sake/hepek/core/Renderable.java"
+        a(
+          href := "https://github.com/sake92/hepek-core/blob/master/src/main/java/ba/sake/hepek/core/Renderable.java"
         )("this one"),
         ")"
       ),
@@ -65,17 +65,15 @@ object PrismJSExample extends StaticPage with PrismDependencies {
       ),
       h3(
         "File from Github API (",
-        hyperlink(
-          "https://github.com/TheAdnan/focustube/blob/master/index.js"
-        )("this one"),
+        a(href := "https://github.com/TheAdnan/focustube/blob/master/index.js")("this one"),
         ")"
       ),
       chl.javascript.github("TheAdnan", "focustube", "index.js"),
       h3(
         "File from a Gist (",
-        hyperlink(
-          "https://gist.github.com/codeBelt/65a82e76597f2fb6c2af#file-brick-ts"
-        )("this one"),
+        a(href := "https://gist.github.com/codeBelt/65a82e76597f2fb6c2af#file-brick-ts")(
+          "this one"
+        ),
         ")"
       ),
       chl.typescript.gist("65a82e76597f2fb6c2af", Option("Brick.ts"))

@@ -8,11 +8,11 @@ object WpClient {
   import wp.config.ClientFactory
   import wp.config.ClientConfig
 
-  val baseUrl                      = "https://thoughts-on-java.org"
-  private val username: String     = null
-  private val password: String     = null
+  val baseUrl = "https://thoughts-on-java.org"
+  private val username: String = null
+  private val password: String = null
   private val usePermalinkEndpoint = false
-  private val debug                = false
+  private val debug = false
 
   val client = ClientFactory.fromConfig(
     ClientConfig.of(baseUrl, username, password, usePermalinkEndpoint, debug)
@@ -20,7 +20,7 @@ object WpClient {
 }
 
 object WpData {
-  import scala.collection.JavaConverters._
+  import scala.jdk.CollectionConverters.*
 
   val posts = { // fetched only once
     val response = WpClient.client.search(

@@ -7,7 +7,7 @@ import examples.Imports.Bundle._
 
 object MyMultiPages extends ScalaMultiRenderable {
   override def rends =
-    List(1, 2, 3) map MyMultiPage
+    List(1, 2, 3).map(MyMultiPage.apply)
 }
 
 case class MyMultiPage(num: Int) extends StaticPage {

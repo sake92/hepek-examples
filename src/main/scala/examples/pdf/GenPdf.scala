@@ -38,7 +38,7 @@ object GenPdf {
       )
     }
     val targetFolder = args(0)
-    val file         = new File(s"$targetFolder/examples/pdf/example.pdf")
+    val file = new File(s"$targetFolder/examples/pdf/example.pdf")
     System
       .setProperty(
         "webdriver.chrome.driver",

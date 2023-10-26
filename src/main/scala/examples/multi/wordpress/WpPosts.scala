@@ -10,7 +10,7 @@ import examples.Imports.Bundle._, Grid._, Classes._
 // Render all posts
 object WpPosts extends ScalaMultiRenderable {
 
-  override def rends: Seq[WpPost] = WpData.posts map WpPost
+  override def rends: Seq[WpPost] = WpData.posts.map(WpPost.apply)
 }
 
 // Template for single post

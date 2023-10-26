@@ -1,7 +1,6 @@
 package examples.multi.wordpress
 
 import java.nio.file.Paths
-import com.afrozaar.wordpress.wpapi.{v2 => wp}
 import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
 import examples.Imports.Bundle._, Grid._, Classes._
@@ -11,17 +10,16 @@ case class ResultPage[T](page: Int, perPage: Int, items: Seq[T])
 // Posts lists
 object WpPostsLists extends ScalaMultiRenderable {
 
-  val perPage   = 10
+  val perPage = 10
   val pageCount = WpPosts.rends.length / perPage
 
   override def rends =
     WpPosts.rends
       .grouped(perPage)
       .zipWithIndex
-      .map {
-        case (wpPosts, i) =>
-          val resultPage = ResultPage(i + 1, perPage, wpPosts)
-          WpPostsList(resultPage)
+      .map { case (wpPosts, i) =>
+        val resultPage = ResultPage(i + 1, perPage, wpPosts)
+        WpPostsList(resultPage)
       }
       .toSeq
 }
@@ -46,17 +44,17 @@ case class WpPostsList(resultPage: ResultPage[WpPost]) extends StaticPage {
       ul(
         resultPage.items.map { wpPost =>
           li(
-            hyperlink(wpPost.ref)(wpPost.pageSettings.title)
+            a(href := wpPost.ref)(wpPost.pageSettings.title)
           )
         }
       ),
       hr,
       Option.when(hasPrev) {
-        hyperlink(s"./page${resultPage.page - 1}.html")("Prev page")
+        a(href := s"./page${resultPage.page - 1}.html")("Prev page")
       },
       Option.when(hasPrev && hasNext) { " | " },
       Option.when(hasNext) {
-        hyperlink(s"./page${resultPage.page + 1}.html")("Next page")
+        a(href := s"./page${resultPage.page + 1}.html")("Next page")
       }
     )
   )

@@ -32,11 +32,11 @@ object StaticPageWithNavbar extends StaticPage {
     )
 
   private def navbarRight = {
-    val aLink  = SimpleStaticPage.ref
+    val aLink = SimpleStaticPage.ref
     val aTitle = SimpleStaticPage.pageSettings.title
     Seq(
-      hyperlink(aLink)(aTitle),
-      Navbar.simpleNestedLink(title = "Nested", links = Seq(hyperlink(aLink)(aTitle)))
+      a(href := aLink)(aTitle),
+      Navbar.simpleNestedLink(title = "Nested", links = Seq(a(href := aLink)(aTitle)))
     )
   }
 

@@ -46,20 +46,18 @@ object Index extends StaticPage {
       table(tableClass, tableHoverable, tableWidthFull)(
         thead(th("Topic"), th("Examples")),
         tbody(
-          examples.map {
-            case (exTitle, exPages) =>
-              tr(
-                td(exTitle),
-                td(
-                  exPages
-                    .map { page =>
-                      a(href := relTo(page))(
-                        page.getClass.getSimpleName.replaceAll("\\$", "")
-                      )
-                    }
-                    .intersperse(br())
+          examples.map { case (exTitle, exPages) =>
+            val links = exPages
+              .map { page =>
+                a(href := relTo(page))(
+                  page.getClass.getSimpleName.replaceAll("\\$", "")
                 )
-              )
+              }
+              .intersperse(br())
+            tr(
+              td(exTitle),
+              td(links)
+            )
           }
         )
       )
