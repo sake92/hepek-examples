@@ -7,4 +7,4 @@
 
 [build]
   publish = "target/web/public/main/examples"
-  command = "chmod 0755 ./sbt-install && ./sbt-install -d . 1.9.7 && ./sbt hepek"
+  command = "chmod +x ./netlify-deps.sh && ./netlify-deps.sh && sbt hepek"
