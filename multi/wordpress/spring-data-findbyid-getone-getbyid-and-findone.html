@@ -1,0 +1,240 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The difference between Spring Data JPA’s findById, getOne, getById, and findOne methods</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The difference between Spring Data JPA’s findById, getOne, getById, and findOne methods</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Spring Data’s&nbsp;<em>JpaRepository&nbsp;</em>provides a huge set of methods that simplify the implementation of your database operations. You can use them to persist, remove, and read an entity object. Choosing the right method for your use case is one of the few problems these interfaces create. And that’s sometimes not as easy as you might expect. One example is the methods&nbsp;<em>findById</em>,&nbsp;<em>getOne, getById</em>, and&nbsp;<em>findOne</em>. Based on their name, all seem to do the same. So, when should you use which one?</p>
+
+
+
+<p>That’s the question I will answer in this article. There are a few important differences between those methods. And as soon as you know them, picking the right one for your specific use case becomes easy.</p>
+
+
+
+<h2 class="wp-block-heading">Check the implementations of Spring Data JPA&#8217;s repository methods</h2>
+
+
+
+<p>Before I get into the implementation details of those 3 methods, I want to quickly show you how you can check the implementation of any of Spring Data JPA&#8217;s repository methods. You can use that whenever you&#8217;re not entirely sure how a method works or what the differences between methods with similar names are.</p>
+
+
+
+<p>One of the key benefits of Spring Data JPA is that it provides default implementations for all of its repositories. You can easily find them using the tools provided by your IDE. You only need to open up one of your own repository interfaces. It extends at least one of Spring Data JPA&#8217;s standard interfaces. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessPlayerRepository extends JpaRepository&lt;ChessPlayer, Long&gt;{}
+</pre></div>
+
+
+<p>In this example, that&#8217;s the <em>JpaRepository</em> interface. You can use your IDE to show you all implementations of that interface. When you do that for the <em>JpaRepository </em>interface, you will find a class called <em>SimpleJpaRepository</em>. It&#8217;s Spring Data JPA&#8217;s standard implementation of the <em>JpaRepository </em>interface with all its methods. I will reference it multiple times during this article.</p>
+
+
+
+<h2 class="wp-block-heading">4 methods that seem to do the same</h2>
+
+
+
+<p>When your repository extends Spring Data JPA&#8217;s <em>JpaRepository</em>, it inherits the methods <em>findById</em>, <em>getOne</em>, <em>getById</em>, and <em>findOne</em>. Based on their name, it seems like they are doing the same. </p>
+
+
+
+<p>But Spring Data obviously doesn&#8217;t provide 4 identical methods under different names. So, let’s take a closer look at these methods and find their differences.</p>
+
+
+
+<h3 class="wp-block-heading">The <em>findById </em>method</h3>
+
+
+
+<p>Spring Data JPA’s&nbsp;<em>CrudRepository&nbsp;</em>is a super interface of the&nbsp;<em>JpaRepository,&nbsp;</em>and it defines the method&nbsp;<em>Optional findById(ID id)</em>. The&nbsp;<em>CrudRepository&nbsp;</em>interface is not JPA-specific. The Spring Data parent project defines it. Due to that, you can find different implementations of it in all Spring Data modules.</p>
+
+
+
+<p>The <em>SimpleJpaRepository </em>class provides the JPA-specific implementation of the <em>findById</em> method. As you can see in the following code snippet, that implementation is based on the <em>find </em>method defined by JPA&#8217;s <em>EntityManager</em> and wraps the retrieved entity object in an <em>Optional</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public Optional&lt;T&gt; findById(ID id) {
+
+	Assert.notNull(id, ID_MUST_NOT_BE_NULL);
+
+	Class&lt;T&gt; domainType = getDomainClass();
+
+	if (metadata == null) {
+		return Optional.ofNullable(em.find(domainType, id));
+	}
+
+	LockModeType type = metadata.getLockModeType();
+
+	Map&lt;String, Object&gt; hints = new HashMap&lt;&gt;();
+
+	getQueryHints().withFetchGraphs(em).forEach(hints::put);
+
+	if (metadata.getComment() != null &amp;&amp; provider.getCommentHintKey() != null) {
+		hints.put(provider.getCommentHintKey(), provider.getCommentHintValue(metadata.getComment()));
+	}
+
+	return Optional.ofNullable(type == null ? em.find(domainType, id, hints) : em.find(domainType, id, type, hints));
+}
+</pre></div>
+
+
+<p>Source: <a href="https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L296">https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L296</a></p>
+
+
+
+<p>Calling the&nbsp;<em>EntityManager</em>‘s&nbsp;<em>find</em>&nbsp;method instead of generating and executing a query enables Hibernate to utilize its 1st and 2nd level caches. That can provide performance benefits if the entity object was already fetched from the database within the current session or if the entity is part of the 2nd level cache. That makes the&nbsp;<em>findById&nbsp;</em>method your best option if you want to get an entity object with all its attributes by its primary key attribute.</p>
+
+
+
+<p>The main difference between the&nbsp;<em>findById</em>&nbsp;method and a simple call of the&nbsp;<em>EntityManager.find&nbsp;</em>method is that it considers the&nbsp;<em>LockModeType&nbsp;</em>you configured for your repository and any&nbsp;<a href="https://thorben-janssen.com/6-performance-pitfalls-when-using-spring-data-jpa/#Using_an_EntityGraph_annotation" target="_blank" rel="noreferrer noopener"><em>EntityGraph</em></a><em>&nbsp;</em>associated with the repository method.</p>
+
+
+
+<p>The <em>LockModeType</em> allows you to configure optimistic or pessimistic locking to handle concurrent modifications on the retrieved entities. I explain both concepts in more detail in the Advanced Hibernate course included in the <a href="/join-persistence-hub/">Persistence Hub</a>.</p>
+
+
+
+<p>And an <em>EntityGraph</em> enables you to define the associations you want to initialize when fetching an entity object. This prevents <a href="https://thorben-janssen.com/lazyinitializationexception/">LazyInitializationExpections</a> and helps you avoid n+1 select issues.</p>
+
+
+
+<h3 class="wp-block-heading">The <em>getOne </em>and <em>getById</em> methods</h3>
+
+
+
+<p>In Spring Data JPA 3, the <em>getOne</em> and <em>getById</em> methods are deprecated and call the <em>getReferenceById</em> method internally. As its name indicates, that method returns a reference to an entity object instead of the entity object itself.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public T getReferenceById(ID id) {
+
+	Assert.notNull(id, ID_MUST_NOT_BE_NULL);
+	return em.getReference(getDomainClass(), id);
+}
+</pre></div>
+
+
+<p>Source: <a href="https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L351">https://github.com/spring-projects/spring-data-jpa/blob/main/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L351</a></p>
+
+
+
+<p>As I explained in my <a href="/jpa-getreference/">guide to JPA&#8217;s <em>getReference</em></a> method, Hibernate doesn&#8217;t execute an SQL query when you call the <em>getReference</em> method. If the entity is not managed, Hibernate instantiates a proxy object and initializes the primary key attribute.</p>
+
+
+
+<p>This is similar to an uninitialized, lazily-fetched association that gives you a proxy object. In both cases, only the primary key attributes are set. When you access the first non-primary key attribute, Hibernate executes a database query to fetch all attributes. That&#8217;s also the first time Hibernate checks if the referenced entity object exists. If the executed query returns no result, Hibernate throws an exception.</p>
+
+
+
+<p>The delayed execution of the SQL query can cause problems and doesn&#8217;t provide any benefits if you need to access any non-primary key attributes. The <em>getOne </em>and <em>getById </em>methods are, therefore, not a good fit for use cases working with the information represented by an entity object. But they provide a very efficient way to get an entity reference if you want to initialize an association. In those cases, a reference provides all the information Hibernate needs.</p>
+
+
+
+<h3 class="wp-block-heading">The <em>findOne </em>methods</h3>
+
+
+
+<p>Spring Data JPA provides 2 versions of the <em>findOne</em> method. </p>
+
+
+
+<p>One version is defined by the <em>QueryByExampleExecutor </em>interface. You can call it to find an entity object that matches an example. Spring Data JPA then generates a WHERE clause based on the provided entity object and example configuration.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+// Sample player
+ChessPlayer examplePlayer = new ChessPlayer();
+examplePlayer.setFirstName(&quot;Magnus&quot;);
+examplePlayer.setLastName(&quot;Carlsen&quot;);
+
+Example&lt;ChessPlayer&gt; example = Example.of(examplePlayer);
+Optional&lt;ChessPlayer&gt; player = playerRepo.findOne(example);
+</pre></div>
+
+
+<p>As I explain in the Spring Data JPA course in the <a href="/join-persistence-hub/">Persistence Hub</a>, you can customize how and for which entity attributes Spring generates the predicates for your WHERE clause. By default, it generates a query that selects an entity object and includes an equal predicate for each provided attribute.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2023-02-01 15:48:11.370 DEBUG 27840 --- &#91;           main] org.hibernate.SQL                        : 
+    select
+        chessplaye0_.id as id1_1_,
+        chessplaye0_.birth_date as birth_da2_1_,
+        chessplaye0_.first_name as first_na3_1_,
+        chessplaye0_.last_name as last_nam4_1_,
+        chessplaye0_.version as version5_1_ 
+    from
+        chess_player chessplaye0_ 
+    where
+        chessplaye0_.first_name=? 
+        and chessplaye0_.last_name=? 
+        and chessplaye0_.version=0
+</pre></div>
+
+
+<p>The other version expects a <em>Specification</em> object that defines the where clause of a query. The specification is a concept defined in Domain Driven Design. They are too complex to explain in this article, and you don&#8217;t need to know the details to understand the differences between the discussed methods of the <em>JpaRepository</em> interface. If you want to learn more about this feature, I recommend joining the <a href="https://thorben-janssen.com/join-persistence-hub/">Persistence Hub</a> and taking the Spring Data JPA course.</p>
+
+
+
+<p>The main idea of the specification concept is that each specification defines a basic business rule, which you can combine into a complex ruleset. When using this concept with Spring Data JPA, each specification defines a small part of the WHERE clause.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessPlayerSpecs  {
+
+    public static Specification&lt;ChessPlayer&gt; playedInTournament(String tournamentName) {
+        return (root, query, builder) -&gt; {
+            SetJoin&lt;ChessPlayer, ChessTournament&gt; tournament = root.join(ChessPlayer_.tournaments);
+            return builder.equal(tournament.get(ChessTournament_.name), tournamentName);
+        };
+    }
+
+    public static Specification&lt;ChessPlayer&gt; hasFirstName(String firstName) {
+        return (root, query, builder) -&gt; {
+            return builder.equal(root.get(ChessPlayer_.firstName), firstName);
+        };
+    }
+}
+</pre></div>
+
+
+<p>Depending on the needs of your business code, you can use these specifications and combine them to create complex queries.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Specification&lt;ChessPlayer&gt; spec = ChessPlayerSpecs.playedInTournament(&quot;Tata Steel Chess Tournament 2023&quot;)
+												  .and(ChessPlayerSpecs.hasFirstName(&quot;Magnus&quot;));
+Optional&lt;ChessPlayer&gt; player = playerRepo.findOne(spec);
+</pre></div>
+
+
+<p>The short descriptions of both <em>findOne </em>methods and the 2 code samples already show the difference between these methods and the previously discussed <em>findById</em>, <em>getOne, </em>and <em>getById</em> methods. The previously discussed methods only get an entity object or a reference by its primary key. Both versions of the <em>findOne</em> method enable you to find entity objects by non-primary key attributes and define queries of any complexity.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Spring Data JPA&#8217;s standard repository interfaces define various methods that you can use to implement your persistence layer. Some of them might have similar names, but their functionality differs. When using any of those methods in your code, you should know how they work internally and under which circumstances you should use them.</p>
+
+
+
+<p>In this article, we had a closer look at multiple methods that return 1 entity object. You should use:</p>
+
+
+
+<ul>
+<li>the <em>findById</em> method to select an entity object by its primary key and initialize its attributes.</li>
+
+
+
+<li>the <em>getReferenceById </em>method to get a reference to an entity object that you can use to initialize associations. The <em>getOne </em>and <em>getById </em>methods are deprecated and call the <em>getReferenceById </em>method.</li>
+
+
+
+<li>the <em>findOne </em>method if you want to use Spring Data JPA&#8217;s query by example or specification feature to define a query that returns 1 entity object.</li>
+</ul>
+
+
+
+<p>These are just some of the methods provided by the <em>JpaRepository </em>that have similar names but provide different functionality. Other examples are the <a href="/spring-data-jpa-save-saveandflush-and-saveall/"><em>save()</em>, <em>saveAndFlush()</em>, and <em>saveAll()</em> method</a>s that I explained in a previous article.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

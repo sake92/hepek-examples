@@ -1,0 +1,158 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The Best Spring Data JPA Logging Configuration in Spring Boot</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The Best Spring Data JPA Logging Configuration in Spring Boot</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Spring Data JPA&#8217;s repositories provide most of the database operations for you. That makes working with Spring Data JPA very comfortable but it also increases the importance of a good logging configuration. If you don&#8217;t implement your database operations yourself, you at least need to make sure that you know which operations get performed.</p>
+
+
+
+<p>The best way to monitor all executed SQL statements during development is to use the right logging configuration for the persistence provider used by Spring Data JPA. The persistence provider does all the heavy lifting. It’s responsible for executing all queries, detecting and persisting dirty entities, handling caching, and providing lazy loading for managed associations. And it’s also the best component to measure and report all these operations.</p>
+
+
+
+<p>When using Spring Boot, Spring Data JPA uses Hibernate as its persistence provider by default. So, let’s take a closer look at a development configuration that provides you with the necessary insides and a configuration for production that keeps the overhead as low as possible.</p>
+
+
+
+<h2 class="wp-block-heading">Logging Configuration for Development</h2>
+
+
+
+<p>When implementing a new feature or fixing a bug, your log file should tell you about all the executed SQL statements, cache interactions, and other operations your persistence layer performs. When using Hibernate, you can get all of this by activating its statistics. You do that by setting the property <em>spring.jpa.properties.hibernate.generate_statistics</em> in your <em>application.properties</em> file to true. And when doing that, you should also set the log category <em>logging.level.org.hibernate.stat</em> to <em>DEBUG </em>to not miss out on any available information.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+# Generate and log statistics
+spring.jpa.properties.hibernate.generate_statistics=true
+logging.level.org.hibernate.stat=DEBUG
+</pre></div>
+
+
+<p>Hibernate writes a log message for each query executed by Spring’s repositories based on these settings. At the end of each transaction, it also summarizes all performed operations.</p>
+
+
+
+<p>Let&#8217;s try this with a simple test case that gets all <em>ChessPlayer</em> entities from the database and writes a log message with their first and last name</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessPlayer&gt; players = playerRepo.findAll();
+assertThat(players.size()).isEqualTo(19);
+
+ChessPlayer player = players.get(0);
+log.info(player.getFirstName() + &quot; &quot; + player.getLastName()); 
+</pre></div>
+
+
+<p>Spring Data JPA&#8217;s findAll method generates a simple query that selects all ChessPlayer entities. As you can see in the log output, Hibernate executed that query and wrote the statement, its execution time, and the number of returned rows to the log file.</p>
+
+
+
+<p>And the block of Session Metrics gives you a quick overview of all the performed operations. In this test case, Hibernate prepared and executed 1 JDBC statement. The 19 L2C puts reported in the metrics tell you that Hibernate added 19 objects to the 2nd level cache. And Hibernate also performed 1 partial flush at the end of the transaction.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2021-12-14 14:41:05.189 DEBUG 65812 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 75ms, rows: 19
+2021-12-14 14:41:05.196  INFO 65812 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    1913100 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    1401600 nanoseconds spent preparing 1 JDBC statements;
+    3825100 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    46241400 nanoseconds spent performing 19 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    11600 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2021-12-14 14:41:05.213  INFO 58480 --- &#91;           main] c.thorben.janssen.spring.data.TestDemo   : Magnus Carlsen
+</pre></div>
+
+
+<p>If I would&#8217;ve activated JDBC batching or triggered more operations on the 2nd level cache, you would see that in the session metrics as well. Based on this information, you can check if any potential problems might cause trouble when deploying your application to production and using it with a bigger test database.</p>
+
+
+
+<p>In addition to Hibernate&#8217;s statistics, you should also configure a threshold for Hibernate&#8217;s slow query log. Hibernate then measures the execution time of each executed SQL statement. If it exceeds the configured threshold, it writes a log message with the execution time and the executed statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+# Log slow queries
+spring.jpa.properties.hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS=3
+</pre></div>
+
+
+<p>Let’s rerun the same test case and check the log output.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2021-12-14 15:02:57.570  INFO 36940 --- &#91;           main] org.hibernate.SQL_SLOW                   : SlowQuery: 4 milliseconds. SQL: 'HikariProxyPreparedStatement@2022715982 wrapping select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_'
+2021-12-14 15:02:57.643 DEBUG 36940 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 82ms, rows: 19
+2021-12-14 15:02:57.650  INFO 36940 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    1901800 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    1981300 nanoseconds spent preparing 1 JDBC statements;
+    3001100 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    52468500 nanoseconds spent performing 19 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    12500 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+2021-12-14 15:02:57.696  INFO 36940 --- &#91;           main] c.thorben.janssen.spring.data.TestDemo   : Magnus Carlsen
+</pre></div>
+
+
+<p>Using this configuration, you get all information you need to understand which operations Spring Data JPA executed and how your persistence layer interacted with the database. </p>
+
+
+
+<p>If you want to get an additional log message for every executed SQL statement and more detailed information on Hibernate&#8217;s operations on the 2nd level cache, you should also set the configuration properties <em>logging.level.org.hibernate.SQL</em> and <em>logging.level.org.hibernate.cache</em> to <em>DEBUG</em>. </p>
+
+
+
+<h3 class="wp-block-heading">Recommended Configuration for Development</h3>
+
+
+
+<p>Here you can see the entire configuration for development systems.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+# Generate and log statistics
+spring.jpa.properties.hibernate.generate_statistics=true
+logging.level.org.hibernate.stat=DEBUG
+# Log slow queries
+spring.jpa.properties.hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS=1
+# Log all SQL statements
+logging.level.org.hibernate.SQL=DEBUG
+# Log cache operations
+logging.level.org.hibernate.cache=DEBUG
+</pre></div>
+
+
+<h2 class="wp-block-heading">Logging Configuration for Production</h2>
+
+
+
+<p>When you deploy your application to production, you should already know how it works internally and which operations it performs. Now it&#8217;s time to reduce the logging overhead to get the best performance.</p>
+
+
+
+<p>You do that by not setting the property <em>spring.jpa.properties.hibernate.generate_statistics</em> or by setting it to <em>false </em>and by setting the log level of <em>org.hibernate</em> to <em>ERROR</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+spring.jpa.properties.hibernate.generate_statistics=false
+logging.level.org.hibernate=ERROR
+</pre></div>
+
+
+<p>Hibernate then only writes a log message if an exception occurs.</p>
+
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>Spring Data JPA adds another layer of abstraction on top of your persistence provider. That makes the implementation of your persistence much easier. But the abstraction also makes it harder to understand how your application uses the database. This increases the importance of your logging configuration. Using the right configurations, you get all the information you need to find, analyze, and fix potential problems during development. You should use a different configuration to avoid any overhead in production and get the best performance.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

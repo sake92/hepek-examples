@@ -1,0 +1,569 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Logging Guide for Hibernate 4, 5 &amp; 6 – Use the right config for dev and prod</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Logging Guide for Hibernate 4, 5 &amp; 6 – Use the right config for dev and prod</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Choosing the right logging configuration can make the difference between finding a performance issue during development or suffering from it on production. But it can also create an overhead that slows down your application. You need to decide which information you need and configure your system accordingly.</p>
+
+
+
+<p>I, therefore, prefer to use two different configurations:</p>
+
+
+
+<ol><li>The development configuration needs to log enough internal information to understand the database interactions, see the number of executed queries, and check the SQL statements.</li><li>The production configuration should avoid any overhead by logging as few messages as possible.</li></ol>
+
+
+
+<p>And in addition to the target system, your configuration also depends on the Hibernate version you&#8217;re using. That&#8217;s especially the case for your development configuration. Some logging features, like the slow query log, aren&#8217;t available in older Hibernate versions, and Hibernate 6 changed the names of a few important logging categories.</p>
+
+
+
+<p>Because of that, I will explain the different log categories and provide you with my recommended logging configurations for development and production when using Hibernate 4, 5, and 6.</p>
+
+
+
+<!--more-->
+
+
+
+<h2 class="wp-block-heading">Supported logging back-ends</h2>
+
+
+
+<p>Before we look at the different logging categories and levels, let&#8217;s have a short look at the logging frameworks supported by Hibernate. Since version 4.0, Hibernate uses the JBoss Logging library to write messages to a log file. This library is a logging bridge that integrates different log frameworks. You can decide which of the following frameworks you want to use for your application:</p>
+
+
+
+<ol><li>JBoss LogManager</li><li>Log4j 2</li><li>Log4j 1</li><li>Slf4j</li><li>JDK logging</li></ol>
+
+
+
+<p>You only need to add your preferred framework to the classpath, and the JBoss Logging library will pick it up. If multiple frameworks are available, it picks the one with the highest priority.</p>
+
+
+
+<p>The concepts and log categories are the same for all frameworks, but the configuration file&#8217;s format and log level&#8217;s names can differ. I will show a few different configuration files in this article. Please check the documentation of your logging framework if yours is not included.</p>
+
+
+
+<h2 class="wp-block-heading">Log categories</h2>
+
+
+
+<p>Like all applications and frameworks, Hibernate writes log messages in different categories and log levels.</p>
+
+
+
+<p>The categories group log messages for specific topics, like executed SQL statements or cache interactions. The following table shows the most important log categories used by Hibernate:</p>
+
+
+
+<figure class="wp-block-table"><table><tbody><tr><th>Category</th><th>Description</th></tr><tr><td>org.hibernate</td><td>This category contains all messages written by Hibernate. You can use this to analyze unspecific issues or find categories used by Hibernate. <br>Setting this category to a fine log level might create a lot of log output.</td></tr><tr><td>org.hibernate.SQL</td><td>All SQL statements executed via JDBC are written to this category.You can use it together with <em>org.hibernate.type.descriptor.sql</em> or <em>org.hibernate.orm.jdbc.bind</em> to get more information about the JDBC parameters and results.</td></tr><tr><td>org.hibernate.type.descriptor.sql</td><td><strong>Hibernate 4 and 5</strong><br>Hibernate writes the values bound to the JDBC parameters and extracted from the JDBC results to this category. This category should be used together with org.hibernate.SQL to also log the SQL statements.</td></tr><tr><td>org.hibernate.orm.jdbc.bind</td><td><strong>Hibernate 6</strong><br>Hibernate writes the values bound to the JDBC parameters to this category. This category should be used together with org.hibernate.SQL to also log the SQL statements. </td></tr><tr><td>org.hibernate.SQL_SLOW</td><td><strong>Hibernate >= 5.4.5</strong><br>Hibernate writes a message to the slow query log if the execution of an SQL statement took longer than the configured threshold (see <a href="https://thorben-janssen.com/hibernate-slow-query-log/">Slow Query Log</a>).</td></tr><tr><td>org.hibernate.pretty</td><td>Hibernate logs the state at flush time of max. 20 entities to this category.</td></tr><tr><td>org.hibernate.cache</td><td>Information about second-level cache activities is written to this category.</td></tr><tr><td>org.hibernate.stat</td><td>Hibernate writes some statistics for each query to this category. The statistics need to be activated separately (see <a href="//thorben-janssen.com/how-to-activate-hibernate-statistics-to-analyze-performance-issues/">Activate Hibernate Statistics</a>).</td></tr><tr><td>org.hibernate.hql.internal.ast.AST</td><td> <strong>Hibernate 4 and 5</strong><br> This category groups the HQL and SQL ASTs during query parsing.</td></tr><tr><td>org.hibernate.tool.hbm2ddl</td><td>Hibernate writes the DDL SQL queries executed during schema migration to this log category.</td></tr></tbody></table></figure>
+
+
+
+<p>The names of the log levels are defined by your logging framework and define the amount and granularity of the log messages. You can assign a log level to each category. If you do not specify a log level for a specific category, it will inherit the level from its parent category.</p>
+
+
+
+<h2 class="wp-block-heading">Don&#8217;t use show_sql to log SQL queries</h2>
+
+
+
+<p>How to get Hibernate to log the executed SQL queries is an often asked question, and the most popular answer on the internet seems to be to set the <em>show_sql</em> parameter in the <em>persistence.xml</em> to <em>true</em>. But please, don&#8217;t do this!</p>
+
+
+
+<p>Hibernate provides two ways to activate the logging of the executed SQL queries, and setting the <em>show_sql</em> parameter to <em>true</em> is the worse one. It has two huge disadvantages:</p>
+
+
+
+<ol><li>Hibernate writes all executed SQL statements to standard out without using the logging framework. Therefore, it becomes difficult to define the log file which shall contain these specific log messages. Writing to standard out is also most often much slower than using an optimized logging framework.</li><li>The <em>persistence.xml</em> is part of a jar file of your application, and you need to open that binary if you want to activate or deactivate the logging of the SQL statements. Your logging framework&#8217;s configuration is most often an external text file that can be easily changed on any system.</li></ol>
+
+
+
+<p>The better way to activate the logging of executed SQL statements is to set the log level of the <em>org.hibernate.SQL</em> category to <em>DEBUG</em> (or the corresponding log level of your log framework). Hibernate will write the SQL statements without any information about the values bound to the JDBC parameters or extracted from the query result. If you also want to get this information, you have to set the log level of <em>org.hibernate.type.descriptor.sql</em> to <em>DEBUG </em>(see the development recommendation for an example).</p>
+
+
+
+<h2 class="wp-block-heading">Recommended logging configurations</h2>
+
+
+
+<p>The requirements for production and development systems are very different. During development, you need to know what Hibernate is doing in the background. But logging this information slows down the application, and it&#8217;s not required in production. I, therefore, recommend using two different settings:</p>
+
+
+
+<h3 class="wp-block-heading">Development</h3>
+
+
+
+<p>Hibernate is doing many things for you in the background, which makes it easy to forget that you are still working with a database. But if you want to make sure that your application will perform as you expected, you need to check the number of executed queries and their SQL statements.</p>
+
+
+
+<p>You need to set the log level for the <em>org.hibernate.SQL</em> category to <em>DEBUG</em> to get this information. If you also want to log the used bind parameter values, you also need to set the <em>org.hibernate.type.descriptor.sql</em> category (Hibernate 4 &amp; 5) or the <em>org.hibernate.orm.jdbc.bind</em> category (Hibernate 6) to <em>trace</em>.</p>
+
+
+
+<p>In addition to that, I prefer to <a href="//thorben-janssen.com/how-to-activate-hibernate-statistics-to-analyze-performance-issues/">activate Hibernate statistics</a> to get a summary of the most critical metrics at the end of each session. And if you&#8217;re using Hibernate in at least version 5.4.5, I also recommend activating <a href="https://thorben-janssen.com/hibernate-slow-query-log/">Hibernate&#8217;s slow query log</a>.</p>
+
+
+
+<p>You can see such a logging configuration for different logging frameworks in the following sections.</p>
+
+
+
+<h4 class="wp-block-heading">Log4J configuration for Hibernate 4, 5, and 6</h4>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+###
+# Global configuration for all Hibernate versions
+###
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Target=System.out
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%d{HH:mm:ss,SSS} %-5p &#91;%c] - %m%n
+
+log4j.rootLogger=info, stdout
+
+###
+# Hibernate &lt; 5.4.5
+###
+# basic log level for all messages
+log4j.logger.org.hibernate=info
+# SQL statements and parameters
+log4j.logger.org.hibernate.SQL=debug
+log4j.logger.org.hibernate.type.descriptor.sql=trace
+# Statistics
+log4j.logger.org.hibernate.stat=debug
+# 2nd Level Cache
+log4j.logger.org.hibernate.cache=debug
+
+###
+# Hibernate &gt;= 5.4.5
+###
+# basic log level for all messages
+log4j.logger.org.hibernate=info
+# SQL statements and parameters
+log4j.logger.org.hibernate.SQL=debug
+log4j.logger.org.hibernate.type.descriptor.sql=trace
+# Statistics and slow queries
+log4j.logger.org.hibernate.stat=debug
+log4j.logger.org.hibernate.SQL_SLOW=info
+# 2nd Level Cache
+log4j.logger.org.hibernate.cache=debug
+
+###
+#Hibernate &gt;= 6
+###
+# basic log level for all messages
+log4j.logger.org.hibernate=info
+# SQL statements and parameters
+log4j.logger.org.hibernate.SQL=debug
+log4j.logger.org.hibernate.orm.jdbc.bind=trace
+# Statistics and slow queries
+log4j.logger.org.hibernate.stat=debug
+log4j.logger.org.hibernate.SQL_SLOW=info
+# 2nd Level Cache
+log4j.logger.org.hibernate.cache=debug
+</pre></div>
+
+
+<h4 class="wp-block-heading">Log4J2 configuration for Hibernate 4, 5, and 6 </h4>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;Configuration monitorInterval=&quot;60&quot;&gt;
+    &lt;Properties&gt;
+        &lt;Property name=&quot;log-path&quot;&gt;PropertiesConfiguration&lt;/Property&gt;
+    &lt;/Properties&gt;
+    &lt;Appenders&gt;
+        &lt;Console name=&quot;Console-Appender&quot; target=&quot;SYSTEM_OUT&quot;&gt;
+            &lt;PatternLayout&gt;
+                &lt;pattern&gt;
+                    &#91;%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} &#91;%t] %c{1} - %msg%n
+                &lt;/pattern&gt;&gt;
+            &lt;/PatternLayout&gt;
+        &lt;/Console&gt;
+    &lt;/Appenders&gt;
+    &lt;Loggers&gt;
+        &lt;!-- Hibernate before 5.4.5 --&gt;
+        &lt;Logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.type.descriptor.sql&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.stat&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.cache&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+
+        &lt;!-- Hibernate after 5.4.5 --&gt;
+        &lt;Logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.type.descriptor.sql&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.stat&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.SQL_SLOW&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.cache&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+
+        &lt;!-- Hibernate after 6 --&gt;
+        &lt;Logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.orm.jdbc.bind&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.stat&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.SQL_SLOW&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+        &lt;Logger name=&quot;org.hibernate.cache&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Logger&gt;
+
+        &lt;Root level=&quot;info&quot;&gt;
+            &lt;AppenderRef ref=&quot;Console-Appender&quot;/&gt;
+        &lt;/Root&gt;
+    &lt;/Loggers&gt;
+&lt;/Configuration&gt;
+</pre></div>
+
+
+<h4 class="wp-block-heading">JDK logger configuration for Hibernate 4, 5, and 6 </h4>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+###
+# Global configuration for all Hibernate versions
+###
+handlers=java.util.logging.ConsoleHandler
+java.util.logging.ConsoleHandler.level=FINEST
+java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
+
+org.hibernate.level=INFO
+
+###
+# Hibernate &lt; 5.4.5
+###
+# basic log level for all messages
+org.hibernate.SQL.level=FINER
+org.hibernate.type.descriptor.sql.level=FINEST
+# Statistics
+org.hibernate.stat.level=FINER
+# 2nd Level Cache
+org.hibernate.cache.level=FINER
+
+###
+# Hibernate &gt;= 5.4.5
+###
+# basic log level for all messages
+org.hibernate.SQL.level=FINER
+org.hibernate.type.descriptor.sql.level=FINEST
+# Statistics
+org.hibernate.stat.level=FINER
+org.hibernate.SQL_SLOW.level=INFO
+# 2nd Level Cache
+org.hibernate.cache.level=FINER
+
+###
+# Hibernate &gt;= 6
+###
+# basic log level for all messages
+org.hibernate.SQL.level=FINER
+org.hibernate.orm.jdbc.bind.level=FINEST
+# Statistics
+org.hibernate.stat.level=FINER
+org.hibernate.SQL_SLOW.level=INFO
+# 2nd Level Cache
+org.hibernate.cache.level=FINER
+</pre></div>
+
+
+<h4 class="wp-block-heading">Logback via Slf4j configuration for Hibernate 4, 5, and 6  </h4>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;configuration&gt;
+	&lt;appender name=&quot;STDOUT&quot; class=&quot;ch.qos.logback.core.ConsoleAppender&quot;&gt;
+		&lt;encoder class=&quot;ch.qos.logback.classic.encoder.PatternLayoutEncoder&quot;&gt;
+			&lt;Pattern&gt;
+				%d{yyyy-MM-dd HH:mm:ss} &#91;%thread] %-5level %logger{36} - %msg%n
+			&lt;/Pattern&gt;
+		&lt;/encoder&gt;
+	&lt;/appender&gt;
+    &lt;!-- Hibernate before 5.4.5 --&gt;
+	&lt;logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.type.descriptor.sql&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.stat&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.cache&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+
+    &lt;!-- Hibernate after 5.4.5 --&gt;
+	&lt;logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.type.descriptor.sql&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.stat&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.SQL_SLOW&quot; level=&quot;info&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.cache&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+
+    &lt;!-- Hibernate after 6 --&gt;
+	&lt;logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.orm.jdbc.bind&quot; level=&quot;trace&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.stat&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.SQL_SLOW&quot; level=&quot;info&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+	&lt;logger name=&quot;org.hibernate.cache&quot; level=&quot;debug&quot; additivity=&quot;false&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/logger&gt;
+
+	&lt;root level=&quot;info&quot;&gt;
+		&lt;appender-ref ref=&quot;STDOUT&quot;/&gt;
+	&lt;/root&gt;
+&lt;/configuration&gt;
+</pre></div>
+
+
+<h4 class="wp-block-heading">Example log for Hibernate 4 and 5</h4>
+
+
+
+<p>If you use any of these configurations with Hibernate 4 or 5, it will write a log file that looks very similar to the following one. It was written by log4j2 and Hibernate 5. The log shows the Hibernate messages for a session in which I persisted 2 new <em>Author</em> entities, updated one of them afterward, and selected all <em>Author</em>s with a given last name.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+13:45:20,863 DEBUG &#91;org.hibernate.SQL] - select nextval ('hibernate_sequence')
+13:45:20,907 DEBUG &#91;org.hibernate.SQL] - select nextval ('hibernate_sequence')
+13:45:20,939 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+13:45:20,950 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Thorben]
+13:45:20,951 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Janssen]
+13:45:20,952 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+13:45:20,953 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;4] as &#91;BIGINT] - &#91;1]
+13:45:20,960 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+13:45:20,960 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolia]
+13:45:20,960 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
+13:45:20,961 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+13:45:20,961 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
+13:45:21,488 DEBUG &#91;org.hibernate.SQL] - update Author set firstName=?, lastName=?, version=? where id=? and version=?
+13:45:21,494 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolai]
+13:45:21,503 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
+13:45:21,505 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;3] as &#91;INTEGER] - &#91;1]
+13:45:21,509 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
+13:45:21,510 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;5] as &#91;INTEGER] - &#91;0]
+13:45:21,522 DEBUG &#91;org.hibernate.SQL] - select author0_.id as id1_0_, author0_.firstName as firstNam2_0_, author0_.lastName as lastName3_0_, author0_.version as version4_0_ from Author author0_ where author0_.lastName=?
+13:45:21,524 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Janssen]
+13:45:21,531 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_0_] : &#91;BIGINT]) - &#91;1]
+13:45:21,541 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    71600 nanoseconds spent acquiring 1 JDBC connections;
+    42200 nanoseconds spent releasing 1 JDBC connections;
+    5946500 nanoseconds spent preparing 6 JDBC statements;
+    9801200 nanoseconds spent executing 6 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    55887200 nanoseconds spent executing 2 flushes (flushing a total of 4 entities and 0 collections);
+    27027800 nanoseconds spent executing 1 partial-flushes (flushing a total of 2 entities and 2 collections)
+}
+</pre></div>
+
+
+<p>If you don’t need that much information, I recommend removing the configuration of the <em>org.hibernate.type.descriptor.sql</em> category. This will remove the log messages showing the bind parameter values. As you can see in the log file, these are the majority of the written log messages, and there are so many of them that the log gets hard to read.</p>
+
+
+
+<h4 class="wp-block-heading">Example log for Hibernate 6</h4>
+
+
+
+<p>As you can see in the following snippet, the log written by Hibernate 6 looks very similar. If you&#8217;re selecting multiple entity objects, it&#8217;s often a little easier to read than the log written by earlier Hibernate versions. That&#8217;s mostly because the category <em>org.hibernate.orm.jdbc.bind</em> only includes log messages for bind parameters but not for extracted parameters.</p>
+
+
+
+<p>If you want to reduce the amount of information, you should consider deactivating trace logging for the category <em>org.hibernate.orm.jdbc.bind</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+15:37:21,600 DEBUG &#91;org.hibernate.SQL] - select nextval('Author_SEQ')
+15:37:21,609 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'select nextval('Author_SEQ')'
+15:37:21,612 DEBUG &#91;org.hibernate.SQL] - select nextval('Author_SEQ')
+15:37:21,615 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'select nextval('Author_SEQ')'
+15:37:21,902 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+15:37:21,903 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Thorben]
+15:37:21,903 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Janssen]
+15:37:21,903 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+15:37:21,904 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;BIGINT] - &#91;1]
+15:37:21,908 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 4 milliseconds. SQL: 'insert into Author (firstName, lastName, version, id) values ('Thorben', 'Janssen', 0, 1)'
+15:37:21,911 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+15:37:21,911 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolia]
+15:37:21,911 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
+15:37:21,912 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+15:37:21,912 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
+15:37:21,914 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'insert into Author (firstName, lastName, version, id) values ('Nicolia', 'Parlog', 0, 2)'
+15:37:21,915 DEBUG &#91;org.hibernate.SQL] - update Author set firstName=?, lastName=?, version=? where id=? and version=?
+15:37:21,915 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolai]
+15:37:21,915 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
+15:37:21,916 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;1]
+15:37:21,916 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
+15:37:21,916 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;INTEGER] - &#91;0]
+15:37:21,919 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 3 milliseconds. SQL: 'update Author set firstName='Nicolai', lastName='Parlog', version=1 where id=2 and version=0'
+15:37:21,952 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.lastName=?
+15:37:21,952 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Janssen]
+15:37:21,959 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 6 milliseconds. SQL: 'select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.lastName='Janssen''
+15:37:21,964 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a WHERE a.lastName = :lastName, time: 26ms, rows: 1
+15:37:21,972 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    51899 nanoseconds spent acquiring 1 JDBC connections;
+    30200 nanoseconds spent releasing 1 JDBC connections;
+    419199 nanoseconds spent preparing 6 JDBC statements;
+    21482801 nanoseconds spent executing 6 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    390499 nanoseconds spent executing 1 flushes (flushing a total of 2 entities and 2 collections);
+    40233400 nanoseconds spent executing 1 partial-flushes (flushing a total of 2 entities and 2 collections)
+}
+</pre></div>
+
+
+<h3 class="wp-block-heading">Production</h3>
+
+
+
+<p>As long as you do not need to analyze an issue in production, you should log as little information as possible. This can be done for all Hibernate versions by setting all Hibernate-related log categories to <em>ERROR</em>. You should also make sure that the Hibernate statistics component and the slow query log are deactivated.</p>
+
+
+
+<h4 class="wp-block-heading">Log4J</h4>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Target=System.out
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%d{HH:mm:ss,SSS} %-5p [%c] - %m%n
+
+log4j.rootLogger=info, stdout
+# basic log level for all messages
+log4j.logger.org.hibernate=error</pre>
+
+
+
+<h4 class="wp-block-heading">Log4J2</h4>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;Configuration monitorInterval="60"&gt;
+    &lt;Properties&gt;
+        &lt;Property name="log-path"&gt;PropertiesConfiguration&lt;/Property&gt;
+    &lt;/Properties&gt;
+    &lt;Appenders&gt;
+        &lt;Console name="Console-Appender" target="SYSTEM_OUT"&gt;
+            &lt;PatternLayout&gt;
+                &lt;pattern&gt;
+                    [%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n
+                &lt;/pattern&gt;&gt;
+            &lt;/PatternLayout&gt;
+        &lt;/Console&gt;
+    &lt;/Appenders&gt;
+    &lt;Loggers&gt;
+        &lt;Logger name="org.hibernate" level="error" additivity="false"&gt;
+            &lt;AppenderRef ref="Console-Appender"/&gt;
+        &lt;/Logger&gt;
+        &lt;Root level="info"&gt;
+            &lt;AppenderRef ref="Console-Appender"/&gt;
+        &lt;/Root&gt;
+    &lt;/Loggers&gt;
+&lt;/Configuration&gt;</pre>
+
+
+
+<h4 class="wp-block-heading">JDK logger</h4>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">handlers=java.util.logging.ConsoleHandler
+
+java.util.logging.ConsoleHandler.level=FINEST
+java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
+
+org.hibernate.level=SEVERE</pre>
+
+
+
+<h4 class="wp-block-heading">Logback via Slf4j</h4>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">&lt;configuration&gt;
+	&lt;appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender"&gt;
+		&lt;encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"&gt;
+			&lt;Pattern&gt;
+				%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n
+			&lt;/Pattern&gt;
+		&lt;/encoder&gt;
+	&lt;/appender&gt;
+	&lt;logger name="org.hibernate" level="error" additivity="false"&gt;
+		&lt;appender-ref ref="STDOUT"/&gt;
+	&lt;/logger&gt;
+	&lt;root level="info"&gt;
+		&lt;appender-ref ref="STDOUT"/&gt;
+	&lt;/root&gt;
+&lt;/configuration&gt;
+</pre>
+
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>Hibernate supports several logging providers and you can pick the one you prefer by adding it to the classpath of your application.</p>
+
+
+
+<p>The log messages are grouped into different categories, and you can activate or deactivate them by assigning a log level for each category.</p>
+
+
+
+<p>Writing log messages and collecting the required information takes some time. You should, therefore, switch off all unnecessary log messages in your production configuration.</p>
+
+
+
+<p>The development configuration should activate debug logging for some crucial categories like <em>org.hibernate.SQL</em> and I most often also <a href="//thorben-janssen.com/how-to-activate-hibernate-statistics-to-analyze-performance-issues/">activate Hibernate statistics</a> to find <a href="//thorben-janssen.com/tips-to-boost-your-hibernate-performance/">potential performance issues</a> as soon as possible.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

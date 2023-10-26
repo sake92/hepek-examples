@@ -1,0 +1,420 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>8 things you need to know when migrating to Hibernate 6.x</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>8 things you need to know when migrating to Hibernate 6.x</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Hibernate 6 has been released for a while, and the latest Spring Data JPA version includes it as a dependency. So, it’s no surprise that more and more developers want to migrate their applications to the latest Hibernate version. As you’re reading this article, you’re probably one of them. And you might ask yourself what you need to do to migrate your application and what you get out of it. I summarized that in this article and included links to further articles that explain the different features in great detail.</p>
+
+
+
+<p>As Steve Ebersole (Lead Developer Hibernate 6) explained when he joined us for an Expert Session in the <a href="/join-persistence-hub/">Persistence Hub</a>, Hibernate 6.0 brought us many internal improvements. And for a moment, it seemed like we wouldn&#8217;t get much out of it for our day-to-day projects. But with versions 6.1 and 6.2, we start to see the benefits of those changes. Both releases included a bunch of interesting improvements and new features. So, if you decide to migrate your application, I recommend you skip version 6.0 and directly migrate to the latest version. And if you decide to do that, here are 8 things you should know.</p>
+
+
+
+<h2 class="wp-block-heading">1. Hibernate 6 is based on JPA 3, and that requires changes</h2>
+
+
+
+<p>With the release of version 6.0.0.Final, the Hibernate team updated the dependency to the Jakarta Persistence API (JPA) specification to version 3. </p>
+
+
+
+<p>That’s not an unexpected change, and thanks to the strict compatibility rules, updating the JPA specification usually doesn’t have a huge effect on existing applications. But updating to JPA 3 is different.</p>
+
+
+
+<p>As part of the transition of the JPA specification from Oracle to the Eclipse Foundation, the expert group had to change all package and configuration parameter names from <em>javax.persistence.*</em> to <em>jakarta.persistence.*</em>. That means you need to change all import statements and your configuration files.</p>
+
+
+
+<p>But don&#8217;t worry; it&#8217;s not as bad as it might seem. I supported several teams in migrating their applications to Hibernate 6. You can migrate your application from JPA 2 to version 3 in just a few minutes by performing these simple steps:</p>
+
+
+
+<ul>
+<li>Use the search and replace command in your IDE or on the command line to replace <em>javax.persistence</em> with <em>jakarta.persistence</em>.</li>
+
+
+
+<li>Build your application and run your test suite to ensure everything works as expected.</li>
+</ul>
+
+
+
+<p>As I explained in my <a href="/migrating-to-hibernate-6/#Update_to_JPA_3">migration guide</a>, I recommend doing this before migrating to Hibernate 6 by using a Hibernate 5 version that supports JPA 3.</p>
+
+
+
+<h2 class="wp-block-heading">2. Hibernate&#8217;s proprietary Criteria API got removed</h2>
+
+
+
+<p>Another change in Hibernate 6 that might require changes to your existing code base is the removal of Hibernate’s proprietary Criteria API.</p>
+
+
+
+<p>In version 5, Hibernate supported its old deprecated version of the Criteria API and the Criteria API defined by the JPA specification. Both APIs do the same, and it doesn’t make much sense to keep supporting both of them. So, after the proprietary Criteria API had been deprecated for several years, the Hibernate ORM team removed it in version 6.</p>
+
+
+
+<p>This is bad news for you if you currently see any deprecation warnings when working with a Criteria API. As I explained in a previous article, there is no easy way to migrate your proprietary Criteria API queries to JPA&#8217;s Criteria API. You will need to reimplement each query using the new API.</p>
+
+
+
+<p>I have <a href="/project-coaching/">coached several teams</a> during such a migration and explained my process to migrate queries from Hibernate proprietary to JPA’s Criteria API in this article: <a href="/migration-criteria-api/">Migrating from Hibernate’s to JPA’s Criteria API</a>.</p>
+
+
+
+<h2 class="wp-block-heading">3. New naming strategy for default sequences</h2>
+
+
+
+<p>Another small change you should know about is Hibernate 6’s new default naming strategies for database sequences.</p>
+
+
+
+<p>This change affects all entity classes for which you modeled a numerical primary key and told Hibernate to use a database sequence to generate the value without specifying which sequence it shall use.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+ 
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+      
+    ...
+}
+</pre></div>
+
+
+<p>As I explain in the Hibernate Performance Tuning courses included in the <a href="/join-persistence-hub/">Persistence Hub</a>, using a database sequence to generate primary key values provides the best performance. It enables Hibernate to apply several internal optimizations to reduce the number of executed statements and delay their execution as long as possible. This provides significant performance benefits compared to using an autoincremented column.</p>
+
+
+
+<p>When using this approach, you can either define which sequence Hibernate shall use or use Hibernate&#8217;s default sequence. In previous versions, Hibernate used the sequence <em>hibernate_sequence</em> as the default sequence for all entity classes. Many developers were concerned about this approach because it created huge gaps in their primary key values, and they worried that they might hit the upper limit of their data type. </p>
+
+
+
+<p>When people ask me about this, I always explain that you don’t need to worry about any of these concerns. Considering that the maximum value of a <em>Long</em> is 9,223,372,036,854,775,807, it&#8217;s rather unlikely that your application will use up all available values. And independent of the number of sequences you&#8217;re using, you can&#8217;t avoid gaps in your primary key values. If a transaction gets rolled back after you get a value from a sequence, that sequence value is lost, and that creates a gap in your primary key values.</p>
+
+
+
+<p>But whether you worry about these concerns or not, using a separate database sequence for each entity class is a common practice. And Hibernate 6&#8217;s new default naming strategy makes that a little easier. If you don&#8217;t specify the sequence name, Hibernate 6 adds the postfix <em>_SEQ</em> to the entity&#8217;s table name and uses that as the default sequence.</p>
+
+
+
+<p>So, starting with version 6, Hibernate uses the sequence <em>ChessPlayer_SEQ</em> when persisting above&#8217;s entity class.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:15:04,917 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('ChessPlayer_SEQ')
+16:15:04,947 DEBUG &#91;org.hibernate.SQL] - 
+    insert
+    into
+        ChessPlayer
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<p>If you want to keep using the old default naming strategy, you need to configure the&nbsp;<em>ID_DB_STRUCTURE_NAMING_STRATEGY</em>&nbsp;property in your <a href="https://thorben-janssen.com/jpa-persistence-xml/">persistence.xml</a> file.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;standard&quot; /&gt;
+            ...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>If you set it to <em>legacy</em>, Hibernate will use the same default strategy as in the Hibernate versions &gt;= 5.3 but &lt;6. And if you set it to <em>single</em>, you get the same default strategy as in Hibernate versions &lt; 5.3.</p>
+
+
+
+<p>I explained all of this in more detail in my article about <a href="/sequence-naming-strategies-in-hibernate-6/">Hibernate 6&#8217;s new sequence naming strategies</a>.</p>
+
+
+
+<h2 class="wp-block-heading">4. Incubating new features</h2>
+
+
+
+<p>The Hibernate team will use the new&nbsp;<em>@Incubating</em>&nbsp;annotation to warn users that a new API or configuration parameter might still change. They want to use that if they release a feature for which they&#8217;re looking for further user feedback or if they&#8217;re releasing a subset of a set of interconnected features. In that case, some of the missing features might require additional changes on the already released APIs. I listed a few examples of incubating features in a <a href="/incubating-features-in-hibernate-6/">recent article</a>.</p>
+
+
+
+<p>Even though this might cause some inconveniences when we&#8217;re using these new APIs, I think this can be a good approach. It gives the Hibernate team more flexibility and enables them to release new features earlier.</p>
+
+
+
+<p>But before we come to a final conclusion about this approach, we will need to wait and see how often incubating features actually change. When they announced this feature with the <a href="https://in.relation.to/2022/03/31/orm-60-final/">release of Hibernate 6.0</a>, the Hibernate teams said they would try to avoid changing incubating APIs and features. So, I&#8217;m optimistic that this will only rarely happen.</p>
+
+
+
+<h2 class="wp-block-heading">5. <em>ResultTransformer </em>got replaced</h2>
+
+
+
+<p>When the <em>ResultTransformer</em> interface got deprecated in Hibernate 5 without offering an alternative, many developers expected that the feature would be removed in a future version. But that&#8217;s not the case! </p>
+
+
+
+<p>Hibernate 6 split the <em>ResultTransformer </em>interface into the <em>TupleTransformer </em>and the <em>ResultListTransformer </em>interfaces. The goal of that change was to fix a design flaw in the old <em>ResultTransformer </em>interface. It defined 2 methods: </p>
+
+
+
+<ol>
+<li>The transformTuple method, which transforms a single record, and </li>
+
+
+
+<li>The transformList method, which transforms the entire list of the transformed objects.</li>
+</ol>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query query = session.createNativeQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;)
+    .setResultTransformer(new ResultTransformer(){
+            @Override
+            public Object transformTuple(Object&#91;] tuples, String&#91;] aliases) {
+                PersonDTO personDTO = new PersonDTO();
+                personDTO.setPersonId((int)tuples&#91;0]);
+                personDTO.setFirstName((String)tuples&#91;1]);
+                personDTO.setLastName((String)tuples&#91;2]);
+                return personDTO;
+            }
+  
+            @Override
+            public List transformList(List list) {
+                return list;
+            }
+        });
+List&lt;PersonDTO&gt; list = query.list();
+</pre></div>
+
+
+<p>But almost all implementations only provided a meaningful implementation for one of these methods. So, the team decided to separate the 2 methods and let you choose which one you want to implement.</p>
+
+
+
+<p>You can see in the following code snippet that this simplifies the interfaces and enables you to use them as functional interfaces.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+PersonDTO person = (PersonDTO) session
+        .createQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;, Object&#91;].class)
+        .setTupleTransformer((tuples, aliases) -&gt; {
+                log.info(&quot;Transform tuple&quot;);
+                PersonDTO personDTO = new PersonDTO();
+                personDTO.setPersonId((int)tuples&#91;0]);
+                personDTO.setFirstName((String)tuples&#91;1]);
+                personDTO.setLastName((String)tuples&#91;2]);
+                return personDTO;
+        }).getSingleResult();
+</pre></div>
+
+
+<p>As I explained in my <a href="/hibernate-resulttransformer">guide to Hibernate&#8217;s <em>ResultTransformer</em>s</a>, the Hibernate team converted all their transformer implementations to the new interfaces. So, the required changes to your code base are minimal.</p>
+
+
+
+<h2 class="wp-block-heading">6. Mapping JSON documents got easier</h2>
+
+
+
+<p>Hibernate 6 makes storing JSON documents in your database and mapping them to Java objects much easier. In versions 4 and 5, you had to implement a custom <em>UserType</em> that tells Hibernate how to serialize and deserialize the JSON document and how to read and write it to the database. In most cases, all of that is no longer necessary with Hibernate 6.</p>
+
+
+
+<p>Starting with version 6, Hibernate can map a JSON document to an <em>@Embeddable</em>. As I show in the Advanced Hibernate course in the <a href="/join-persistence-hub/">Persistence Hub</a>, an embeddable is a reusable mapping component that becomes part of the entity definition and gets mapped to the same database table.</p>
+
+
+
+<p>You define an embeddable by implementing a Java class and annotating it with <em>@Embeddable</em>. In this specific case, the embeddable represents the data structure to which you want to map the JSON document.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+public class MyJson implements Serializable {
+  
+    private String stringProp;
+      
+    private Long longProp;
+
+    ...
+}
+</pre></div>
+
+
+<p>After you have defined the embeddable, you can use it as an entity attribute. That requires an additional&nbsp;<em>@Embedded</em>&nbsp;annotation on the attribute. It tells Hibernate to get further mapping information from the embeddable class.</p>
+
+
+
+<p>And if you want to map the embeddable to a JSON document, you also need to annotate it with <em>@JdbcTypeCode(SqlTypes.JSON)</em> and include a JSON mapping library in your classpath.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class MyEntity {
+  
+    @Id
+    @GeneratedValue
+    private Long id;
+
+    @Embedded  
+    @JdbcTypeCode(SqlTypes.JSON)
+    private MyJson jsonProperty;
+      
+    ...
+}
+</pre></div>
+
+
+<p>Hibernate then serializes and deserializes the attribute to a JSON document and stores it in the database. The type of database column to which Hibernate maps the attribute depends on your database dialect. If you&#8217;re using a PostgreSQL database, Hibernate uses a JSONB column.</p>
+
+
+
+<p>And as I showed in a recent episode of the <a href="/join-persistence-hub/">Java persistence news</a>, you can use the same approach to map a JSON document to a <em>java.util.Map</em>.</p>
+
+
+
+<h2 class="wp-block-heading">7. Java Records can be embeddables</h2>
+
+
+
+<p>Since the introduction of records, developers have wanted to use them to model immutable entity classes. Unfortunately, that&#8217;s still not possible. But Hibernate 6 supports records as embeddables.</p>
+
+
+
+<p>In versions 6.0 and 6.1, you need to implement an&nbsp;<em>EmbeddableInstantiator&nbsp;</em>for each record you want to use as an embeddable. The&nbsp;<em>EmbeddableInstantiator&nbsp;</em>is a proprietary Hibernate interface that tells Hibernate how to instantiate an embeddable object. This removes JPA’s requirement of a no-argument constructor and enables you to model an embeddable as a record.</p>
+
+
+
+<p>Starting with version 6.2, Hibernate provides its own <em>EmbeddableInstantiator </em>for all embeddable records.</p>
+
+
+
+<p>Let&#8217;s take a look at a quick example. You define an embeddable record by annotating your record with an <em>@Embeddable</em> annotation. If you&#8217;re using Hibernate 6.0 or 6.1, you also need to annotate it with <em>@EmbeddableInstantiator</em> and reference your instantiator implementation.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+@EmbeddableInstantiator(AddressInstantiator.class)
+public record Address (String street, String city, String postalCode) {}
+</pre></div>
+
+
+<p>Implementing the&nbsp;<em>EmbeddableInstantiator&nbsp;</em>interface isn’t complex and only necessary if you&#8217;re using Hibernate 6.0 or 6.1.</p>
+
+
+
+<p>As you can see in the following code snippet, only implementing the <em>instantiate</em> method requires multiple lines of code. Hibernate calls it every time it has to instantiate an embeddable object and provides all the attribute values in a <em>ValueAccess</em> object. That object contains these values in the alphabetical order of the attributes&#8217; names.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class AddressInstantiator implements EmbeddableInstantiator {
+ 
+    Logger log = LogManager.getLogger(this.getClass().getName());
+ 
+    public boolean isInstance(Object object, SessionFactoryImplementor sessionFactory) {
+        return object instanceof Address;
+    }
+ 
+    public boolean isSameClass(Object object, SessionFactoryImplementor sessionFactory) {
+        return object.getClass().equals( Address.class );
+    }
+ 
+    public Object instantiate(ValueAccess valuesAccess, SessionFactoryImplementor sessionFactory) {
+        // valuesAccess contains attribute values in alphabetical order
+        final String city = valuesAccess.getValue(0, String.class);
+        final String postalCode = valuesAccess.getValue(1, String.class);
+        final String street = valuesAccess.getValue(2, String.class);
+        log.info(&quot;Instantiate Address embeddable for &quot;+street+&quot; &quot;+postalCode+&quot; &quot;+city);
+        return new Address( street, city, postalCode );
+    }
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">8. Improved OffsetDateTime and ZonedDateTime mapping</h2>
+
+
+
+<p>Hibernate 5 introduced proprietary support for OffsetDateTime and ZondDateTime by converting them into the local timezone of your application before persisting the timestamp without timezone information. When reading the timestamp from the database, Hibernate then added the local timezone to the timestamp.</p>
+
+
+
+<p>That mapping works as long as all your Java applications use the same timezone, the timezone never changes and is a timezone without daylight saving time. Most teams either avoided this mapping or used UTC as their timezone.</p>
+
+
+
+<p>Hibernate 6 improves this mapping by introducing the <em>@TimeZoneStorage</em> annotating and supporting 5 different mappings:</p>
+
+
+
+<ul>
+<li><em><a href="https://thorben-janssen.com/hibernate-6-offsetdatetime-and-zoneddatetime/#TimeZoneStorageTypeNATIVE">TimeZoneStorageType.NATIVE</a></em>&nbsp;stores the timestamp in a column of type&nbsp;<em>TIMESTAMP_WITH_TIMEZONE</em>,</li>
+
+
+
+<li><em><a href="https://thorben-janssen.com/hibernate-6-offsetdatetime-and-zoneddatetime/#TimeZoneStorageTypeNORMALIZE">TimeZoneStorageType.NORMALIZE</a></em>&nbsp;uses the mapping introduced in Hibernate 5. It normalizes the timestamp to your JDBC driver&#8217;s local timezone and persists it without timezone information,</li>
+
+
+
+<li><em><a href="https://thorben-janssen.com/hibernate-6-offsetdatetime-and-zoneddatetime/#TimeZoneStorageTypeNORMALIZE_UTC">TimeZoneStorageType.NORMALIZE_UTC</a></em>&nbsp;normalizes the timestamp to UTC and persists it without timezone information,</li>
+
+
+
+<li><em><a href="https://thorben-janssen.com/hibernate-6-offsetdatetime-and-zoneddatetime/#TimeZoneStorageTypeCOLUMN">TimeZoneStorageType.COLUMN</a></em>&nbsp;stores the timestamp without timezone information in one column and the difference between the provided timezone and UTC in another column,</li>
+
+
+
+<li><em><a href="https://thorben-janssen.com/hibernate-6-offsetdatetime-and-zoneddatetime/#TimeZoneStorageTypeAUTO">TimeZoneStorageType.AUTO</a></em>&nbsp;lets Hibernate choose based on the capabilities of your database. It either uses <em>TimeZoneStorageType.NATIVE</em>&nbsp;or&nbsp;<em>TimeZoneStorageType.COLUMN</em>.</li>
+</ul>
+
+
+
+<p>I explained all these different mappings in great detail in my guide to <a href="/hibernate-6-offsetdatetime-and-zoneddatetime/">Hibernate 6&#8217;s improved <em>ZonedDateTime </em>and <em>OffsetDateTime </em>mapping</a>.</p>
+
+
+
+<p>Here you can see a simple example of a <em>ZonedDateTime </em>attribute that Hibernate shall map to a column of type <em>TIMESTAMP_WITH_TIMEZONE</em> using <em>TimeZoneStorageType.NATIVE</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+     
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    private ZonedDateTime zonedDateTime;
+     
+    ...
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Migrating your application to Hibernate 6 might require some work because JPA 3 had to change all package and configuration parameter names from <em>javax.persistence</em> to <em>jakarta.persistence</em>. The Hibernate team also removed some APIs that have been deprecated for several years.</p>
+
+
+
+<p>But after you have completed the migration, you get access to several new features and simplifications that are worth the effort. As I showed you in the article, mapping JSON documents and handling&nbsp;<em>ZonedDateTime&nbsp;</em>and&nbsp;<em>OffsetDateTime&nbsp;</em>got easier and more flexible. Implementing a&nbsp;<em>TupleTransformer&nbsp;</em>or&nbsp;<em>ResultListTransformer&nbsp;</em>is also easier than the old approach. And with the new default naming strategy for database sequences, the approach used by most teams becomes the new default.</p>
+
+
+
+<p>And if you follow my blog or the announcements of the Hibernate team, you know that this is just the beginning. There are many more features and improvements in the making from which you will benefit after migrating your application to Hibernate 6.</p>
+
+
+
+<p>If you want to stay up to date with the latest developments in Hibernate and Spring Data JPA, I recommend joining the <a href="/join-persistence-hub/">Persistence Hub</a>. Besides many other things, that gives you access to my monthly Java Persistence News in which I tell you about the latest releases and show you how to use the new features.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

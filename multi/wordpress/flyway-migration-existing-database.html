@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to add Flyway to an existing application</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to add Flyway to an existing application</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>After my talk about combining Flyway, Hibernate, and jOOQ at the JavaLand conference, one of the participants asked me how to add Flyway to an existing application that&#8217;s already deployed in production. This is a common question because database migrations get often ignored for new projects. And that&#8217;s understandable. You don&#8217;t need it for the first installation, and there are many more urgent tasks you need to work on.</p>
+
+
+
+<p>But ignoring your database migration in the beginning creates new problems later on. For your first update, you not only need to add Flyway to your project, but you also need to define an update process that works with your existing database and can set up a new one from scratch. Luckily, Flyway provides a simple solution for this:</p>
+
+
+
+<ol><li>You start by generating a DDL script of your existing database. This will be the first migration script for all new installations.</li><li>After that, you need to baseline your existing database so that Flyway knows that it doesn&#8217;t have to execute the 1st migration script.</li></ol>
+
+
+
+<p>After that, there is no difference between your project and one that used Flyway from the beginning. You can define the next migration steps as <a href="https://thorben-janssen.com/flyway-getting-started/">SQL scripts</a> or <a href="https://thorben-janssen.com/java-based-database-migrations-callbacks-flyway/">Java classes</a>, and Flyway will execute them automatically to migrate an existing database or create a new one.</p>
+
+
+
+<h2 class="wp-block-heading">Generate a DDL script of your database</h2>
+
+
+
+<p>The goal of this script is to recreate the entire structure of your current database before Flyway executes all other migration scripts. This includes all database schemas, tables, sequences, constraints, functions, stored procedures, etc. If your application requires a predefined set of reference data, you should include them in this script as well.</p>
+
+
+
+<p>Here you can see a simple example of the script that creates the database used in this month&#8217;s coding challenge in the <a href="/join-persistence-hub/">Persistence Hub</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+CREATE TABLE public.chess_game (
+    id bigint NOT NULL,
+    date date,
+    round integer NOT NULL,
+    version integer NOT NULL,
+    chess_tournament_id bigint,
+    player_black_id bigint,
+    player_white_id bigint
+);
+ALTER TABLE public.chess_game OWNER TO postgres;
+
+CREATE TABLE public.chess_player (
+    id bigint NOT NULL,
+    birth_date date,
+    first_name character varying(255),
+    last_name character varying(255),
+    version integer NOT NULL
+);
+ALTER TABLE public.chess_player OWNER TO postgres;
+
+CREATE TABLE public.chess_tournament (
+    id bigint NOT NULL,
+    end_date date,
+    name character varying(255),
+    start_date date,
+    version integer NOT NULL
+);
+ALTER TABLE public.chess_tournament OWNER TO postgres;
+
+CREATE TABLE public.chess_tournament_games (
+    chess_tournament_id bigint NOT NULL,
+    games_id bigint NOT NULL
+);
+ALTER TABLE public.chess_tournament_games OWNER TO postgres;
+
+CREATE TABLE public.chess_tournament_players (
+    tournaments_id bigint NOT NULL,
+    players_id bigint NOT NULL
+);
+ALTER TABLE public.chess_tournament_players OWNER TO postgres;
+
+CREATE SEQUENCE public.hibernate_sequence
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.hibernate_sequence OWNER TO postgres;
+
+CREATE SEQUENCE public.player_sequence
+    START WITH 100
+    INCREMENT BY 50
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.player_sequence OWNER TO postgres;
+
+CREATE SEQUENCE public.tournament_sequence
+    START WITH 100
+    INCREMENT BY 50
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+ALTER TABLE public.tournament_sequence OWNER TO postgres;
+
+ALTER TABLE ONLY public.chess_game
+    ADD CONSTRAINT chess_game_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.chess_player
+    ADD CONSTRAINT chess_player_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.chess_tournament_games
+    ADD CONSTRAINT chess_tournament_games_pkey PRIMARY KEY (chess_tournament_id, games_id);
+
+ALTER TABLE ONLY public.chess_tournament
+    ADD CONSTRAINT chess_tournament_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.chess_tournament_players
+    ADD CONSTRAINT chess_tournament_players_pkey PRIMARY KEY (tournaments_id, players_id);
+
+ALTER TABLE ONLY public.chess_tournament_games
+    ADD CONSTRAINT uk_aydrmqjva2yao3biowshrrcx8 UNIQUE (games_id);
+
+ALTER TABLE ONLY public.chess_game
+    ADD CONSTRAINT fk1kenmun90s7uhly5kkk9o6rsf FOREIGN KEY (player_black_id) REFERENCES public.chess_player(id);
+
+ALTER TABLE ONLY public.chess_tournament_players
+    ADD CONSTRAINT fk5ykqwib1neqhak6wwuhsusf5w FOREIGN KEY (tournaments_id) REFERENCES public.chess_tournament(id);
+
+ALTER TABLE ONLY public.chess_tournament_players
+    ADD CONSTRAINT fkfmhm06fi40ak53r6gofvoyr44 FOREIGN KEY (players_id) REFERENCES public.chess_player(id);
+
+ALTER TABLE ONLY public.chess_tournament_games
+    ADD CONSTRAINT fkhoasvgr0mq1tkj5308chmd97v FOREIGN KEY (games_id) REFERENCES public.chess_game(id);
+
+ALTER TABLE ONLY public.chess_game
+    ADD CONSTRAINT fkikaihvc8m29y7fqtk5brfwk48 FOREIGN KEY (player_white_id) REFERENCES public.chess_player(id);
+
+ALTER TABLE ONLY public.chess_game
+    ADD CONSTRAINT fkquj6n755j3k650vwhoabw44yu FOREIGN KEY (chess_tournament_id) REFERENCES public.chess_tournament(id);
+
+ALTER TABLE ONLY public.chess_tournament_games
+    ADD CONSTRAINT fkuqqdoorh4jhfx6mqe3wsy5ni FOREIGN KEY (chess_tournament_id) REFERENCES public.chess_tournament(id);
+</pre></div>
+
+
+<p>The best and easiest way to create this script is to use the backup tools provided by your database. It usually only takes a few clicks or a short command to export the current table structure. Or, if you&#8217;re using Hibernate or any other JPA implementation, you can use its <a href="https://thorben-janssen.com/standardized-schema-generation-data-loading-jpa-2-1/">schema export feature</a>.</p>
+
+
+
+<p>In the next step, you need to rename the script to follow <a href="/flyway-getting-started/#Define_your_first_migration">Flyway&#8217;s naming convention</a> <em>V&lt;VERSION&gt;__&lt;DESCRIPTION&gt;.sql</em>, e.g., <em>V1__initial_version.sq</em>l, and copy it to Flyway&#8217;s migration folder. The command-line client uses the folder <em>./sql</em> by default. And Spring Boot&#8217;s Flyway integration expects these files in your project&#8217;s&nbsp;<em>main/resources/db/migration</em>&nbsp;folder. You can override the default by setting the <em>flyway.locations</em> property in your configuration.</p>
+
+
+
+<h2 class="wp-block-heading">Baseline your database</h2>
+
+
+
+<p>As I explained in my <a href="/flyway-getting-started">introduction to Flyway</a>, Flyway writes a record to the <em>flyway_schema_history</em> table for each performed migration step. Flyway uses this information to determine the current database version and compares it with the available migration scripts to find the ones it needs to execute.</p>
+
+
+
+<p>This table doesn&#8217;t exist when you add Flyway to an existing application and database. Without that table, Flyway expects that the database is empty and executes all available migration scripts. This will obviously fail because you already created your database without using Flyway. </p>
+
+
+
+<p>You, therefore, need to tell Flyway that the database is already in version 1. You can do that by executing the <em>baseline </em>command in the command-line client. Flyway then creates the <em>flyway_schema_history</em> table and adds the first record.</p>
+
+
+
+<p>The <em>baseline</em> command requires the connection information to your database and the version and description of the current database schema.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: bash; title: ; notranslate" title="">
+flyway -url=jdbc:postgresql://localhost:5432/codingChallenge-220404 
+       -user=postgres 
+       -password=postgres 
+       -baselineVersion=1 
+       -baselineDescription=initial_version 
+       baseline
+</pre></div>
+
+
+<p>Please make sure that the provided <em>baselineVersion</em> and <em>baselineDescription</em> match the file name of your 1st migration script. In my example, the name of that file is <em>V1__initial_version.sql</em>. I, therefore, set <em>baselineVersion</em> to <em>1</em> and <em>baselineDescription</em> to <em>initial_version</em>.</p>
+
+
+
+<p>When you execute the baseline command, Flyway creates its <em>flyway_schema_version</em> table and documents the execution of the baseline command.</p>
+
+
+
+<figure class="wp-block-image size-large"><img decoding="async" loading="lazy" width="1024" height="52" src="https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-1024x52.png" alt="The flyway_schema_version table with 1 record documenting the execution of the baseline command." class="wp-image-36909" srcset="https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-1024x52.png 1024w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-300x15.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-768x39.png 768w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-1536x78.png 1536w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-624x32.png 624w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-50x3.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history-100x5.png 100w, https://thorben-janssen.com/wp-content/uploads/2022/04/flyway_schema_history.png 1651w" sizes="(max-width: 1024px) 100vw, 1024px" /></figure>
+
+
+
+<p>Based on this record, Flyway knows that the database is in version 1 and will not execute the migration script <em>V1__initial_version.sql</em>.</p>
+
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>As you saw in this article, you can introduce Flyway to existing projects in 2 steps: </p>
+
+
+
+<ol><li>You need to create an SQL script that recreates your current database. The easiest way to do that is to create a backup using the tools provided by your database. </li><li>After that, you need to baseline your existing databases so that Flyway skips the execution of the first migration script.</li></ol>
+
+
+
+<p>After performing these 2 steps, you&#8217;ve successfully added the Flyway database migration to your existing application. Flyway will treat the existing database that contains the baseline version in the same ways as a new database created using the 1st migration script.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

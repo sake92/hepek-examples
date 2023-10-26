@@ -1,0 +1,250 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Flyway – Implementing Java-based Migrations and Callbacks</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Flyway – Implementing Java-based Migrations and Callbacks</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Flyway&#8217;s SQL-script based <a href="/database-migration/">database migration</a><span style="font-size: inherit;"> is more than powerful enough for most use cases. But sometimes, you must take it one step further to adapt your existing data to the new database schema. E.g., you might need to extract data from blobs or read JSON documents so that you can fill the newly added database columns. In these cases, Flyway&#8217;s Java migration and callback methods provide an easy and powerful way to implement the necessary migration logic.</span></p>
+
+
+
+<p>Let&#8217;s implement a Java migration step first. As you will see, this is quite simple. And after you implement it, you can use it in the same way as the SQL migration steps I showed you in the <a href="https://thorben-janssen.com/flyway-getting-started/">previous post of this series</a>.<br></p>
+
+
+
+<!--more-->
+
+
+
+<h2 class="wp-block-heading">Implement Complex Migrations in Java</h2>
+
+
+
+<p>When searching for available migration steps, Flyway not only searches for migration scripts. It also picks up implementations of the <em>Callback </em>interface from the <em>db/migration</em> package. If you want to use a different package, you can configure it in the <a href="https://flywaydb.org/documentation/configuration/parameters/locations"><em>flyway.locations</em> property</a>.</p>
+
+
+
+<p>An easy way to implement the Callback interface is to extend Flyway&#8217;s <em>BaseJavaMigration</em> class. It handles all the technical complexity of a migration step and allows you to focus on the actual migration. When you do that, you need to use a class name that follows Flyway&#8217;s naming schema <em>V&lt;VERSION&gt;__DESCRIPTION.java</em>. Flyway then picks up your migration step, checks if it needs to be executed, and does that if necessary.</p>
+
+
+
+<p>Here&#8217;s an example of a simple migration class that updates the database to version 2.0. The goal of this migration is to store the author of the book in a separate table. This requires the following operations:</p>
+
+
+
+<ul><li>Create a new <em>author</em> table and <a href="https://thorben-janssen.com/jpa-generate-primary-keys/">sequence</a></li><li>Read all records from the <em>book</em> table and get the <em>id</em> of the book and the name of the author</li><li>Persist each author as a new record in the <em>author</em> table</li><li>Set the <em>id</em> of the author as the foreign key in the <em>book</em> table</li></ul>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class V2__extract_author extends BaseJavaMigration {
+
+	@Override
+	public void migrate(Context context) throws Exception {
+		Connection connection = context.getConnection();
+		// create author table
+		Statement st = connection.createStatement();
+		st.execute(
+				&quot;CREATE TABLE author(id bigint NOT NULL, firstname character varying(255), lastname character varying(255), CONSTRAINT author_pkey PRIMARY KEY (id));&quot;);
+		st.execute(&quot;CREATE SEQUENCE author_seq&quot;);
+
+		// add fk_author to book table
+		st.execute(&quot;ALTER TABLE book ADD COLUMN fk_author bigint REFERENCES author (id);&quot;);
+
+		// migrate author information
+		final PreparedStatement psAuthor = connection
+				.prepareStatement(&quot;INSERT INTO author (id, firstname, lastname) VALUES (?, ?, ?)&quot;);
+		final PreparedStatement psBook = connection.prepareStatement(&quot;UPDATE book SET fk_author = ? WHERE id = ?;&quot;);
+
+		ResultSet rs = st.executeQuery(&quot;select id, author from book&quot;);
+		Statement idSt = connection.createStatement();
+		while (rs.next()) {
+			// get data from book table
+			Long bookId = rs.getLong(&quot;id&quot;);
+			String author = rs.getString(&quot;author&quot;);
+			String&#91;] name = author.split(&quot;,&quot;);
+
+			// get author id from sequence
+			ResultSet authorIdRs = idSt.executeQuery(&quot;select nextval('author_seq');&quot;);
+			authorIdRs.next();
+			Long authorId = authorIdRs.getLong(1);
+
+			// write new author
+			psAuthor.setLong(1, authorId);
+			psAuthor.setString(2, name&#91;1]);
+			psAuthor.setString(3, name&#91;0]);
+			psAuthor.execute();
+
+			// update book
+			psBook.setLong(1, authorId);
+			psBook.setLong(2, bookId);
+			psBook.execute();
+		}
+		rs.close();
+		psAuthor.close();
+
+		// add fk_author to book table
+		st.execute(&quot;ALTER TABLE book DROP COLUMN author;&quot;);
+
+		st.close();
+	}
+
+}
+</pre></div>
+
+
+<p>As you can see, this requires almost no Flyway-specific code. You just need to implement the <em>migrate</em> method of the <em>JavaMigration</em> interface. Within this method, you can use the provided <em>Context</em> object to get a <em>java.sql.Connection </em>to the database. Using this <em>Connection</em>, you can then define and execute the required SQL statements. </p>
+
+
+
+<p>This approach gives you full flexibility to read data from your database, transform it in any way you need, and store it in your database. That makes Java-based migration steps a great option for implementing complex, multi-step migration operations.</p>
+
+
+
+<p>When you now run your migration, Flyway will detect the current database version, scan for all SQL and Java migration steps and execute the required ones. You can see the log output of these operations below. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+15:42:53,864  INFO BaseDatabaseType:37 - Database: jdbc:postgresql://localhost:5432/test-flyway (PostgreSQL 10.14)
+15:42:53,925  INFO DbValidate:37 - Successfully validated 2 migrations (execution time 00:00.023s)
+15:42:53,966  INFO JdbcTableSchemaHistory:37 - Creating Schema History table &quot;public&quot;.&quot;flyway_schema_history&quot; ...
+15:42:54,038  INFO DbMigrate:37 - Current version of schema &quot;public&quot;: &lt;&lt; Empty Schema &gt;&gt;
+15:42:54,049  INFO DbMigrate:37 - Migrating schema &quot;public&quot; to version &quot;1 - create database&quot;
+15:42:54,097  INFO DbMigrate:37 - Migrating schema &quot;public&quot; to version &quot;2 - extract author&quot;
+</pre></div>
+
+
+<p>I triggered the migration on an empty database, and Flyway found the migration steps for versions 1 and 2. The 2nd one was the migration step I implemented as a Java class, which you saw in the previous code snippet.</p>
+
+
+
+<p>After Flyway successfully executes a migration step, it adds a record to the <em>flyway_schema_history</em> table.</p>
+
+
+<div class="wp-block-image">
+<figure class="aligncenter size-large"><img decoding="async" loading="lazy" width="1024" height="64" src="https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-1024x64.png" alt="" class="wp-image-37567" srcset="https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-1024x64.png 1024w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-300x19.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-768x48.png 768w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-1536x95.png 1536w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-624x39.png 624w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-50x3.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table-100x6.png 100w, https://thorben-janssen.com/wp-content/uploads/2022/07/flyway_schema_history-table.png 1626w" sizes="(max-width: 1024px) 100vw, 1024px" /></figure></div>
+
+
+<p>As you have seen, a Java migration step is used the same way as an SQL script and fully integrates into your migration process. So, when you&#8217;re in the situation that you can&#8217;t describe the required migration in SQL, you just need to implement the <em>JavaMigration</em> interface and follow Flyway&#8217;s naming convention.</p>
+
+
+
+<h2 class="wp-block-heading">Use Callbacks for Repetitive Tasks</h2>
+
+
+
+<p>Another useful feature for complex migration scenarios is Flyway&#8217;s callback mechanism. It allows you to execute an SQL script or a Java class when one of the lifecycle events defined in the <em>Event</em> enum gets triggered within Flyway. A few examples of these events AFTER_BASELINE, AFTER_CLEAN, AFTER_EACH_MIGRATE, AFTER_EACH_MIGRATE_ERROR, AFTER_UNDO, and AFTER_MIGRATE. You can find a list of all supported events in <a href="https://flywaydb.org/documentation/usage/api/javadoc/org/flywaydb/core/api/callback/Event" rel="nofollow">official javadoc</a>.</p>
+
+
+
+<p>We didn&#8217;t discuss Flyway&#8217;s Callback feature in any of the <a href="https://thorben-janssen.com/database-migration/">previous articles</a>. So, let&#8217;s also take a quick look at SQL callbacks before I get into more details about Java callbacks.</p>
+
+
+
+<h3 class="wp-block-heading">SQL Callbacks</h3>
+
+
+
+<p>The implementation of an SQL callback is straightforward. You only need to add an SQL script with the name of the lifecycle trigger you want to use in your migration directory. The migration directory is either the&nbsp;<em>sql</em>&nbsp;folder of the Flyway command-line client or your Java application&#8217;s&nbsp;<em>src/main/resources/db/migration</em>&nbsp;folder.</p>
+
+
+
+<p>So, if you want to execute a SQL script after Flyway migrated your database, you need to put all SQL statements into a file with the name <em>afterMigrate.sql</em> and copy it to the <em>sql</em> or <em>src/main/resources/db/migration</em> folder.</p>
+
+
+
+<h3 class="wp-block-heading">Java Callbacks</h3>
+
+
+
+<p>If your callback operation is too complex for an SQL script, you can implement it in Java. </p>
+
+
+
+<p>A callback implementation is very similar to the previously discussed migration step. You need to implement Flyway&#8217;s&nbsp;<em>Callback</em>&nbsp;interface and add your class to the&nbsp;<em>db/callback</em>&nbsp;package or the package configured by the&nbsp;<em>flyway.callbacks</em>&nbsp;property. </p>
+
+
+
+<p>The easiest way to implement the&nbsp;<em>Callback&nbsp;</em>interface is to extend Flyway’s&nbsp;<em>BaseCallback</em>&nbsp;class. It provides all the required technical boilerplate code so that you can concentrate on implementing the callback operation.</p>
+
+
+
+<p>For each&nbsp;<em>Callback&nbsp;</em>implementation, Flyway calls the&nbsp;<em>handle&nbsp;</em>method for each previously described event. When doing that, Flyway provides an&nbsp;<em>Event&nbsp;</em>enum value and a&nbsp;<em>Context&nbsp;</em>object of the current migration. Similar to the previously described implementation of a migration step, you can use the&nbsp;<em>Context&nbsp;</em>object to get a&nbsp;<em>Connection</em>&nbsp;to the database and perform the operations of your callback.</p>
+
+
+
+<p>I use that in the following example to implement a callback that adds some example data if the database is empty. To do that, I first check if the <em>book </em>table contains any data. If it doesn&#8217;t, I insert a record into the <em>author</em> and the <em>book</em> table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class FillDatabaseAfterMigrate extends BaseCallback {
+
+	Logger log = Logger.getLogger(FillDatabaseAfterMigrate.class.getSimpleName());
+
+	@Override
+	public void handle(Event event, Context context) {
+		if (event == Event.AFTER_MIGRATE) {
+			log.info(&quot;afterMigrate&quot;);
+			Statement st;
+			try {
+				st = context.getConnection().createStatement();
+				ResultSet rs = st.executeQuery(&quot;SELECT count(id) FROM book&quot;);
+				rs.next();
+				if (rs.getInt(1) == 0) {
+					st.execute(
+							&quot;INSERT INTO author (id, firstname, lastname) VALUES ((SELECT nextval('author_seq')), 'Thorben', 'Janssen');&quot;);
+					st.execute(
+							&quot;INSERT INTO book (id, publishingdate, title, fk_author, price) VALUES ((SELECT nextval('book_seq')), '2017-04-04', 'Hibernate Tips - More than 70 solutions to common Hibernate problems', 1, 9.99);&quot;);
+					log.info(&quot;Database was empty. Added example data.&quot;);
+				} else {
+					log.info(&quot;Database contains books. No example data needed.&quot;);
+					return;
+				}
+			} catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+	}
+
+	public class MigrationException extends RuntimeException {
+
+		public MigrationException(Throwable cause) {
+			super(cause);
+		}
+	}
+}
+</pre></div>
+
+
+<p>That&#8217;s all you need to do to implement a callback. When you now start your application and trigger the database migration, Flyway will call the <em>Callback </em>implementation.</p>
+
+
+
+<p>The following log output shows that Flyway called our callback implementation after it completed the migration. The callback implementation then initialized the empty database with 2 example records.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:06:27,515  INFO BaseDatabaseType:37 - Database: jdbc:postgresql://localhost:5432/test-flyway (PostgreSQL 10.14)
+16:06:27,605  INFO DbValidate:37 - Successfully validated 2 migrations (execution time 00:00.030s)
+16:06:27,659  INFO JdbcTableSchemaHistory:37 - Creating Schema History table &quot;public&quot;.&quot;flyway_schema_history&quot; ...
+16:06:27,745  INFO DbMigrate:37 - Current version of schema &quot;public&quot;: &lt;&lt; Empty Schema &gt;&gt;
+16:06:27,760  INFO DbMigrate:37 - Migrating schema &quot;public&quot; to version &quot;1 - create database&quot;
+16:06:27,822  INFO DbMigrate:37 - Migrating schema &quot;public&quot; to version &quot;2 - extract author&quot;
+16:06:27,893  INFO DbMigrate:37 - Successfully applied 2 migrations to schema &quot;public&quot;, now at version v2 (execution time 00:00.162s)
+16:06:27,909  INFO FillDatabaseAfterMigrate:19 - afterMigrate
+16:06:27,919  INFO FillDatabaseAfterMigrate:30 - Database was empty. Added example data.
+</pre></div>
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>I showed you in the&nbsp;<a href="https://thorben-janssen.com/flyway-getting-started/" target="_blank" rel="noreferrer noopener">previous post of this series</a>&nbsp;that Flyway provides an easy but powerful approach to implementing a version-based migration process. You only need to provide a script with the required SQL statements to update your database structure and migrate your data.</p>
+
+
+
+<p>In my experience, you should be able to implement almost all migrations within these SQL scripts. But as you&#8217;ve seen in this post, you&#8217;re not limited to that approach. If you need more flexibility to perform complex migration operations, you can implement them in Java.</p>
+
+
+
+<p>And for all repetitive tasks, like recompilation of <a href="https://thorben-janssen.com/call-stored-procedures-jpa/">stored procedures</a>, database initialization with sample data, or dynamic creation of database triggers, you can implement lifecycle callbacks in SQL scripts or Java classes.</p>
+
+
+
+<p>Combining all this gives you a powerful toolset to implement a version-based <a href="/database-migration/">database migration</a> approach. </p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

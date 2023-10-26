@@ -1,0 +1,166 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>@DiscriminatorFormular – Modeling Single Table Inheritance Without a Discriminator</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>@DiscriminatorFormular – Modeling Single Table Inheritance Without a Discriminator</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Inheritance is one of the key concepts of all object-oriented programming languages. And Java makes there no difference. All developers are familiar with this concept and expect to use it in all parts of their code. That, of course, also includes the persistence layer and the entity model. But the concept of inheritance doesn&#8217;t exist in relational table models. JPA and Hibernate bridge that gap by providing different <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">inheritance mapping strategies</a> that map the entities to one or more database tables.</p>
+
+
+
+<p>The <em>InheritanceType.SINGLE_TABLE</em> is the default strategy and provides the best performance. It maps all entities of the inheritance hierarchy and their attributes to the same database table. Based on this mapping, your persistence provider can generate simple and efficient queries to fetch a specific subclass or all classes of the inheritance hierarchy.</p>
+
+
+
+<p>Using this strategy introduces a technical requirement. For each database record, Hibernate needs to identify the subclass to which it has to map it. The default mapping uses a discriminator column, which contains a class-specific identifier. In most cases, that&#8217;s the simple name of the entity class. </p>
+
+
+
+<p>But what do you do if you&#8217;re working with an existing table model that doesn&#8217;t contain such a column and that you&#8217;re not allowed to change? The JPA standard doesn&#8217;t provide a solution for this. It can&#8217;t use <em>InheritanceType.SINGLE_TABLE</em> without a discriminator column. But Hibernate does, if you can provide an SQL snippet that returns this information. </p>
+
+
+
+<h2 class="wp-block-heading">Domain Model</h2>
+
+
+
+<p>Let&#8217;s take a quick look at the domain model used in this article before diving into the mapping definition. The <em>ChessTournament </em>class is the superclass of the classes <em>ChessSwissTournament </em>and <em>ChessRoundRobinTournament</em>.</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter size-full"><img decoding="async" loading="lazy" width="440" height="278" src="https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Class-Diagram.png" alt="Class diagram: ChessTournament class with subclasses ChessSwissTournament and ChessRoundRobinTournament" class="wp-image-32298" srcset="https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Class-Diagram.png 440w, https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Class-Diagram-300x190.png 300w, https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Class-Diagram-400x253.png 400w" sizes="(max-width: 440px) 100vw, 440px" /></figure></div>
+
+
+
+<p>As you can see in the diagram, the <em>ChessTournament </em>class defines almost all attributes. The <em>ChessSwissTournament </em>class adds the <em>rounds</em> attribute, and the <em>ChessRoundRobinTournament</em> class the <em>numPlayers</em> attribute.</p>
+
+
+
+<p>Using the <em>InheritanceType.SINGLE_TABLE</em>, we will map all 3 classes to the <em>ChessTournament </em>table. It contains a column for each attribute of the 3 entity classes but no discriminator column.</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter size-full is-resized"><img decoding="async" loading="lazy" src="https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Table-Model.png" alt="Table model: chesstournament table with all columns mapped by the 3 entity classes" class="wp-image-32295" width="371" height="325" srcset="https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Table-Model.png 424w, https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Table-Model-300x263.png 300w, https://thorben-janssen.com/wp-content/uploads/2021/10/DiscriminatorFormula-Table-Model-343x300.png 343w" sizes="(max-width: 371px) 100vw, 371px" /></figure></div>
+
+
+
+<h2 class="wp-block-heading">Defining a <em>@DiscriminatorFormula</em></h2>
+
+
+
+<p>The discriminator-based mapping using <em>InheritanceType.SINGLE_TABLE</em> is straightforward. You annotate your superclass with <em>@Entity</em> and <em>@Inheritance</em>. Your subclasses extend the superclass, and you annotate them with <em>@Entity</em>. If you don&#8217;t want to use the simple class name as the discriminator value, you can define it using a <em>@DiscriminatorValue</em> annotation.</p>
+
+
+
+<p>Without a discriminator column, you need to add a <em>@DiscriminatorFormula</em> annotation to the superclass and provide an SQL snippet that returns the discriminator value of a record. Everything else stays the same.</p>
+
+
+
+<p>Here you can see the mapping of the <em>ChessTournament</em> class. I provide an SQL snippet to the <em>@DiscriminatorFormula</em> annotation, checking if the <em>rounds </em>attribute is not null. This check is based on the assumption that the <em>rounds </em>attribute of the <em>ChessSwissTournament</em> entity is mandatory. If the <em>rounds </em>attribute is not null the record represents a ChessSwissTournament. Otherwise, it&#8217;s a ChessRoundRobinTournament.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorFormula(&quot;case when rounds is not null then &#039;Swiss&#039; else &#039;RoundRobin&#039; end&quot;)
+public abstract class ChessTournament {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;tournament_seq&quot;)
+    @SequenceGenerator(name = &quot;tournament_seq&quot;, sequenceName = &quot;tournament_seq&quot;, initialValue = 100)
+    private Long id;
+
+    private String name;
+
+    private LocalDate startDate;
+
+    private LocalDate endDate;
+
+    @Version
+    private int version;
+
+    @ManyToMany
+    private Set&lt;ChessPlayer&gt; players = new HashSet&lt;&gt;();
+
+    @OneToMany
+    private Set&lt;ChessGame&gt; games = new HashSet&lt;&gt;();
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<p>The <em>String</em>s <em>Swiss </em>and <em>RoundRobin</em> returned by the SQL snippet of the <em>@DiscriminatorFormula</em> match the discriminator values defined for the <em>ChessSwissTournament</em> and <em>ChessRoundRobinTournament</em> entities.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@DiscriminatorValue(&quot;Swiss&quot;)
+public class ChessSwissTournament extends ChessTournament {
+    
+    private int rounds;
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@DiscriminatorValue(&quot;RoundRobin&quot;)
+public class ChessRoundRobinTournament extends ChessTournament {
+    
+    private int numPlayers;
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<h2 class="wp-block-heading">Fetching Entities</h2>
+
+
+
+<p>Let&#8217;s use a simple test case to try this mapping. I want to fetch the <em>ChessTournament</em> with <em>id </em>1 from the database. Using JPA&#8217;s polymorphic query feature, I can select a <em>ChessTournament</em> entity, and Hibernate will return an object of the correct subclass. The tournament with <em>id</em> 1 is a <em>ChessRoundRobinTournament</em> entity.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Test
+public void testSample1() {
+	log.info(&quot;==== test Sample 1 ====&quot;);
+
+	EntityManager em = emf.createEntityManager();
+
+	ChessTournament chessTournament = em.find(ChessTournament.class, 1L);
+
+	log.info(&quot;==== Test Assertions ====&quot;);
+	assertThat(chessTournament).isNotNull();
+	assertThat(chessTournament instanceof ChessRoundRobinTournament).isTrue();
+}</pre>
+
+
+
+<p>When running this test and activating my <a href="https://thorben-janssen.com/hibernate-logging-guide/">recommended logging configuration for development systems</a>, you can see the executed SQL SELECT statement in the log output. Hibernate selects all columns mapped by the classes of the inheritance hierarchy and integrates the SQL snippet of the <em>@DiscriminatorFormula</em> annotation.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">18:35:48,729 DEBUG SQL:144 - select chesstourn0_.id as id1_2_0_, chesstourn0_.endDate as enddate2_2_0_, chesstourn0_.name as name3_2_0_, chesstourn0_.startDate as startdat4_2_0_, chesstourn0_.version as version5_2_0_, chesstourn0_.numPlayers as numplaye6_2_0_, chesstourn0_.rounds as rounds7_2_0_, case when chesstourn0_.rounds is not null then &#039;Swiss&#039; else &#039;RoundRobin&#039; end as clazz_0_ from ChessTournament chesstourn0_ where chesstourn0_.id=?
+18:35:48,731 TRACE BasicBinder:64 - binding parameter [1] as [BIGINT] - [1]
+18:35:48,739 TRACE BasicExtractor:60 - extracted value ([clazz_0_] : [VARCHAR]) - [RoundRobin]
+18:35:48,747 TRACE BasicExtractor:60 - extracted value ([enddate2_2_0_] : [DATE]) - [1953-10-24]
+18:35:48,747 TRACE BasicExtractor:60 - extracted value ([name3_2_0_] : [VARCHAR]) - [Zurich international chess tournament]
+18:35:48,747 TRACE BasicExtractor:60 - extracted value ([startdat4_2_0_] : [DATE]) - [1953-08-29]
+18:35:48,748 TRACE BasicExtractor:60 - extracted value ([version5_2_0_] : [INTEGER]) - [0]
+18:35:48,748 TRACE BasicExtractor:60 - extracted value ([numplaye6_2_0_] : [INTEGER]) - [15]
+</pre>
+
+
+
+<p>As you can see in the log output, SQL snippet returned the value <em>RoundRobin</em> and Hibernate mapped the record to a <em>ChessRoundRobinTournament</em> entity object.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>When using an inheritance hierarchy in your domain model, Hibernate needs to apply a mapping strategy to map the classes to one or more database tables. By default, Hibernate uses <em>InheritanceType.SINGLE_TABLE</em>, which maps all entity classes of the inheritance hierarchy to the same database table.</p>
+
+
+
+<p>This mapping requires a discriminator value that tells Hibernate to which subclass it has to map the record. By default, this value gets stored in a separate column. If your table model doesn&#8217;t provide such a column, you can use Hibernate&#8217;s <em>@DiscriminatorFormula</em> annotation. It expects an SQL snippet that returns the discriminator value for each record. Hibernate includes this snippet in the <em>SELECT </em>statement and maps the record based on the returned discriminator value when fetching an entity from the database.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

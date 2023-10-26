@@ -1,0 +1,326 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate-specific extensions to the Criteria API</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate-specific extensions to the Criteria API</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Most developers know that the JPA specification defines the string-based&nbsp;<a href="https://thorben-janssen.com/jpql/" target="_blank" rel="noreferrer noopener">JPQL</a>&nbsp;query language and that Hibernate extends it to support things like database-specific functions, window functions, and set-based operations. But most developers don&#8217;t know that since version 6, Hibernate has done the same for JPA&#8217;s Criteria API.</p>
+
+
+
+<p>Extending an API is, of course, a little more complex than doing the same for a string-based query language. To extend the features of JPQL, the Hibernate team only needs to add more features to the parser of the query string and doesn&#8217;t need to change any of the official APIs. The extension of the Criteria API requires additional interfaces and new methods that return those interfaces.</p>
+
+
+
+<p>Hibernate 6 handles this by providing the <em>HibernateCriteriaBuilder</em> interface, which extends JPA&#8217;s <em>CriteriaBuilder </em>interface, and by adding a method to its proprietary <em>Session</em> interface to get a <em>HibernateCriteriaBuilder</em> instance.</p>
+
+
+
+<h2 class="wp-block-heading">The <em>HibernateCriteriaBuilder </em>interface</h2>
+
+
+
+<p>Before we talk about the <em>HibernateCriteriaBuilder</em> interface, we need to take one step back and take a look at the creation of a standard <em>CriteriaQuery</em>. And after that, I&#8217;ll show you how to get a <em>HibernateCriteriaBuilder </em>and the features it adds to JPA&#8217;s standard Criteria API.</p>
+
+
+
+<h3 class="wp-block-heading">Working with JPA&#8217;s <em>CriteriaBuilder </em>interface</h3>
+
+
+
+<p>The first step to using the Criteria API is always a call of the&nbsp;<em>getCriteriaBuilder&nbsp;</em>method on the&nbsp;<em>EntityManager&nbsp;</em>interface. That method returns an instance of JPA’s&nbsp;<em>CriteriaBuilder</em>, which you can use to create different parts of your query. In the following code snippet, I use it to create a very basic query that returns all&nbsp;<em>ChessGame&nbsp;</em>entities that a player played with the white pieces whose name ends on “anssen”.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+CriteriaBuilder cBuilder = em.getCriteriaBuilder();
+CriteriaQuery&lt;ChessGame&gt; q = cBuilder.createQuery(ChessGame.class);
+Root&lt;ChessGame&gt; game = q.from(ChessGame.class);
+q.select(game);
+q.where(cBuilder.like(game.get(&quot;playerWhite&quot;), &quot;%anssen&quot;));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see, I use JPA&#8217;s <em>CriteriaBuilder </em>in 2 places:</p>
+
+
+
+<ol>
+<li>To create a <em>CriteriaQuery </em>object that represents a query that returns <em>ChessGame </em>objects.</li>
+
+
+
+<li>To create a like predicate for the WHERE clause of the query that checks if the <em>playerWhite </em>attribute of the <em>ChessGame</em> is like &#8220;%anssen&#8221;</li>
+</ol>
+
+
+
+<p>JPA’s&nbsp;<em>CriteriaBuilder&nbsp;</em>interface provides lots of other methods that you can use to instantiate different kinds of&nbsp;<em>CriteriaQuery</em>&nbsp;objects, build more complex WHERE clauses, and call database functions. I explain all of that in more detail in the Advanced Hibernate course included in the <a href="/join-persistence-hub/">Persistence Hub</a>, and you can find a full list of all methods in the official&nbsp; <a href="https://jakarta.ee/specifications/persistence/3.1/apidocs/jakarta.persistence/jakarta/persistence/criteria/criteriabuilder" rel="nofollow">Javadoc</a>.</p>
+
+
+
+<h3 class="wp-block-heading">How to get a <em>HibernateCriteriaBuilder </em>instance</h3>
+
+
+
+<p>Hibernate&#8217;s <em>HibernateCriteriaBuilder </em>interface extends JPA&#8217;s <em>CriteriaBuilder </em>interface. Due to that, an implementation of the <em>HibernateCriteriaBuilder</em> supports the same methods, and you can use it in the same way I showed you in the previous section. In addition to that, the interface defines a few proprietary methods to support things like set operations and additional database functions. </p>
+
+
+
+<p>The main difference you will recognize in your code is how you instantiate a <em>HibernateCriteriaBuilder</em>. The best way to instantiate it is by calling the <em>getCriteriaBuilder</em> method on Hibernate&#8217;s <em>Session </em>interface.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = em.unwrap(Session.class).getCriteriaBuilder();
+CriteriaQuery&lt;ChessGame&gt; q = cBuilder.createQuery(ChessGame.class);
+Root&lt;ChessGame&gt; game = q.from(ChessGame.class);
+q.select(game);
+q.where(cBuilder.like(game.get(&quot;playerWhite&quot;), &quot;%anssen&quot;));
+</pre></div>
+
+
+<p>You can also cast a <em>CriteriaBuilder</em> interface to <em>HibernateCriteriaBuilder</em>. The cast is, of course, not type-safe, and it relies on the implementation detail that Hibernate uses the same class to implement both interfaces. I, therefore, recommend you get a <em>Session </em>and call the <em>getCriteriaBuilder </em>method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = (HibernateCriteriaBuilder) em.getCriteriaBuilder();
+CriteriaQuery&lt;ChessGame&gt; q = cBuilder.createQuery(ChessGame.class);
+Root&lt;ChessGame&gt; game = q.from(ChessGame.class);
+q.select(game);
+q.where(cBuilder.like(game.get(&quot;playerWhite&quot;), &quot;%anssen&quot;));
+</pre></div>
+
+
+<h3 class="wp-block-heading">Features added by <em>HibernateCriteriaBuilder</em></h3>
+
+
+
+<p>As you can see in the <a href="https://docs.jboss.org/hibernate/orm/6.0/javadocs/org/hibernate/query/criteria/HibernateCriteriaBuilder.html" rel="nofollow">official Javadoc</a> of the <em>HibernateCriteriaBuilder </em>interface, the interface defines many methods to build different parts of your query. Some of them are defined by JPA&#8217;s <em>CriteriaBuilder</em>; others are Hibernate-specific features. Here are some of the most interesting additions defined by the <em>HibernateCriteriaBuilder </em>interface.</p>
+
+
+
+<h4 class="wp-block-heading">Insert Into Select statements</h4>
+
+
+
+<p>INSERT INTO SELECT statements are a well-known SQL feature that enables you to insert data selected by a query as new records into a database table. Since version 6, Hibernate supports this for HQL statements, and Hibernate 6.1 will provide this feature as an extension to the Criteria API.</p>
+
+
+
+<h4 class="wp-block-heading">Additional Expressions</h4>
+
+
+
+<p>The <em>HibernateCriteriaBuilder</em> defines several methods to create <em>Expression</em>s that you can use to perform calculations, transform or extract information and get the current date or time. Here are a few examples:</p>
+
+
+
+<ul>
+<li><em>JpaExpression&lt;Integer&gt; sign(Expression&lt;? extends Number&gt; x)</em><br>Returns 1 if the provided argument is positive, -1 if it&#8217;s negative, and 0 if it&#8217;s exactly 0.</li>
+
+
+
+<li><em>JpaExpression ceiling(Expression x)</em><br>Returns the smallest integer greater or equal to the provided argument.</li>
+
+
+
+<li><em>JpaExpression floor(Expression x)</em><br>Returns the smallest largest integer smaller or equal to the provided argument.</li>
+
+
+
+<li><em>JpaExpression round(Expression x, Integer n)</em><br>Returns the 1st argument rounded to the number of decimal digits provided as the 2nd argument.</li>
+
+
+
+<li><em>JpaExpression exp(Expression x)</em> and <em>JpaExpression power(Expression x, Expression y)</em><br>Returns Euler&#8217;s number <em>e</em> raised to the power of the provided argument or returns the 1st argument raised to the power of the 2nd argument.</li>
+
+
+
+<li><em>JpaExpression&lt;Double&gt; ln(Expression&lt;? extends Number&gt; x)</em><br>Returns the natural logarithm of the provided argument.</li>
+
+
+
+<li><em>JpaExpression&lt;java.time.LocalDate&gt; localDate()</em>, <em>JpaExpression localDateTime()</em> and <em>JpaExpression localTime()</em><br>Returns the current date, date and time, or time of your database server.</li>
+</ul>
+
+
+
+<p>Similar to the methods defined by JPA&#8217;s <em>CriteriaBuilder</em> interface that define expressions, you can use those methods to define your query&#8217;s projection or WHERE clause.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = em.unwrap(Session.class).getCriteriaBuilder();
+CriteriaQuery&lt;ChessGame&gt; q = cBuilder.createQuery(ChessGame.class);
+Root&lt;ChessGame&gt; game = q.from(ChessGame.class);
+q.select(game);
+q.where(cBuilder.equal(game.get(&quot;playedOn&quot;), cBuilder.localDate()));
+
+List&lt;ChessGame&gt; games = em.createQuery(q).getResultList();
+</pre></div>
+
+
+<p>Hibernate then includes these expressions in the generated SQL statement. Your database processes them and returns the result. This is important if you&#8217;re processing the returned values and rely on timezones or other localizations. In those situations, you need to ensure that your Java application and database use the same settings.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+11:58:59,183 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.playedOn,c1_0.playerBlack_id,c1_0.playerWhite_id,c1_0.version from ChessGame c1_0 where c1_0.playedOn=current_date
+</pre></div>
+
+
+<h4 class="wp-block-heading">Additional Predicates</h4>
+
+
+
+<p>Hibernate also provides a few additional predicates, which you can use to define your WHERE clause. The most interesting ones are the different versions of <em>ilike</em> and <em>notilike</em> methods, which provide an easy way to define a case-insensitive LIKE or NOT LIKE expression. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = em.unwrap(Session.class).getCriteriaBuilder();
+CriteriaQuery&lt;ChessPlayer&gt; q = cBuilder.createQuery(ChessPlayer.class);
+Root&lt;ChessPlayer&gt; player = q.from(ChessPlayer.class);
+q.select(player);
+q.where(cBuilder.ilike(player.get(&quot;firstName&quot;), &quot;%ikar%&quot;));
+
+List&lt;ChessPlayer&gt; games = em.createQuery(q).getResultList();
+games.forEach(p -&gt; log.info(p));
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:32:13,147 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 where c1_0.firstName ilike ? escape ''
+16:32:13,148 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;%ikar%]
+16:32:13,168 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Hikaru, lastName=Nakamura]
+</pre></div>
+
+
+<p>And if you modeled an <a href="https://thorben-janssen.com/map-association-java-util-map/">association as a <em>java.util.Map</em></a>, you can use the methods <em>isMapEmpty</em>, <em>isMapNotEmpty</em>, and <em>mapSize </em>to check if or how many elements that <em>Map</em> contains.</p>
+
+
+
+<h4 class="wp-block-heading">Ordering</h4>
+
+
+
+<p>JPA’s&nbsp;<em>CriteriaBuilder</em>&nbsp;enables you to fetch the result set in the ascending or descending order of one or more entity attributes. In addition, the&nbsp;<em>HibernateCriteriaBuilder&nbsp;</em>also enables you to define the handling of null values and order by the result of an&nbsp;<em>Expression</em>, e.g., the result of a database function.</p>
+
+
+
+<p>In addition to the&nbsp;<em>asc</em>&nbsp;and&nbsp;<em>desc&nbsp;</em>methods defined by JPA’s&nbsp;<em>CriteriaBuilder</em>, the&nbsp;<em>HibernateCriteriaBuilder</em>&nbsp;defines a 2nd version of each method that accepts a boolean as the 2nd method parameter. This boolean defines if null values shall be returned first.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = em.unwrap(Session.class).getCriteriaBuilder();
+CriteriaQuery&lt;ChessPlayer&gt; q = cBuilder.createQuery(ChessPlayer.class);
+Root&lt;ChessPlayer&gt; player = q.from(ChessPlayer.class);
+q.select(player);
+q.orderBy(cBuilder.asc(player.get(&quot;firstName&quot;), true));
+
+List&lt;ChessPlayer&gt; games = em.createQuery(q).getResultList();
+games.forEach(p -&gt; log.info(p));
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:24:56,003 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 order by c1_0.firstName asc nulls first
+17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=2, firstName=Fabiano, lastName=Caruana]
+17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Hikaru, lastName=Nakamura]
+17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen]
+17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=3, firstName=Richard, lastName=Rapport]
+</pre></div>
+
+
+<p>If you want to define a more complex ORDER BY clause based on an <em>Expression</em>, you need to call one of the <em>sort </em>methods. They enable you to provide the <em>Expression</em> by which you want to sort the result, if you want to get the result in ascending or descending order and how you want to handle null values.</p>
+
+
+
+<p>I use that in the following code snippet to get the query result in the ascending order of the length of the player&#8217;s first names. In this example, it doesn&#8217;t make any sense to define the handling of null values. But if you&#8217;re ordering your query result by a different <em>Expression</em>, you could provide a 3rd method parameter to define the handling of null values.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = em.unwrap(Session.class).getCriteriaBuilder();
+CriteriaQuery&lt;ChessPlayer&gt; q = cBuilder.createQuery(ChessPlayer.class);
+Root&lt;ChessPlayer&gt; player = q.from(ChessPlayer.class);
+q.select(player);
+q.orderBy(cBuilder.sort(cBuilder.length(player.get(&quot;firstName&quot;)), SortOrder.ASCENDING));
+
+List&lt;ChessPlayer&gt; games = em.createQuery(q).getResultList();
+games.forEach(p -&gt; log.info(p));
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+08:15:10,477 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 order by character_length(c1_0.firstName) asc
+08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen]
+08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Hikaru, lastName=Nakamura]
+08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=2, firstName=Fabiano, lastName=Caruana]
+08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=3, firstName=Richard, lastName=Rapport]
+</pre></div>
+
+
+<h4 class="wp-block-heading">Set operations</h4>
+
+
+
+<p>Hibernate 6 also introduced support for set operations for HQL and Criteria queries. Using the <em>HibernateCriteriaBuilder</em>, you can now combine the result sets of 2 query statements using the methods <em>union</em>, <em>unionAll</em>, <em>intersect</em>, <em>intersectAll</em>, <em>except</em>, and <em>exceptAll</em>. </p>
+
+
+
+<p>Here you can see an example that selects the firstName and lastName of all ChessPlayer in the 1st and the firstName and lastName of all ChessStreamer in the 2nd query and creates a union of both result sets. When using set operations, please keep in mind that all result sets need to follow the same structure.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+HibernateCriteriaBuilder cBuilder = em.unwrap(Session.class).getCriteriaBuilder();
+CriteriaQuery&lt;Tuple&gt; qPlayer = cBuilder.createTupleQuery();
+Root&lt;ChessPlayer&gt; player = qPlayer.from(ChessPlayer.class);
+qPlayer.multiselect(player.get(&quot;firstName&quot;).alias(&quot;firstName&quot;), player.get(&quot;lastName&quot;).alias(&quot;lastName&quot;));
+
+CriteriaQuery&lt;Tuple&gt; qStreamer = cBuilder.createTupleQuery();
+Root&lt;ChessStreamer&gt; streamer = qStreamer.from(ChessStreamer.class);
+qStreamer.multiselect(streamer.get(&quot;firstName&quot;).alias(&quot;firstName&quot;), streamer.get(&quot;lastName&quot;).alias(&quot;lastName&quot;));
+
+CriteriaQuery&lt;Tuple&gt; qPlayerAndStreamer = cBuilder.union(qPlayer, qStreamer);
+
+List&lt;Tuple&gt; persons = em.createQuery(qPlayerAndStreamer).getResultList();
+persons.forEach(t -&gt; log.info(t.get(&quot;firstName&quot;) + &quot;, &quot; + t.get(&quot;lastName&quot;)));
+</pre></div>
+
+
+<p>As you can see in the log output, Hibernate generated an SQL statement that tells the database to apply the set operation union on the 2 result sets that contain the first and last names of all <em>ChessPlayer</em> and <em>ChessStreamer</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:43:05,857 DEBUG &#91;org.hibernate.SQL] - select c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 union select c2_0.firstName,c2_0.lastName from ChessStreamer c2_0
+17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Hikaru, Nakamura
+17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Fabiano, Caruana
+17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Magnus, Carlsen
+17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Richard, Rapport
+17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Levy, Rozman
+17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Ben, Finegold
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>As you saw in this article, Hibernate&#8217;s <em>HibernateCriteriaBuilder </em>interface extends JPA&#8217;s <em>CriteriaBuilder </em>interface and adds methods for Hibernate&#8217;s proprietary query features. These are: </p>
+
+
+
+<ul>
+<li>Additional <em>Expression</em>s, like <em>round</em> and <em>exp</em>, that you can use to perform calculations, transform or extract information and get the current date or time.</li>
+
+
+
+<li>Additional <em>Predicate</em>s, like the ilike <em>Predicate</em>, that you can use to define your WHERE clauses.</li>
+
+
+
+<li>Methods to define more complex ORDER BY clauses, e.g. based on the result of an SQL function.</li>
+
+
+
+<li>Set operations to combine the result of multiple queries.</li>
+</ul>
+
+
+
+<p>By adding all these proprietary features, the <em>HibernateCriteriaBuilder</em> interface provides you with the same query features as Hibernate&#8217;s HQL query language, which extends JPA&#8217;s JPQL language. That enables you to easily switch between the 2 approaches and use the query definition you feel most comfortable with.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

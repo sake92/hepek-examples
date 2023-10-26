@@ -1,0 +1,337 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The Best Mapping for Shared Technical Attributes With Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The Best Mapping for Shared Technical Attributes With Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Most domain models have a few technical attributes shared by most entity classes. Typical examples are the version attribute and the timestamp or user who performed the last update or persisted an entity. In these situations, many developers ask themselves what&#8217;s the best way to model these attributes. Oleg did the same recently in the comments here on the blog, and I will explain the 2 most popular options in this article.</p>
+
+
+
+<figure class="wp-block-image size-full"><img decoding="async" loading="lazy" width="792" height="475" src="https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question.png" alt="" class="wp-image-35719" srcset="https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question.png 792w, https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question-300x180.png 300w, https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question-768x461.png 768w, https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question-624x374.png 624w, https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question-50x30.png 50w, https://thorben-janssen.com/wp-content/uploads/2021/11/How-to-model-shared-technical-attributes-Question-100x60.png 100w" sizes="(max-width: 792px) 100vw, 792px" /></figure>
+
+
+
+<p>I prepared the following table model to show you the different mapping options. The <em>chessgame</em> and the <em>chesstournament </em>table both contain the columns <em>version</em>, <em>lastModifiedDateTime</em> and <em>lastModifiedUser</em>, which are typical examples of shared technical columns.</p>
+
+
+
+<figure class="wp-block-image size-full"><img decoding="async" loading="lazy" width="950" height="309" src="https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt.png" alt="" class="wp-image-35729" srcset="https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt.png 950w, https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt-300x98.png 300w, https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt-768x250.png 768w, https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt-624x203.png 624w, https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt-50x16.png 50w, https://thorben-janssen.com/wp-content/uploads/2021/11/Unbenannt-100x33.png 100w" sizes="(max-width: 950px) 100vw, 950px" /></figure>
+
+
+
+<p>At first glance, the mapping as a <em>@MappedSuperclass</em> and an <em>@Embeddable</em> seem to be a good option. But both have their downsides, as I will show you in the following sections.</p>
+
+
+
+<h2 class="wp-block-heading">@MappedSuperclass Mapping</h2>
+
+
+
+<p>The <em>@MappedSuperclass</em> is one of JPA&#8217;s inheritance mapping strategies. It tells your persistence provider to include the mapping information of the mapped superclass in all subclasses that are mapped as entities. But the superclass itself doesn&#8217;t become an entity. </p>
+
+
+
+<p>I explain this mapping in more detail in the post <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">Inheritance Strategies with JPA and Hibernate – The Complete Guide</a> here on the blog and in the <a href="https://thorben-janssen.com/lessons/inheritance-2-0/">Inheritance Mapping lecture</a> in the <a href="https://thorben-janssen.com/join-persistence-hub/">Persistence Hub</a>.</p>
+
+
+
+<p>Here you can see a <em>@MappedSuperclass</em> that defines the attributes <em>id</em>, <em>version</em>, <em>lastModifiedDateTime</em>, and <em>lastModifiedUser</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@MappedSuperclass
+public class MyAbstractEntity {
+    
+    @Transient
+    Logger  log = Logger.getLogger(this.getClass().getName());
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    @Version
+    protected int version;
+
+    @UpdateTimestamp
+    protected LocalDateTime lastModifiedDateTime;
+
+    protected String lastModifiedUser;
+	
+	...
+	
+	@PrePersist
+    @PreUpdate
+    private void setLastModifiedUser() {
+        log.info(&quot;Set lastModifiedUser&quot;);
+        this.lastModifiedUser = &quot;Thorben&quot;;
+    }
+}
+</pre></div>
+
+
+<p>FoI use a typical primary key mapping for the <em>id</em> attribute. It tells Hibernate to use a database sequence to <a href="/jpa-generate-primary-keys/">generate unique primary key values</a>.</p>
+
+
+
+<p>I annotated the <em>version</em> attribute with a <em>@Version</em> annotation. That tells Hibernate to use this attribute for its optimistic locking algorithmto detect concurrent modifications.</p>
+
+
+
+<p>The <em>@UpdateTimestamp</em> annotation on the <em>lastModifiedDateTime</em> attribute tells Hibernate to set this timestamp when flushing any entity changes to the database. This is a proprietary and very comfortable way to track the timestamp of the last modification.</p>
+
+
+
+<p>And I annotated the <em>setLastModifiedUser</em> method with the lifecycle callback annotations <em>@PrePersist</em> and <em>@PreUpdate</em>. They tell Hibernate to call this method before persisting or updating an entity object. This enables me to set and persist the <em>lastModifiedUser </em>attribute.</p>
+
+
+
+<p>The <em>ChessTournament </em>class extends the <em>MyAbstractEntity</em> and inherits its attributes and their mapping definition.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessTournament extends MyAbstractEntity {
+
+    private String name;
+
+    private LocalDate startDate;
+
+    private LocalDate endDate;
+
+    @Version
+    private int version;
+
+    @OneToMany
+    private Set&lt;ChessGame&gt; games = new HashSet&lt;&gt;();
+	
+	...
+}
+</pre></div>
+
+
+<p>Let&#8217;s use this entity class in a simple test case that persists a new <em>ChessTournament</em> entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessTournament t = new ChessTournament();
+t.setName(&quot;World Chess Championship 2021&quot;);
+t.setStartDate(LocalDate.of(2021, 11, 24));
+t.setEndDate(LocalDate.of(2021, 12, 16));
+em.persist(t);
+
+em.flush();
+
+assertThat(t.getLastModifiedDateTime()).isNotNull();
+assertThat(t.getLastModifiedUser()).isNotNull();
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the log output, the mapping works as expected. Hibernate uses all attribute mappings defined by the <em>@MappedSuperclass</em> when persisting the <em>ChessTournament </em>entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+14:41:37,080 INFO  &#91;com.thorben.janssen.TestMapping] - ==== testMappedSuperclass ====
+Nov. 30, 2021 2:41:37 PM com.thorben.janssen.model.MyAbstractEntity setLastModifiedUser
+INFO: Set lastModifiedUser
+14:41:37,143 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('tournament_seq')
+14:41:37,149 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('tournament_seq')
+14:41:37,179 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessTournament
+        (endDate, lastModifiedDateTime, lastModifiedUser, name, startDate, version, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+
+</pre></div>
+
+
+<h3 class="wp-block-heading">Strengths and Weaknesses of the @MappedSuperclass mapping</h3>
+
+
+
+<p>As you saw in the previous example, the <em>@MappedSuperclass</em> mapping provides a very natural approach to define the mapping of shared attributes. It supports all mapping annotations, and you can even model attributes with specific semantics, e.g., primary keys and version attributes, on your superclass. As you will see in the next section, that&#8217;s not the case if you&#8217;re using an <em>@Embeddable</em>.</p>
+
+
+
+<p>But I also want to point out that this mapping approach feels wrong when looking at it from a modeling perspective.</p>
+
+
+
+<p>The <em>ChessTournament</em> isn&#8217;t an <em>AbstractEntity</em>. It only shares attributes defined by that class. When you analyze your application&#8217;s domain, something like an <em>AbstractEntity </em>will not come up in the analysis process because it doesn&#8217;t exist in the real world. </p>
+
+
+
+<p>It&#8217;s also rather unlikely that we will actively use the <em>AbstractEntity</em> in the business code to implement any part of our business logic. </p>
+
+
+
+<p>The only reason to introduce <em>AbstractEntity </em>as a superclass is to define the mapping of all shared technical attributes in 1 place. Based on object-oriented design principles, you should better use composition instead of inheritance to achieve this.</p>
+
+
+
+<h2 class="wp-block-heading">@Embeddable Mapping</h2>
+
+
+
+<p>The <em>@Embeddable</em> mapping applies the concept of composition to the domain model and might be considered as the better approach. But it introduces some restrictions to your mapping definitions. </p>
+
+
+
+<p>The embeddable object itself has no identity in your persistence context. All its attributes and mappings become part of the entity and get mapped to the entity&#8217;s database table. You can learn more about this mapping in the lecture on <a href="https://thorben-janssen.com/topic/embeddable-lecture-2-0/">@Embeddables</a> in the <a href="/join-persistence-hub/">Persistence Hub</a>.</p>
+
+
+
+<p>Here you can see an <em>@Embeddable</em> mapping based on this article&#8217;s example. In contrast to the <em>MyAbstractEntity</em>, the <em>MetaData </em>class doesn&#8217;t define the <em>id </em>and <em>version</em> attributes. The simple reason for that is that Hibernate doesn&#8217;t allow you to define these attributes on an <em>@Embeddable</em>. You need to define the primary key, and the version attributes on the entity class itself.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+public class MetaData {
+    
+    @Transient
+    Logger  log = Logger.getLogger(this.getClass().getName());
+    
+    private LocalDateTime lastModifiedDateTime;
+
+    private String lastModifiedUser;
+
+	...
+
+    @PrePersist
+    @PreUpdate
+    private void setLastModified() {
+        log.info(&quot;Set lastModifiedUser and lastModifiedDateTime&quot;);
+        this.lastModifiedUser = &quot;Thorben&quot;;
+		this.lastModifiedDateTime = LocalDateTime.now();
+    }
+}
+</pre></div>
+
+
+<p>I also don&#8217;t annotate the <em>lastModifiedDateTime</em> attribute with an <em>@UpdateTimestamp</em> annotation. Because if I do that, Hibernate 5 and 6 throw a <em>NotYetImplementedException </em>during deployment.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+jakarta.persistence.PersistenceException:&#91;PersistenceUnit:my-persistence-unit] Unable to build Hibernate SessionFactory
+...
+Caused by: org.hibernate.cfg.NotYetImplementedException: Still need to wire in composite in-memory value generation
+</pre></div>
+
+
+<p>But instead of using the <em>@UpdateTimestamp</em> annotation, you can set the <em>lastModifiedDateTime </em>attribute in the life cycle callback method <em>setLastModified</em>. </p>
+
+
+
+<p>After you modeled the <em>@Embeddable</em>, you can use it as an attribute type in your entity class. Here you can see the <em>ChessGame</em> entity. Its <em>metaData </em>attribute is of type <em>MetaData, </em>and I annotated it with an <em>@Embedded</em> annotation. That tells Hibernate to include all attributes defined by the <em>@Embeddable</em> into the <em>ChessGame </em>entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    private LocalDate date;
+
+    private int round;
+
+    @ManyToOne
+    private ChessTournament chessTournament;
+
+    @Embedded
+    private MetaData metaData;
+	
+    @Version
+    private int version;
+
+    ...
+}
+</pre></div>
+
+
+<p>Let&#8217;s use this mapping in a simple test case that persists a new <em>ChessGame </em>entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessGame g = new ChessGame();
+g.setDate(LocalDate.of(2021, 11, 26));
+g.setRound(1);
+g.setMetaData(new MetaData());
+em.persist(g);
+
+assertThat(g.getMetaData().getLastModifiedDateTime()).isNotNull();
+assertThat(g.getMetaData().getLastModifiedUser()).isNotNull();
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the log output, the mapping worked as expected. All attributes of the <em>MetaData </em>embeddable became part of the <em>ChessGame </em>entity, and Hibernate mapped them to columns of the <em>chessgame </em>table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+15:04:51,692 INFO  &#91;com.thorben.janssen.TestMapping] - ==== testEmbeddable ====
+15:04:51,736 INFO  &#91;com.thorben.janssen.model.MetaData] - Set lastModifiedUser and lastModifiedDateTime
+15:04:51,742 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('ChessGame_SEQ')
+15:04:51,749 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('ChessGame_SEQ')
+15:04:51,807 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessGame
+        (chessTournament_id, date, lastModifiedDateTime, lastModifiedUser, round, version, id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h3 class="wp-block-heading">Strengths and Weaknesses of the <em>@Embeddable</em> mapping </h3>
+
+
+
+<p>As explained earlier, the <em>@Embeddable</em> mapping applies the concept of composition and is the better approach from an object-oriented design perspective.</p>
+
+
+
+<p>But as you saw in the example, it also introduces several mapping restrictions. Even though you can use an <em>@Embeddable</em> with all its attributes as an <em>@EmbeddedId</em>, you can&#8217;t use it to model only one primary key and several other attributes.</p>
+
+
+
+<p>You also can&#8217;t use the <em>@Version</em> or the <em>@UpdateTimestamp</em> annotations to map the attributes of an embedded class. Hibernate supports both of them only for entity classes.</p>
+
+
+
+<p>If you don&#8217;t need these specific annotations, e.g., because you can provide all the required logic in a lifecycle callback method, an <em>@Embeddable </em>is a great way to model shared technical attributes.</p>
+
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>Almost all domain models have technical attributes that are part of nearly all entity classes. You can, of course, map them on each entity class individually. But most teams decide to use a <em>@MappedSuperclass </em>mapping instead. Even though this often feels like a wrong design decision, it&#8217;s the more flexible and powerful mapping. As you saw in the examples, the mapping as a <em>@MappedSuperclass</em> doesn&#8217;t introduce any limitations. You can use all mapping features that you would otherwise use on an entity class.</p>
+
+
+
+<p>From an object-oriented design perspective, mapping this as an <em>@Embeddable</em> is the better approach. It utilizes the concept of composition instead of inheritance. But it introduces a few mapping limitations that might require a few workarounds.</p>
+
+
+
+<p>In general, I recommend trying the <em>@Embeddable</em> mapping first. It&#8217;s the cleaner approach, and it works really well, as long as you model the version or primary key attributes on your entity classes. If you don&#8217;t want to do that, you should use a <em>@MappedSuperclass</em> mapping. </p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

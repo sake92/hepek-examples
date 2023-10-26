@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – How to create a custom base repository</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JPA – How to create a custom base repository</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Most developers create their own repositories by adding their queries to one of Spring Data JPA’s standard base repositories, like the <em>JpaRepository</em> or the <em>CrudRepository</em>. These repositories give you a set of standard operations, e.g., to read and write entity objects. It often seems like the obvious choice to define your own repositories based on one of these standard interfaces. But they are not adjusted to your project. They usually contain several methods you don’t want to use. Some of the provided methods can even cause performance problems.</p>
+
+
+
+<p>You should, therefore, create your own base repository definition that you can then customize for each entity object. And don’t worry; this doesn’t mean you will not benefit from Spring Data JPA’s standard features or that you will implement all persistence operations yourself. Spring Data JPA provides an easy way to define your own standard repository and use Spring’s implementation.</p>
+
+
+
+<h2 class="wp-block-heading">Better exclude these methods from your repository</h2>
+
+
+
+<p>There are 2 general groups of methods you should not include in your repository definition:</p>
+
+
+
+<ol>
+<li>Methods you don&#8217;t want to use based on your coding guidelines and other team-specific rules.</li>
+
+
+
+<li>Methods you shouldn’t use because they can cause performance and other problems.</li>
+</ol>
+
+
+
+<h3 class="wp-block-heading">Exclude methods you don&#8217;t want to use</h3>
+
+
+
+<p>You might have various reasons why you don’t want to use specific methods in your project. Maybe you don’t want to use features like query by example or specification because you want to limit the number of different approaches used to define a query. Or maybe you consider the code that uses a specific feature hard to read.</p>
+
+
+
+<p>All of these are valid reasons. Just make sure that you understand the feature and its performance implications before you decide to exclude it. I sometimes see teams exclude features like <a href="https://thorben-janssen.com/spring-data-jpa-query-annotation/">custom or native queries</a>. But these are essential to creating an efficient persistence layer. If you find a method or feature you don’t know, I recommend watching my Spring Data JPA Certification course <a href="https://thorben-janssen.com/join-persistence-hub/">included in the Persistence Hub</a>.</p>
+
+
+
+<h3 class="wp-block-heading">Exclude methods that cause problems</h3>
+
+
+
+<p>Unfortunately, Spring Data JPA also offers a few methods that can cause severe performance problems. The most obvious ones are the <em>count()</em>, <em>deleteAll()</em>, <em>deleteAllInBatch()</em>, and <em>findAll()</em> methods. These methods count, delete or fetch all records in the database table mapped by an entity class.</p>
+
+
+
+<p>Other methods you should avoid in most situations are <em>flush()</em> and <em><a href="https://thorben-janssen.com/spring-data-jpa-save-saveandflush-and-saveall/">saveAndFlush(T entity)</a></em>. Both methods force your persistence provider, e.g., Hibernate, to ignore all internal optimizations, immediately flush the current persistence context, and write all pending changes to the database. There are only very few situations where this is necessary or helpful, like the execution of a <a href="https://thorben-janssen.com/implementing-bulk-updates-with-spring-data-jpa/">bulk operation</a>. In all other cases, it will only slow down your application. Due to that, you should only provide these methods if you need them, and they shouldn&#8217;t be part of your standard repository.</p>
+
+
+
+<p>The <em>deleteAllInBatch(Iterable&lt;T> entities)</em> method defined by the <em>JpaRepository </em>is another method you might want to exclude from your standard repository definition if you don&#8217;t need to delete a huge number of entities. This method handles those situations very efficiently, but your 1st level cache and database might get out of sync. If not everyone on your team knows how to handle or avoid that, this method should better not be available.</p>
+
+
+
+<h2 class="wp-block-heading">Create a base repository and let Spring Data implement it</h2>
+
+
+
+<p>It only takes a few minutes to create your own base repository that you can then extend to define your entity-specific repositories. You only need to create an interface that extends Spring Data&#8217;s <em>Repository </em>interface and annotate it with <em>@NoRepositoryBean</em>. This annotation tells Spring Data JPA that this is a base repository definition for which it shall not instantiate a repository.</p>
+
+
+
+<p>After that, you can copy method definitions from all repositories defined by Spring Data JPA. Spring will then automatically provide the required implementations.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@NoRepositoryBean
+public interface CustomJpaRepository&lt;T&gt; extends Repository&lt;T, Long&gt; {
+
+    &lt;S extends T&gt; S save(S entity);
+    &lt;S extends T&gt; List&lt;S&gt; saveAll(Iterable&lt;S&gt; entities);
+
+    Optional&lt;T&gt; findById(Long id);
+    Iterable&lt;T&gt; findAllById(Iterable&lt;Long&gt; ids);
+
+    void deleteById(Long id);
+    void delete(T entity);
+    void deleteAllById(Iterable&lt;? extends Long&gt; ids);
+    void deleteAll(Iterable&lt;? extends T&gt; entities);
+    
+}
+</pre></div>
+
+
+<p>The code snippet shows the definition of a custom base repository that only provides a very basic set of methods. I copied these methods from the <em>JpaRepository</em> and <em>CrudRepository</em> interfaces.</p>
+
+
+
+<p>I also set the type of the primary key attribute to <em>Long</em>. This isn&#8217;t necessary, but it&#8217;s a common approach that streamlines the definition of your repositories if you use a database sequence to <a href="/jpa-generate-primary-keys/">generate the primary key value</a> of all of your entities.</p>
+
+
+
+<p>That&#8217;s all you need to do to define your own base repository. As mentioned earlier, Spring Data JPA will provide the implementations of all methods you copied from Spring Data&#8217;s repositories.</p>
+
+
+
+<p>In the next step, you can use your new standard repository to define entity-specific repositories and add your queries to them. Here you can see an example of such a repository.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessPlayerRepository extends CustomJpaRepository&lt;ChessPlayer&gt; {
+
+    List&lt;ChessPlayer&gt; findByFirstNameAndLastName(String firstName, String lastName);
+
+}
+</pre></div>
+
+
+<p>The <em>ChessPlayerRepository </em>extends the <em>CustomJpaRepository</em> with all its methods and adds the <em>findByFirstNameAndLastName</em> method. That method uses <a href="https://thorben-janssen.com/ultimate-guide-derived-queries-with-spring-data-jpa/">Spring Data JPA&#8217;s derived query</a> feature. At runtime, Spring Data generates and executes a query based on the method name.</p>
+
+
+
+<p>As you can see, you can use the <em>CustomJpaRepository </em>in the same way as Spring Data JPA&#8217;s standard repositories, e.g., the <em>JpaRepository </em>or <em>CrudRepository</em>. But in contrast to using one of those standard repositories, you are now in full control of provided repository methods. That enables you to exclude methods you don&#8217;t want to use, reduces the risk of bugs, and makes it easier to follow your project-specific guidelines.</p>
+
+
+
+<h2 class="wp-block-heading">Add custom method implementations to your repository</h2>
+
+
+
+<p>As I showed you in the previous section, you don&#8217;t need to provide any method implementations when you copy the method definitions from Spring Data JPA&#8217;s standard repositories. But you might want to add methods not defined by Spring Data. In those cases, you can use <a href="https://thorben-janssen.com/composite-repositories-spring-data-jpa/">fragment repositories</a>. They enable you to combine your own method implementations with Spring Data JPA&#8217;s standard methods.</p>
+
+
+
+<p>Unfortunately, you can’t include fragment repositories in the base repository definition (see <a href="https://github.com/spring-projects/spring-data-commons/issues/2142" target="_blank" rel="noreferrer noopener nofollow">#2142</a>). Due to that, you need to define your custom methods in one or more independent fragment repository definitions and extend them together with your base repository.</p>
+
+
+
+<p>Let&#8217;s take a look at an example that gives you a better version of Spring Data JPA&#8217;s <em>save</em> method. As you might know, I&#8217;m not a huge fan of that method. The name sounds like you need to call that method to save any change in the database. But that&#8217;s not the case. Due to <a href="https://thorben-janssen.com/entity-lifecycle-model/">JPA&#8217;s lifecycle management</a>, you only need to call the save method to persist a new entity or to merge a detached entity. All the changes you perform on managed entity objects get automatically stored in the database.</p>
+
+
+
+<p>So, let&#8217;s create a <em>BetterJpaRepository </em>that doesn&#8217;t include the <em>save</em> and <em>saveAll</em> methods</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@NoRepositoryBean
+public interface BetterJpaRepository&lt;T&gt; extends Repository&lt;T, Long&gt; {
+
+    Optional&lt;T&gt; findById(Long id);
+    Iterable&lt;T&gt; findAllById(Iterable&lt;Long&gt; ids);
+
+    void deleteById(Long id);
+    void delete(T entity);
+    void deleteAllById(Iterable&lt;? extends Long&gt; ids);
+    void deleteAll(Iterable&lt;? extends T&gt; entities);
+    
+}
+</pre></div>
+
+
+<p>In the next step, you need to define and implement a fragment repository. As I explained in my guide to composite repositories and fragment interfaces, the fragment interface only defines the methods you want to add to a base repository. So, in this example, these are the <em>persist</em>, <em>persistAll</em>, <em>merge</em>, and <em>mergeAll</em> methods.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface PersistAndMergeRepository&lt;T&gt; {
+ 
+    &lt;S extends T&gt; S persist(S entity);
+    &lt;S extends T&gt; List&lt;S&gt; persistAll(Iterable&lt;S&gt; entities);
+    &lt;S extends T&gt; S merge(S entity);
+    &lt;S extends T&gt; List&lt;S&gt; mergeAll(Iterable&lt;S&gt; entities);
+}
+</pre></div>
+
+
+<p>The implementation of these is straightforward. You only need to inject an <em>EntityManager</em> and call the <em>persist</em> and <em>merge </em>methods. Spring Data JPA will automatically find and use this implementation for all repositories that extend the <em>PersistAndMergeRepository</em> fragment interface.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class PersistAndMergeRepositoryImpl&lt;T&gt; implements PersistAndMergeRepository&lt;T&gt; {
+
+    @PersistenceContext
+    private EntityManager em;   
+
+    @Override
+    public &lt;S extends T&gt; S persist(S entity) {
+        em.persist(entity);
+        return entity;
+    }
+
+    @Override
+    public &lt;S extends T&gt; List&lt;S&gt; persistAll(Iterable&lt;S&gt; entities) {
+        List&lt;S&gt; result = new ArrayList&lt;&gt;();
+        entities.forEach(e -&gt; result.add(persist(e)));
+        return result;
+    }
+
+    @Override
+    public &lt;S extends T&gt; S merge(S entity) {
+        return em.merge(entity);
+    }
+
+    @Override
+    public &lt;S extends T&gt; List&lt;S&gt; mergeAll(Iterable&lt;S&gt; entities) {
+        List&lt;S&gt; result = new ArrayList&lt;&gt;();
+        entities.forEach(e -&gt; result.add(merge(e)));
+        return result;
+    }
+}
+</pre></div>
+
+
+<p>After you have defined the <em>BetterJpaRepository </em>and the <em>PersistAndMergeRepository</em>, you can extend them to define your custom repository. In this example, I define a <em>BetterChessPlayerRepository</em>, which includes the methods defined by the 2 extended interfaces and a derived query. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface BetterChessPlayerRepository extends BetterJpaRepository&lt;ChessPlayer&gt;, PersistAndMergeRepository&lt;ChessPlayer&gt; {
+
+    List&lt;ChessPlayer&gt; findByFirstNameAndLastName(String firstName, String lastName);
+
+}
+</pre></div>
+
+
+<p>When you use this repository in your business code, Spring Data JPA:</p>
+
+
+
+<ul>
+<li>generates the query for the <em>findByFirstNameAndLastName</em>, </li>
+
+
+
+<li>provides the implementation of all methods defined in the <em>BetterJpaRepository</em>, and </li>
+
+
+
+<li>calls the methods provided by the <em>PersistAndMergeRepositoryImpl</em> class when you call any methods defined by the <em>PersistAndMergeRepository</em> interface.</li>
+</ul>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Spring Data JPA provides different standard repositories which provide a huge set of methods that you can use to implement your persistence layer. But a few of these methods can cause problems when used on a production database, and others might not fit your coding guidelines. </p>
+
+
+
+<p>In those cases, you can define a repository that you can then use as the base of your entity-specific repository definitions. You don&#8217;t need to provide any method implementation if you copy all methods used in that repository from Spring Data JPA&#8217;s standard repositories. Spring Data will handle that for you.</p>
+
+
+
+<p>If you want to provide custom implementations for any of these methods or add methods that are unknown to Spring Data JPA, you need to use a <a href="/composite-repositories-spring-data-jpa/">fragment repository</a>. When doing that, please remember that Spring Data JPA doesn&#8217;t support fragment interfaces on super interfaces. So, you can&#8217;t reference them in your base repository definition.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

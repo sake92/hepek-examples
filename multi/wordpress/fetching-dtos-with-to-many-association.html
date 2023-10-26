@@ -1,0 +1,146 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Fetching a DTO With a To-Many Association</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Fetching a DTO With a To-Many Association</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p><a href="https://thorben-janssen.com/dto-projections/">DTO projections</a> provide better performance than entities if you only want to read but not change the retrieved information. They avoid the management overhead of an entity class and enable you to only select the database columns your business code needs.</p>
+
+
+
+<p>But as so often, DTO projections also have a downside, and that’s the handling of <a href="/associations">associations</a>. When you select an entity object, you can easily traverse all of its managed associations. Doing that with a DTO projection requires a custom result mapping.</p>
+
+
+
+<p>The JPA specification defines a constructor expression for <a href="https://thorben-janssen.com/jpql/">JPQL queries</a>, which gets executed for each record in the result set and doesn’t support nested constructor calls. That’s more than good enough to map your query result to a flat data structure. But you can’t map a query result that consists of multiple records to a DTO object that contains a list of other complex objects.</p>
+
+
+
+<p>This article will show you the best way to map such a query result programmatically and how to use <a href="https://thorben-janssen.com/hibernate-resulttransformer/">Hibernate’s&nbsp;<em>ResultTransformer</em></a><em>&nbsp;</em>to let Hibernate handle the result.</p>
+
+
+
+<h2 class="wp-block-heading">Mapping the Result Programmatically</h2>
+
+
+
+<p>The most obvious solution to avoid the described shortcomings of JPA&#8217;s constructor expressions is to write your own mapping using Java&#8217;s Stream API. That&#8217;s a good approach if you need that mapping only for one query.</p>
+
+
+
+<p>The 2 main benefits of a DTO projection are that you avoid the management overhead of an entity projection and only select the database columns you need in your business code. If you map the query result yourself, you need to ensure that you keep these benefits. That requires you to use a scalar value projection and not an entity projection. </p>
+
+
+
+<p>You can retrieve a scalar value projection as an <em>Object[]</em> or a <em>Tuple </em>interface. The <em>Tuple </em>interface supports alias-based access to its elements and is my preferred representation of a scalar projection. I use it in the following code snippet to get the result as a <em>Stream</em> of <em>Tuple</em>s. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">Stream&lt;Tuple&gt; resultStream = em.createQuery("select t.id as tournament_id, " +
+											"t.name as tournament_name, " +
+											"g.id as game_id, " +
+											"g.round as game_round " +
+											"from ChessGame g " +
+											"join g.chessTournament t", Tuple.class)
+											.getResultStream();
+        
+Map&lt;Long, ChessTournamentDto&gt; chessTournamentDtoMap = new LinkedHashMap&lt;&gt;();
+List&lt;ChessTournamentDto&gt; chessTournamentDtos = resultStream
+		.map(tuple -&gt; {
+			ChessTournamentDto chessTournamentDto = chessTournamentDtoMap.computeIfAbsent(tuple.get("tournament_id", Long.class), 
+																						  id -&gt; new ChessTournamentDto(tuple.get("tournament_id", Long.class), 
+																													   tuple.get("tournament_name", String.class)));
+			chessTournamentDto.getGames()
+							  .add(new ChessGameDto(tuple.get("game_id", Long.class), 
+													tuple.get("game_round", Integer.class)));
+			return chessTournamentDto;
+		})
+		.distinct()
+		.collect(Collectors.toList());</pre>
+
+
+
+<p>The main challenge of the mapping code is to only instantiate 1 <em>ChessTournamentDto </em>object for each <em>tournament_id</em> and add all associated <em>ChessGameDto </em>objects to its <em>Set </em>of <em>games</em>. I store all <em>ChessTournamentDto </em>objects in the <em>chessTournamentDtoMap</em> and check that <em>Map </em>before instantiating a new object. I then create a new <em>ChessGameDto </em>object and add it to the <em>Set</em> of <em>games</em>.</p>
+
+
+
+<p>After the mapping is done, I remove the duplicates from the <em>Stream </em>and collect them as a <em>List</em>.</p>
+
+
+
+<h2 class="wp-block-heading">Create a Custom ResultTransformer</h2>
+
+
+
+<p>You can implement a similar mapping using Hibernate&#8217;s <em>ResultTranformer</em>. The specific implementation of the transformer depends on your Hibernate version: </p>
+
+
+
+<ul><li>In Hibernate 4 and 5, you need to implement the <em>ResultTransformer </em>interface and its <em>transformTuple</em> and <em>transformList </em>methods. </li><li>In Hibernate 6, the <em>ResultTranformer </em>interface got split into the <em>TupleTransformer </em>and the <em>ResultListTransformer</em> interface. For this mapping, you need to implement the <em>TupleTransformer </em>interface and its <em>transformTuple </em>method. </li></ul>
+
+
+
+<p>The method signature and your implementation of the <em>transformTuple</em> method are identical for all Hibernate versions.</p>
+
+
+
+<p>Here you can see the implementation of the <em>ResultTransformer </em>interface for Hibernate 4 and 5. I use the same algorithm in the <em>transformTuple</em> method as in the previous example. The <em>transformList </em>method ignores the transformed <em>List </em>of the result and uses the <em>chessTournamentDtoMap </em>to remove the duplicates from the query result.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">// Implementation for Hibernate 4 and 5
+public class ChessTournamentDtoTransformer implements ResultTransformer {
+
+    private static final String TOURNAMENT_ID = "tournament_id";
+    private static final String TOURNAMENT_NAME = "tournament_name";
+    private static final String GAME_ID = "game_id";
+    private static final String GAME_ROUND = "game_round";
+
+    private final Map&lt;Long, ChessTournamentDto&gt; chessTournamentDtoMap = new LinkedHashMap&lt;&gt;();    
+
+    @Override
+    public Object transformTuple(Object[] objects, String[] aliases) {
+        List&lt;String&gt; aliasList = Arrays.asList(aliases);
+        Map&lt;String, Object&gt; tupleMap = aliasList.stream()
+                                                .collect(Collectors.toMap(a -&gt; a, 
+                                                                          a -&gt; objects[aliasList.indexOf(a)]));
+
+        ChessTournamentDto chessTournamentDto = chessTournamentDtoMap.computeIfAbsent((Long)tupleMap.get(TOURNAMENT_ID), 
+                                                                                      id -&gt; new ChessTournamentDto((Long)tupleMap.get(TOURNAMENT_ID), 
+                                                                                                                   (String)tupleMap.get(TOURNAMENT_NAME)));
+
+        chessTournamentDto.getGames().add(new ChessGameDto((Long)tupleMap.get(GAME_ID), 
+                                                           (Integer)tupleMap.get(GAME_ROUND)));
+
+        return chessTournamentDto;
+    }
+
+    @Override
+    public List&lt;ChessTournamentDto&gt; transformList(List list) {
+        return new ArrayList&lt;&gt;(chessTournamentDtoMap.values());
+    }
+}</pre>
+
+
+
+<p>After you define your <em>ResultTransformer</em>, you can assign it to your query. Hibernate will call the <em>transformTuple </em>method for each record in the result set and the <em>transformList </em>method for the entire result.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">List&lt;ChessTournamentDto&gt; dtos = em.createQuery("select t.id as tournament_id, " +
+												"t.name as tournament_name, " +
+												"g.id as game_id, " +
+												"g.round as game_round " +
+												"from ChessGame g " +
+												"join g.chessTournament t")
+								  .unwrap(Query.class)
+								  .setResultTransformer(new ChessTournamentDtoTransformer())
+								  .list();</pre>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>You can use JPA&#8217;s constructor expression and Hibernate&#8217;s standard <em>ResultTransformer </em>to map each record of your result set to a DTO object. But mapping the result to a more complex data structure, e.g., one that contains a <em>List </em>of other DTO objects, requires a custom mapping. </p>
+
+
+
+<p>You can select a scalar value projection and map it using Java&#8217;s Stream API or implement a Hibernate-specific <em>ResultTransformer</em>. In both cases, your mapping code operates on the result set records. Each record includes the values of a parent DTO and a child DTO object. Within your mapping, you need to instantiate both objects and use the parent DTO object to group your result.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

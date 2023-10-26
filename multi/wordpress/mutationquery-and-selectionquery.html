@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>MutationQuery and SelectionQuery in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>MutationQuery and SelectionQuery in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>One of the smaller changes in Hibernate 6 that can easily get overlooked, which Steve Ebersole presented in a recent <a href="/lessons/whats-new-in-hibernate-6-guest-steve-ebersole/">Expert Session in the Persistence Hub</a>, is the introduction of the <em>MutationQuery </em>and <em>SelectionQuery </em>interfaces. It allows the separation between queries that change data and the ones that select it from the database. </p>
+
+
+
+<p>Older Hibernate versions and the JPA specification use the <em>Query </em>interface to handle both types of queries. It extends the <em>SelectionQuery </em>and <em>MutationQuery</em> interfaces. And you can, of course, still use that interface with Hibernate 6. But the 2 new interfaces are much cleaner because each only defines the methods you can use with the corresponding type of query. And as I will show you in this article, it also enables a stricter validation of the provided statement.</p>
+
+
+
+<h2 class="wp-block-heading" id="unwrapping-a-hibernate-session">Unwrapping a Hibernate Session</h2>
+
+
+
+<p>Before we take a closer look at the 2 new interfaces, I want to quickly show you how to get a Hibernate <em>Session</em> if you&#8217;re using Hibernate as your JPA implementation. In that case, you often inject an <em>EntityManager </em>instance and not Hibernate&#8217;s proprietary <em>Session</em>. You can get the underlying <em>Session </em>by calling the <em>unwrap </em>method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+Session s = em.unwrap(Session.class);
+</pre></div>
+
+
+<h2 class="wp-block-heading" id="selectionquery-r-querying-data-from-the-database"><em>SelectionQuery&lt;R&gt; </em>&#8211; Querying data from the database</h2>
+
+
+
+<p>Getting Hibernate&#8217;s <em>SelectionQuery </em>interface is quite simple. After you get a <em>Session</em> instance, you can call the <em>createSelectionQuery</em> method with a JPQL query <em>String </em>or a <em>CriteriaQuery </em>object. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+SelectionQuery&lt;Book&gt; q = s.createSelectionQuery(&quot;SELECT b FROM Book b WHERE b.title = :title&quot;, Book.class);
+q.setParameter(&quot;title&quot;, &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;);
+List&lt;Book&gt; books = q.getResultList();
+</pre></div>
+
+
+<p>You can also call the <em>createNamedSelectionQuery</em> method with the name of a <em>@NamedQuery</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+SelectionQuery&lt;Book&gt; q = s.createNamedSelectionQuery(&quot;Book.selectByTitle&quot;, Book.class);
+q.setParameter(&quot;title&quot;, &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;);
+List&lt;Book&gt; books = q.getResultList();
+</pre></div>
+
+
+<h3 class="wp-block-heading" id="improved-statement-validation">Improved statement validation</h3>
+
+
+
+<p>One of the advantages of the <em>SelectionQuery</em> interface is the improved validation. When Hibernate instantiates the <em>SelectionQuery</em>, it immediately validates the query statement. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Session s = em.unwrap(Session.class);
+SelectionQuery&lt;Book&gt; q = s.createSelectionQuery(&quot;UPDATE Book SET title = upper(title)&quot;, Book.class);
+List&lt;Book&gt; books = q.getResultList();
+</pre></div>
+
+
+<p>If you provided a modifying instead of a select statement, Hibernate throws an <em>IllegalSelectQueryException</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:27:35,288 INFO  &#91;com.thorben.janssen.model.TestQueryInterfaces] - Hibernate threw the expected IllegalSelectQueryException.
+10:27:35,289 INFO  &#91;com.thorben.janssen.model.TestQueryInterfaces] - org.hibernate.query.IllegalSelectQueryException: Expecting a selection query, but found `UPDATE Book SET title = upper(title)` &#91;UPDATE Book SET title = upper(title)]
+</pre></div>
+
+
+<h3 class="wp-block-heading" id="cleaner-api">Cleaner API</h3>
+
+
+
+<p>Another advantage of the <em>SelectionQuery </em>interface is the much cleaner interface. It only provides the methods to configure and execute a query that selects data. But no methods specific to update operations, like the <em>executeUpdate </em>method. You can find all method definitions in the <a href="https://docs.jboss.org/hibernate/orm/6.0/javadocs/org/hibernate/query/SelectionQuery.html">Javadoc</a>. A few examples are:</p>
+
+
+
+<ul>
+<li>the <em>getResultList </em>and <em>getResultStream </em>methods to get a query result containing multiple records,</li>
+
+
+
+<li>the <em>getSingleResult</em> method to get a query result that has precisely 1 record,</li>
+
+
+
+<li>different versions of the <em>setParameter</em> method to set the value of a bind parameter used in your query, </li>
+
+
+
+<li>the <em>setFirstResult</em> and <em>setMaxResult </em>methods to define pagination, </li>
+
+
+
+<li>the setHint method to <a href="https://thorben-janssen.com/11-jpa-hibernate-query-hints-every-developer-know/">provide a query hint</a> and </li>
+
+
+
+<li>various methods to configure the cache handling.</li>
+</ul>
+
+
+
+<h2 class="wp-block-heading" id="mutationquery-implementing-modifying-queries"><em>MutationQuery </em>&#8211; Implementing modifying queries</h2>
+
+
+
+<p>There are much fewer things you can define for modifying queries, and that&#8217;s why the <em>MutationQuery </em>interface benefits the most from the separation. The&nbsp;<em>MutationQuery</em>&nbsp;interface is much cleaner and easier to use than the&nbsp;<em>Query</em>&nbsp;interface by excluding all selection-specific methods.&nbsp;It only defines:</p>
+
+
+
+<ul>
+<li>the <em>executeUpdate </em>method to execute the modifying query,</li>
+
+
+
+<li>multiple versions of the <em>setParameter </em>method to provide bind parameter values,</li>
+
+
+
+<li>2 methods to define the JPA and the Hibernate-specific <a href="https://thorben-janssen.com/flushmode-in-jpa-and-hibernate/">FlushMode</a> and</li>
+
+
+
+<li>a method to set a query timeout, a <a href="https://thorben-janssen.com/hibernate-tips-query-comments/">query comment</a>, and a <a href="https://thorben-janssen.com/11-jpa-hibernate-query-hints-every-developer-know/">query hint</a>.</li>
+</ul>
+
+
+
+<h3 class="wp-block-heading" id="defining-a-mutationquery">Defining a MutationQuery</h3>
+
+
+
+<p>You can instantiate a <em>MutationQuery </em>in a similar way as the <em>SelectionQuery</em>. If you want to use a JPQL or Criteria statement, you have to call the <em>createMutationQuery </em>method on Hibernate&#8217;s <em>Session </em>interface and provide a <em>String </em>with your JPQL statement, or a <em>CriteriaUpdate</em> or <em>CriteriaDelete </em>object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Session s = em.unwrap(Session.class);
+MutationQuery q = s.createMutationQuery(&quot;UPDATE Book SET title = upper(title)&quot;);
+q.executeUpdate();
+</pre></div>
+
+
+<p>If you define a <em>@NamedQuery</em> for your statement, you can instantiate it by calling the <em>createNamedMutationQuery </em>method with the name of your <em>@NamedQuery</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Session s = em.unwrap(Session.class);
+MutationQuery q = s.createNamedMutationQuery(&quot;Book.updateTitle&quot;);
+q.executeUpdate();
+</pre></div>
+
+
+<p>By calling the <em>createNativeMutationQuery</em>, you can also instantiate a <em>MutationQuery</em> interface using a native SQL statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Session s = em.unwrap(Session.class);
+MutationQuery q = s.createNativeMutationQuery(&quot;UPDATE Book SET title = upper(title)&quot;);
+q.executeUpdate();
+</pre></div>
+
+
+<p>In all 3 cases, Hibernate returns an instance of the same <em>MutationQuery</em> interface, which you can then use to configure and execute your modifying statement.</p>
+
+
+
+<h3 class="wp-block-heading" id="improved-validation">Improved validation</h3>
+
+
+
+<p>Like the&nbsp;<em>SelectionQuery</em>&nbsp;interface, Hibernate validates the provided statement when you instantiate a&nbsp;<em>MutationQuery</em>. If your provided statement selects data instead of modifying it, Hibernate throws an <em>IllegalMutationQueryException</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Session s = em.unwrap(Session.class);
+try {
+	MutationQuery q = s.createMutationQuery(&quot;SELECT b FROM Book b&quot;);
+	fail(&quot;Expected an IllegalMutationQueryException&quot;);
+} catch (IllegalMutationQueryException e) {
+	log.info(&quot;Hibernate threw the expected IllegalMutationQueryException.&quot;);
+	log.info(e);
+}
+</pre></div>
+
+
+<p>As you can see in the <a href="https://thorben-janssen.com/hibernate-logging-guide/">log output</a>, the exception message clearly describes the problem.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:42:47,778 INFO  &#91;com.thorben.janssen.model.TestQueryInterfaces] - Hibernate threw the expected IllegalMutationQueryException.
+10:42:47,779 INFO  &#91;com.thorben.janssen.model.TestQueryInterfaces] - org.hibernate.query.IllegalMutationQueryException: Expecting a mutation query, but found `SELECT b FROM Book b`
+</pre></div>
+
+
+<h2 class="wp-block-heading" id="conclusion">Conclusion</h2>
+
+
+
+<p>Hibernate 6 brings a bunch of changes. The <em>SelectionQuery </em>and <em>MutationQuery </em>interfaces are some of the smaller ones. They provide a much cleaner API than the often used <em>Query</em> interface because they focus on a specific type of operation:</p>
+
+
+
+<ul>
+<li>The <em>SelectionQuery </em>interface defines the methods required to create, configure and execute a query that selects data from the database. </li>
+
+
+
+<li>The <em>MutationQuery </em>interface does the same for UPDATE and DELETE statements.</li>
+</ul>
+
+
+
+<p>Designing an interface for a specific type of operation enabled removing all the unnecessary methods and the design of much cleaner interfaces.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

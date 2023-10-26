@@ -1,0 +1,275 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Modeling sequence-based composite primary keys with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Modeling sequence-based composite primary keys with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Some <a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">primary keys</a> consist of more than 1 entity attribute or database column. These are called composite primary keys. They often contain a foreign key reference to a parent object or represent a complex natural key. Another reason to use composite keys is combining a domain-specific value with a simple counter, e.g., an order type and the order number. If this counter gets incremented independently, most developers want to use a database sequence for it.</p>
+
+
+
+<p>On the database level, you can model this easily. Your primary key definition references all columns that are part of the primary key. A sequence is an independent object. You request a value during your insert operation and set it as the value of your counter. </p>
+
+
+
+<p>The mapping to a JPA entity includes a few challenges that we will solve in this article.</p>
+
+
+
+<h2 class="wp-block-heading">Modelling a composite primary key</h2>
+
+
+
+<p>If you want to model a JPA entity that uses a composite primary key, you need to provide 1 class representing this key. Your persistence provider and cache implementations use objects of this class internally to identify an entity object. The class has to model all attributes that are part of the primary key. It also needs to have a no-args constructor and implement the <em>Serializable </em>interface and the <em>equals</em> and <em>hashCode</em> methods.</p>
+
+
+
+<p>After you implemented that class, you need to decide if you want to use it as an <em>@EmbeddedId</em> or an <em>@IdClass</em>. There are a few important differences between these mappings, which I explain in more detail in my <a href="/advanced-hibernate-online-training-wst/">Advanced Hibernate Online Training</a>. In this article, I will only give you a quick introduction to both options. I will also explain why this is one of the few situations in which an <em>@IdClass</em> is your better option.</p>
+
+
+
+<h3 class="wp-block-heading">Mapping an @EmbeddedId</h3>
+
+
+
+<p>As the name indicates, the mapping of a composite primary key as an <em>@EmbeddedId</em> requires an embeddable. This simple Java class defines a reusable piece of mapping information that becomes part of the entity. If you want to use the embeddable as an identifier, it also needs to fulfill JPA’s previously mentioned requirements of an identifier.</p>
+
+
+
+<p>Here you can see a simple example of a <em>ChessGameId</em> embeddable that models the attributes <em>id</em> and <em>tournamentCode</em>. I want to use them as the identifying attributes of my <em>ChessGame</em> entity class.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Embeddable
+public class ChessGameId implements Serializable {
+
+    private Long id;
+
+    private String tournamentCode;
+
+    public ChessGameId() {
+    }
+
+    public ChessGameId(Long id, String tournamentCode) {
+        this.id = id;
+        this.tournamentCode = tournamentCode;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, tournamentCode);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        ChessGameId chessGameId = (ChessGameId) obj;
+        return id.equals(chessGameId.id) &amp;&amp; tournamentCode.equals(chessGameId.tournamentCode);
+    }
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<p>The only thing special about this mapping is the <em>@Embeddable</em> annotation. It tells the persistence provider that all attributes and mapping information shall become part of the entity that uses <em>ChessGameId </em>as an attribute type.</p>
+
+
+
+<p>Next, I use this embeddable in my <em>ChessGame</em> entity class and annotate it with <em>@EmbeddedId</em>. That tells Hibernate to include all mapped attributes of <em>ChessGameId</em> in this entity and use them as the primary key.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class ChessGame {
+
+    @EmbeddedId
+    private ChessGameId chessGameId;
+
+    private LocalDate date;
+
+    private int round;
+
+    @Version
+    private int version;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessTournament chessTournament;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessPlayer playerWhite;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessPlayer playerBlack;
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<h4 class="wp-block-heading"><em>@EmbeddedId</em>s don&#8217;t support generated attributes</h4>
+
+
+
+<p>All of this might look like a straightforward mapping of a composite primary key. And that would be the case if you don&#8217;t want to use a database sequence or an auto-incremented column to generate the primary key value. </p>
+
+
+
+<p>The <em>@GeneratedValue</em> annotation is supposed to be used on an attribute annotated with <em>@Id</em>. But none of the attributes of the <em>ChessGameId</em> class are annotated with that annotation. Due to that, Hibernate ignores the <em>@GeneratedValue</em> annotation in the following code snippet. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Embeddable
+public class ChessGameId implements Serializable {
+
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;game_seq&quot;)
+    @SequenceGenerator(name = &quot;game_seq&quot;, sequenceName = &quot;game_seq&quot;, initialValue = 100)
+    private Long id;
+
+    private String tournamentCode;
+
+    public ChessGameId() {
+    }
+
+    public ChessGameId(Long id, String tournamentCode) {
+        this.id = id;
+        this.tournamentCode = tournamentCode;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, tournamentCode);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        ChessGameId chessGameId = (ChessGameId) obj;
+        return id.equals(chessGameId.id) &amp;&amp; tournamentCode.equals(chessGameId.tournamentCode);
+    }
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<p>When you persist a new <em>ChessGame</em> entity object, the value of the <em>id </em>attribute stays null.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">15:09:29,337 DEBUG SQL:144 - insert into ChessGame (chessTournament_id, date, playerBlack_country, playerBlack_id, playerWhite_country, playerWhite_id, round, version, id, tournamentCode) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+15:09:29,348  WARN SqlExceptionHelper:137 - SQL Error: 0, SQLState: 23502
+15:09:29,348 ERROR SqlExceptionHelper:142 - ERROR: null value in column &quot;id&quot; violates not-null constraint</pre>
+
+
+
+<h3 class="wp-block-heading">Mapping an <em>IdClass</em></h3>
+
+
+
+<p>If you want to map a composite primary key and generate the value of one of its attributes using a sequence or auto-incremented column, you need to use an <em>IdClass</em>. The main difference to the previous mapping is that you model all entity attributes on your entity class. The attributes of the <em>IdClass</em> don&#8217;t become part of the entity definition. They only mirror the identifying attributes.</p>
+
+
+
+<p>The <em>IdClass </em>itself is a basic Java class. As defined by the JPA specification, it requires a default constructor and has to implement the <em>Serializable </em>interface and the <em>equals</em> and <em>hashCode</em> methods. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class ChessPlayerId implements Serializable {
+
+    private Long id;
+
+    private String country;
+
+    public ChessPlayerId() {
+    }
+
+    public ChessPlayerId(Long id, String country) {
+        this.id = id;
+        this.country = country;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, country);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+        ChessPlayerId chessPlayerId = (ChessPlayerId) obj;
+        return id.equals(chessPlayerId.id) &amp;&amp; country.equals(chessPlayerId.country);
+    }
+}</pre>
+
+
+
+<p>The type and name of the <em>IdClass&#8217;s</em> attributes need to match the attributes of the entity class that you annotated with <em>@Id</em>. Your persistence provider, in my case Hibernate, then keeps both sets of attributes automatically in sync.</p>
+
+
+
+<p>After you define your <em>IdClass</em>, you need to annotate your entity class with an <em>@IdClass </em>annotation and reference that class. In contrast to the previous example, the entity class maps all database columns, including those that are part of the identifier. You need to annotate these attributes with an <em>@Id</em> annotation. This is an obvious difference from the previous example. It enables you also to annotate one or more of them with a <em>@GeneratedValue</em> annotation.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+@IdClass(ChessPlayerId.class)
+public class ChessPlayer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;player_seq&quot;)
+    @SequenceGenerator(name = &quot;player_seq&quot;, sequenceName = &quot;player_seq&quot;, initialValue = 100)
+    private Long id;
+    
+    @Id
+    private String country;
+
+    private String lastName;
+
+    private String firstName;
+
+    private LocalDate birthDate;
+
+    @OneToMany(mappedBy = &quot;playerWhite&quot;)
+    private Set&lt;ChessGame&gt; gamesWhite;
+
+    @OneToMany(mappedBy = &quot;playerBlack&quot;)
+    private Set&lt;ChessGame&gt; gamesBlack;
+
+    @Version
+    private int version;
+	
+    // getter and setter methods
+}</pre>
+
+
+
+<p>In this mapping, the <em>id</em> attribute of the <em>ChessPlayer</em> entity class is annotated with an <em>@Id</em> and a <em>@GeneratedValue</em> annotation. The persistence provider no longer ignores the <em>@GeneratedValue</em> annotation and gets a  value from the database sequence before persisting a new entity object.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">15:42:35,368 DEBUG SQL:144 - select nextval (&#039;player_seq&#039;)
+15:42:35,388 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, country, id) values (?, ?, ?, ?, ?, ?)</pre>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>JPA and Hibernate support 2 mappings to model composite primary keys. I generally prefer the mapping of composite primary keys as <em>@EmbeddedId</em>s. But it doesn&#8217;t support generated identifier values and can&#8217;t be used in this situation. That&#8217;s because you can only use the <em>@GeneratedValue</em> annotation on an attribute that&#8217;s annotated with <em>@Id</em>. And when using an <em>@EmbeddedId</em>, none of your primary key attributes are annotated with <em>@Id</em>.</p>
+
+
+
+<p>Only the mapping as an <em>IdClass </em>supports composite primary keys that use generated identifier values. You model all attributes on your entity class and annotate them with the required mapping annotations. You also need to annotate your entity class with an <em>@IdClass</em> annotation and reference a class that contains all identifying attributes and fulfills JPA&#8217;s requirements of an identifier class.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>FlushMode in JPA and Hibernate – What it is and how to change it</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>FlushMode in JPA and Hibernate – What it is and how to change it</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>The&nbsp;<em>FlushMode</em>&nbsp;defines when new entities and your changes on existing ones get written to the database. This might seem like a simple and obvious mechanism. But I recognized in my <a href="/join-persistence-hub/">Q&amp;A calls</a> that it often causes some confusion because, by default, Hibernate doesn’t perform a flush when you call the&nbsp;<em>persist&nbsp;</em>method on your&nbsp;<em>EntityManager</em>, or the&nbsp;<em>save&nbsp;</em>method on your Spring Data JPA repository. It also doesn’t only perform a flush at the end of the transaction, even though this is an important and guaranteed trigger of a flush operation.</p>
+
+
+
+<p>The specific flush handling depends on the combination of the configured <em>FlushMode</em>, the type of operations you&#8217;re executing, and some Hibernate-specific optimizations. I&#8217;ll explain all of that in this article.</p>
+
+
+
+<h2 class="wp-block-heading">FlushModes supported by JPA and Hibernate</h2>
+
+
+
+<p>The JPA specification only defines the <em>FlushModeType</em>s <em>AUTO </em>and <em>COMMIT</em>. Hibernate extends this by the <em>FlushModeType</em>s <em>ALWAYS </em>and <em>MANUAL</em>. Let&#8217;s take a closer look at all 4 modes.</p>
+
+
+
+<h3 class="wp-block-heading">FlushModeType.AUTO (JPA &amp; Hibernate)</h3>
+
+
+
+<p>The JPA specification defines the&nbsp;<em>FlushModeType.AUTO</em>&nbsp;as the default flush mode. It flushes the persistence context in 2 situations:</p>
+
+
+
+<ul><li>before the transaction gets committed and</li><li>before executing&nbsp;a query that uses any database table for which your persistence context contains any pending changes.</li></ul>
+
+
+
+<p>Flushing the persistence context before the transaction gets committed should be obvious and not require any deeper explanation. But the 2nd situation is a little more complex and requires you to know how Hibernate determines which database tables a query affects. This is based on the <a href="/hibernate-query-spaces/">query space I explained in a previous article</a>.</p>
+
+
+
+<p>For every <a href="https://thorben-janssen.com/jpql/">JPQL</a> or Criteria Query, Hibernate generates the SQL statement. It, therefore, knows which database tables are used in the query. Hibernate can use that when performing a dirty check on all entity objects in the current persistence context. If it finds a dirty entity mapped to one of the tables referenced by the query, it needs to flush these changes to the database.</p>
+
+
+
+<h4 class="wp-block-heading">Detecting the query space</h4>
+
+
+
+<p>Here you can see a simple example that persists a new <em>ChessPlayer </em>entity before it selects all <em>ChessTournament</em> entities in the first and the <em>ChessPlayer</em> with the <em>firstName </em>Magnus in the 2nd query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+em.persist(player);
+
+em.createQuery(&quot;SELECT t from ChessTournament t&quot;).getResultList();
+
+Query q = em.createQuery(&quot;SELECT p FROM ChessPlayer p WHERE p.firstName = :firstName&quot;);
+q.setParameter(&quot;firstName&quot;, &quot;Magnus&quot;);
+q.getResultList();
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the log output, Hibernate doesn&#8217;t flush the new <em>ChessPlayer</em> entity before it executes the query that selects all <em>ChessTournament </em>entities. That query doesn’t reference the&nbsp;<em>ChessPlayer</em>&nbsp;table, and the new&nbsp;<em>ChessPlayer&nbsp;</em>will not affect the query result. Hibernate can, therefore, delay the insert statement&#8217;s execution, which might create some <a href="https://thorben-janssen.com/tips-to-boost-your-hibernate-performance/">performance benefits</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+11:56:14,076 DEBUG SQL:144 - select nextval ('player_seq')
+11:56:14,085 DEBUG SQL:144 - select nextval ('player_seq')
+11:56:14,188 DEBUG SQL:144 - select chesstourn0_.id as id1_2_, chesstourn0_.endDate as enddate2_2_, chesstourn0_.name as name3_2_, chesstourn0_.startDate as startdat4_2_, chesstourn0_.version as version5_2_ from ChessTournament chesstourn0_
+11:56:14,213 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
+11:56:14,219 DEBUG SQL:144 - select chessplaye0_.id as id1_1_, chessplaye0_.birthDate as birthdat2_1_, chessplaye0_.firstName as firstnam3_1_, chessplaye0_.lastName as lastname4_1_, chessplaye0_.version as version5_1_ from ChessPlayer chessplaye0_ where chessplaye0_.firstName=?
+</pre></div>
+
+
+<p>But that changes when Hibernate selects a <em>ChessPlayer </em>with the <em>firstName</em> Magnus. That JPQL query references the <em>ChessPlayer </em>table, and Hibernate doesn&#8217;t know if the new <em>ChessPlayer</em> entity will affect the query result. It, therefore, flushes the entity and generates an SQL INSERT statement for it before it executes the query.</p>
+
+
+
+<p>It gets a little more complex if you execute a <a href="https://thorben-janssen.com/jpa-native-queries/">native SQL query</a>. As I explained in my guide to Hibernate&#8217;s query spaces, Hibernate can&#8217;t determine which tables a native SQL query uses. You should, therefore, <a href="/hibernate-query-spaces/#Query_Spaces_in_Native_Queries">register the query space</a> for each native query. Otherwise, Hibernate isn&#8217;t able to decide if it needs to flush the persistence context. It, therefore, flushes the persistence context to ensure that the query returns the correct results.</p>
+
+
+
+<p>You can see an example of this in the following code snippet. This time, I persist a new <em>ChessPlayer</em> entity and execute 2 native SQL queries that select all <em>ChessTournament </em>entities. For the 1st one, I register the <em>ChessTournament</em> entity as the query space. And for the 2nd one, I don&#8217;t register the query space. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+em.persist(player);
+
+// with defined query space
+Query q = em.createNativeQuery(&quot;SELECT * from ChessTournament&quot;, ChessTournament.class);
+q.unwrap(SynchronizeableQuery.class).addSynchronizedEntityClass(ChessTournament.class);
+q.getResultList();
+
+// without query space
+em.createNativeQuery(&quot;SELECT * from ChessTournament&quot;, ChessTournament.class).getResultList();
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the log output, the 1st quey doesn&#8217;t trigger a flush of the new <em>ChessPlayer </em>entity. Hibernate checked the query space and knew that the new <em>ChessPlayer </em>entity isn&#8217;t relevant for this native query. </p>
+
+
+
+<p>But the 2nd query triggered a flush. This is the same query statement as the previous one, but I didn&#8217;t register the query space. Due to that, Hibernate didn&#8217;t know if the query referenced the <em>ChessPlayer </em>table and had to flush the new entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:01:38,984 DEBUG SQL:144 - select nextval ('player_seq')
+12:01:38,992 DEBUG SQL:144 - select nextval ('player_seq')
+12:01:39,037 DEBUG SQL:144 - SELECT * from ChessTournament
+12:01:39,058 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
+12:01:39,066 DEBUG SQL:144 - SELECT * from ChessTournament
+</pre></div>
+
+
+<h3 class="wp-block-heading">FlushModeType.COMMIT (JPA &amp; Hibernate)</h3>
+
+
+
+<p>The <em>FlushModeType.COMMIT</em> requires a flush before committing the transaction but doesn&#8217;t define what needs to happen before executing a query. When using Hibernate 5 or 6, executing any query doesn&#8217;t flush any pending changes.</p>
+
+
+
+<p>You can see that in the following example that persists a new <em>ChessPlayer</em> before selecting all <em>ChessPlayer</em> entities from the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+em.persist(player);
+
+List&lt;ChessPlayer&gt; players = em.createQuery(&quot;SELECT p from ChessPlayer p&quot;).getResultList();
+for (ChessPlayer p : players) {
+	log.info(p);
+}
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>The JPQL query that selects all <em>ChessPlayer </em>entities doesn&#8217;t cause a flush of the newly persisted <em>ChessPlayer</em> entity. Due to that, the player isn&#8217;t part of the query result.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:14:17,117 DEBUG SQL:144 - select nextval ('player_seq')
+12:14:17,125 DEBUG SQL:144 - select nextval ('player_seq')
+12:14:17,225 DEBUG SQL:144 - select chessplaye0_.id as id1_1_, chessplaye0_.birthDate as birthdat2_1_, chessplaye0_.firstName as firstnam3_1_, chessplaye0_.lastName as lastname4_1_, chessplaye0_.version as version5_1_ from ChessPlayer chessplaye0_
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen, birthDate=1990-09-30, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=2, firstName=Jorden, lastName=van Foreest, birthDate=1999-04-30, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=3, firstName=Anish, lastName=Giri, birthDate=1994-06-28, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0]
+12:14:17,249 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h3 class="wp-block-heading">FlushModeType.ALWAYS (Hibernate)</h3>
+
+
+
+<p>The <em>FlushModeType.ALWAYS</em> is Hibernate-specific and tells Hibernate to flush the persistence context before executing a query. Using this mode, Hibernate doesn&#8217;t check if the flush is required and handles all types of queries in the same way.</p>
+
+
+
+<p>In the following example, I persist a new <em>ChessPlayer</em> entity before selecting all <em>ChessTournament </em>entities from the database. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+em.persist(player);
+
+em.createQuery(&quot;SELECT t from ChessTournament t&quot;).getResultList();
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>The new player doesn&#8217;t change the query result, and the flush wouldn&#8217;t be necessary. But because I configured <em>FlushModeType.ALWAYS</em>, Hibernate flushes the persistence context anyways.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:29:41,306 DEBUG SQL:144 - select nextval ('player_seq')
+12:29:41,318 DEBUG SQL:144 - select nextval ('player_seq')
+12:29:41,449 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
+12:29:41,459 DEBUG SQL:144 - select chesstourn0_.id as id1_2_, chesstourn0_.endDate as enddate2_2_, chesstourn0_.name as name3_2_, chesstourn0_.startDate as startdat4_2_, chesstourn0_.version as version5_2_ from ChessTournament chesstourn0_
+</pre></div>
+
+
+<h3 class="wp-block-heading">FlushModeType.MANUAL (Hibernate)</h3>
+
+
+
+<p>The <em>FlushModeType.MANUAL</em> is the 2nd Hibernate-specific mode. It deactivates all automatic flushes and requires the application to trigger the flushes automatically.</p>
+
+
+
+<p>I use this in the following example when persisting a new&nbsp;<em>ChessPlayer</em>, selecting all&nbsp;<em>ChessPlayer</em>&nbsp;entities from the database and flushing the persistence context.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+em.persist(player);
+
+List&lt;ChessPlayer&gt; players = em.createQuery(&quot;SELECT p from ChessPlayer p&quot;).getResultList();
+for (ChessPlayer p : players) {
+	log.info(p);
+}
+		
+em.flush();
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>I deactivated all automatic flushes, and the JPQL query no longer caused a flush of the newly persisted&nbsp;<em>ChessPlayer&nbsp;</em>entity. Due to that, the player isn’t part of the query result and doesn’t get flushed until I call the&nbsp;<em>EntityManager.flush()</em>&nbsp;method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+14:50:16,552 DEBUG SQL:144 - select nextval ('player_seq')
+14:50:16,559 DEBUG SQL:144 - select nextval ('player_seq')
+14:50:16,652 DEBUG SQL:144 - select chessplaye0_.id as id1_1_, chessplaye0_.birthDate as birthdat2_1_, chessplaye0_.firstName as firstnam3_1_, chessplaye0_.lastName as lastname4_1_, chessplaye0_.version as version5_1_ from ChessPlayer chessplaye0_
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen, birthDate=1990-09-30, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=2, firstName=Jorden, lastName=van Foreest, birthDate=1999-04-30, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=3, firstName=Anish, lastName=Giri, birthDate=1994-06-28, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0]
+14:50:16,678 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<p>I don&#8217;t recommend using <em>FlushModeType.MANUAL</em>. It creates a high risk that you miss flushing some changes to the database or that some of your queries don&#8217;t use the latest changes.</p>
+
+
+
+<p>Some teams try to use it to improve the performance of their persistence layer. But in almost all cases, delaying the flush operation only improves the performance if you implemented your persistence layer in the wrong way. It only hides performance issues instead of solving it. </p>
+
+
+
+<p>Considering the high risks this <em>FlushMode </em>introduces, I recommend fixing these performance problems instead of hiding them. This usually doesn&#8217;t require more work than implementing and testing the manual flush handling.</p>
+
+
+
+<h2 class="wp-block-heading">How to configure the FlushMode</h2>
+
+
+
+<p>You can configure the flush mode globally or set it for each database query. This enables you to define a standard flush mode for your application and override it for a specific query.</p>
+
+
+
+<p>You can set the standard flush mode for your application by configuring the property <em>org.hibernate.flushMode</em> in your <em>persistence.xml</em> file. By default, the <em>FlushMode</em> is set to AUTO, and I recommend you <strong>DON&#8217;T </strong>change it.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+
+        &lt;properties&gt;
+            &lt;property name=&quot;org.hibernate.flushMode&quot; value=&quot;COMMIT&quot;/&gt;
+			
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>The way you can configure a query-specific flush mode depends on the <em>FlushModeType </em>you want to set. If you want to use the <em>FlushModeTypes </em>AUTO or COMMIT, which are defined by the JPA specification, you can call the <em>setFlushMode </em>method on your <em>Query </em>or <em>TypedQuery </em>interface.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createQuery(&quot;SELECT p from ChessPlayer p&quot;);
+q.setFlushMode(FlushModeType.COMMIT);
+q.getResultList();
+</pre></div>
+
+
+<p>And if you want to use a Hibernate-specific flush mode, you need to use Hibernate&#8217;s <em>Session </em>to create your query and call its <em>setHibernateFlushMode </em>method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createQuery(&quot;SELECT p from ChessPlayer p&quot;);
+q.unwrap(org.hibernate.query.Query.class).setHibernateFlushMode(FlushMode.ALWAYS);
+q.getResultList();
+</pre></div>
+
+
+<h2 class="wp-block-heading">Triggering flush programmatically</h2>
+
+
+
+<p>As you already saw in the section on <em>FlushModeType.MANUAL</em>, you can trigger a flush programmatically by calling the <em>EntityManager.flush</em> method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+Query q = em.createQuery(&quot;SELECT p from ChessPlayer p&quot;);
+q.setFlushMode(FlushModeType.COMMIT);
+q.getResultList();
+
+// trigger a flush		
+em.flush();
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>If you&#8217;re using <em>FlushModeType </em>AUTO or COMMIT, this should only be necessary if you use a JPQL or Criteria query to perform a bulk update or remove operations. Hibernate’s automatic flush handling is easier to use and more efficient in all other cases.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>The <em>FlushMode </em>defines when your persistence provider flushes new and changed entities to the database. </p>
+
+
+
+<p>Based on the JPA specification, it can either do that automatically before executing a query and before committing the transaction (<em>FlushModeType.AUTO</em>) or only before committing the transaction (<em>FlushModeType.COMMIT</em>).</p>
+
+
+
+<p>Hibernate supports 2 additional FlushModes that you can use to flush the persistence context before every query (<em>FlushModeType.ALWAYS</em>)or to manage the flushes programmatically and deactivate all automatic flushes (<em>FlushModeType.MANUAL</em>).</p>
+
+
+
+<p>I recommend using <em>FlushMode</em>Type<em>.AUTO</em> for all persistence layers. It avoids the risk that you might miss flushing a pending change or that a query works on outdated data. And Hibernate provides its own optimization, based on the <a href="https://thorben-janssen.com/hibernate-query-spaces/">query space</a>, to avoid any unnecessary flushes.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

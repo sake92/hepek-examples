@@ -1,0 +1,287 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Java Records as Embeddables with Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Java Records as Embeddables with Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Since the release of Java’s record feature, I got asked how you could use records with Hibernate. Until Hibernate 6, I had to tell you that JPA and Hibernate only supported records as <a href="https://thorben-janssen.com/java-records-hibernate-jpa/" target="_blank" rel="noreferrer noopener">DTO projections</a>. That finally changed with the release of Hibernate 6.0 and got even easier with Hibernate 6.2. Unfortunately, you still can&#8217;t use records to model your entities, but you can at least use them as an <em>@Embeddable</em>.</p>
+
+
+
+<p>Before I show you how to define that mapping, I want to quickly summarize what records are and why JPA doesn&#8217;t support them. If you&#8217;re already familiar with that, feel free to skip the next section and <a href="#model">go directly to the modeling section</a>.</p>
+
+
+
+<h2 class="wp-block-heading">Records and why JPA doesn’t support them</h2>
+
+
+
+<p>The JDK introduced records to provide a carrier for immutable data that’s comfortable to use and easier to declare than a class. They achieved that by reducing the declaration of a record to 3 simple parts:</p>
+
+
+
+<ol>
+<li>the name of the record, </li>
+
+
+
+<li>optional type parameters, and </li>
+
+
+
+<li>a list of record components.</li>
+</ol>
+
+
+
+<p>As you can see in the following code snippet, you can provide all of that in just 1 line of code. That declaration defines a record with the name <em>Address </em>and its 3 components of type <em>String </em>with the names <em>street</em>, <em>city</em>, and <em>postalCode</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public record Address (String street, String city, String postalCode) {}
+</pre></div>
+
+
+<p>The record class is <em>final </em>and automatically provides all the infrastructure code required by a data class. These are:</p>
+
+
+
+<ul>
+<li>a <em>private final</em> field and a <em>public</em> accessor method for every component. Both share the same name as the component,</li>
+
+
+
+<li>a canonical constructor that matches the record declaration,</li>
+
+
+
+<li>an implementation of the <em>equals </em>method that compares the type and all component values,</li>
+
+
+
+<li>an implementation of the <em>hashCode </em>method that includes all component values,</li>
+
+
+
+<li>an implementation of the <em>toString </em>method that includes all component names and values.</li>
+</ul>
+
+
+
+<p>As you can see, a record automatically provides you with all the boilerplate code you previously let your IDE generate. So, it&#8217;s understandable that everyone wants to use them to model their entities. </p>
+
+
+
+<p>But you might have already recognized that the definition of a record doesn&#8217;t fulfill JPA&#8217;s requirements of an entity. These are:</p>
+
+
+
+<ul>
+<li>It has to be a top-level class annotated with @Entity.</li>
+
+
+
+<li><strong>It can&#8217;t be final.</strong></li>
+
+
+
+<li>It has to provide a <strong>public or protected, parameter-less constructor</strong>.</li>
+
+
+
+<li>It has to declare an identifier that consists of at least 1 attribute.</li>
+</ul>
+
+
+
+<p>As mentioned earlier, a record class is implicitly final and doesn&#8217;t provide a parameter-less constructor. That makes it impossible to use it as a JPA entity class. Until now, Hibernate also doesn&#8217;t provide any proprietary extensions that enable you to use a record as an entity class. But you can use them to model embeddable classes.</p>
+
+
+
+<h2 class="wp-block-heading" id="model">Modeling embeddables as records</h2>
+
+
+
+<p>In version 6, Hibernate introduced the <em>EmbeddableInstantiator</em> feature that makes the instantiation of an embeddable more flexible. As a side-effect, this also enables you to map a record as an embeddable.</p>
+
+
+
+<p>An embeddable is a reusable mapping component that you can use as an attribute type. The embeddable object then becomes part of the entity, doesn&#8217;t have its own lifecycle, and gets mapped to the same database table as the entity class. </p>
+
+
+
+<p>If the information stored in the embeddable is immutable, modeling it as a record class seems obvious. But the JPA specification also requires it to be a non-final class and define a public, parameter-less constructor. So, if you want to create a specification-compliant entity model, you can&#8217;t use records.</p>
+
+
+
+<p>If you only need to support Hibernate in at least version 6.0, you can implement a proprietary <em>EmbeddableInstantiator</em> and use a record as an embeddable. And with Hibernate 6.2, you don’t even need to implement that instantiator yourself.</p>
+
+
+
+<h3 class="wp-block-heading">Hibernate &gt;= 6.2</h3>
+
+
+
+<p>Starting with version 6.2, Hibernate supports record classes as embeddables. You only need to define a record class and annotate it with&nbsp;<em>@Embeddable</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+public record Address (String street, String city, String postalCode) {}
+</pre></div>
+
+
+<p>In this example, I want to use the <em>Address</em> record class with the components <em>street</em>, <em>city</em>, and <em>postalCode </em>as an embeddable. This requires an <em>@Embeddable</em> annotation, which is defined by the JPA specification. It tells the persistence provider that this class can be embedded into entity objects.</p>
+
+
+
+<p>After you define your embeddable record, you can use it like any other embeddable. You define an entity attribute of that record type and annotate it with&nbsp;<em>@Embedded</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+	
+	@Embedded
+	private Address address;
+
+	private String firstName;
+	private String lastName;	
+	...
+}
+</pre></div>
+
+
+<p>After that, you can use the entity and its attributes to read and write your data. Just keep in mind that the information represented by the record is immutable.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+
+Author a = em.find(Author.class, authorId);
+System.out.println(a.getAddress());
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:43:51,155 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.street,a1_0.city,a1_0.postalCode,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.id=?
+17:43:51,155 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;BIGINT] - &#91;1]
+Address: Address&#91;street=homeStreet, city=homeCity, postalCode=12345]
+</pre></div>
+
+
+<h3 class="wp-block-heading">Hibernate &gt;= 6.0</h3>
+
+
+
+<p>As mentioned earlier, modeling an embeddable as a record class requires some extra effort if you&#8217;re using Hibernate 6.0 or 6.1. For those Hibernate versions, you need to provide an <em>EmbeddableInstantiator </em>for each embeddable record. Everything else is identical to the code I showed you in the previous section.</p>
+
+
+
+<p>The <a href="https://thorben-janssen.com/hibernate-embeddableinstantiator/"><em>EmbeddableInstantiator</em></a> enables you to provide the code Hibernate uses to instantiate an embeddable when fetching it from the database. You can use this feature in 2 steps. You need to implement the <em>EmbeddableInstantiator </em>interface and reference it in your embeddable definition.</p>
+
+
+
+<p>Let&#8217;s first define the embeddable and tell Hibernate to use a custom <em>EmbeddableInstatiator</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+@EmbeddableInstantiator(AddressInstantiator.class)
+public record Address (String street, String city, String postalCode) {}
+</pre></div>
+
+
+<p>As you can see, the definition of the embeddable looks very similar to the one I showed you in the previous section. The only difference is the <em>@EmbeddableInstantiator</em> annotation. It’s a Hibernate-specific annotation defining which class Hibernate shall call to instantiate the embeddable. In this example, that’s the <em>AddressInstantiator</em> class.</p>
+
+
+
+<p>The implementation of that class is simple. It implements the <em>EmbeddableInstantiator</em> interface, which defines 3 methods. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class AddressInstantiator implements EmbeddableInstantiator {
+
+    Logger log = LogManager.getLogger(this.getClass().getName());
+
+    public boolean isInstance(Object object, SessionFactoryImplementor sessionFactory) {
+        return object instanceof Address;
+    }
+
+    public boolean isSameClass(Object object, SessionFactoryImplementor sessionFactory) {
+        return object.getClass().equals( Address.class );
+    }
+
+    public Object instantiate(ValueAccess valuesAccess, SessionFactoryImplementor sessionFactory) {
+        // valuesAccess contains attribute values in alphabetical order
+        final String city = valuesAccess.getValue(0, String.class);
+        final String postalCode = valuesAccess.getValue(1, String.class);
+        final String street = valuesAccess.getValue(2, String.class);
+        log.info(&quot;Instantiate Address embeddable for &quot;+street+&quot; &quot;+postalCode+&quot; &quot;+city);
+        return new Address( street, city, postalCode );
+    }
+
+}
+</pre></div>
+
+
+<p>The <em>instantiate</em> method is the most important one of the <em>EmbeddableInstantiator</em> interface. Hibernate calls it with a <em>ValueAccess</em> object that contains all attribute values of the embeddable in the alphabetical order of their names. As you can see in the code snippet, you can access them by index and cast them to their specific type. After you extract all parameters, you can use them to instantiate your record object.</p>
+
+
+
+<p>Let&#8217;s use this embeddable and its instantiator with the same entity class and test case as in the previous section.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+	
+	@Embedded
+	private Address address;
+
+	private String firstName;
+	private String lastName;	
+	...
+}
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+
+Author a = em.find(Author.class, authorId);
+System.out.println(a.getAddress());
+</pre></div>
+
+
+<p>As the log output shows, Hibernate calls the <em>AddressInstantiator </em>class with all attribute values and instantiates an <em>Address </em>record when it fetches the <em>Author </em>entity from the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:24:59,987 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.city,a1_0.postalCode,a1_0.street,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.id=?
+17:24:59,987 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;BIGINT] - &#91;1]
+17:24:59,991 INFO  &#91;org.thoughts.on.java.model.AddressInstantiator] - Instantiate Address embeddable for homeStreet 12345 homeCity
+17:24:59,992 INFO  &#91;org.thoughts.on.java.model.AddressInstantiator] - Instantiate Address embeddable for homeStreet 12345 homeCity
+Address &#91;city=homeCity, postalCode=12345, street=homeStreet]
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Java records are simple carrier classes for immutable data. That makes them look like an obvious candidate for entity classes and embeddables.</p>
+
+
+
+<p>But the JPA specification requires entity and embeddable classes to be non-final and to provide a parameter-less constructor. A record class doesn&#8217;t fulfill these requirements. It&#8217;s implicitly final and provides a constructor with a parameter for each record component. Due to that, the JPA specification only allows you to use <a href="https://thorben-janssen.com/java-records-hibernate-jpa/">record classes as DTO projections</a>.</p>
+
+
+
+<p>Hibernate 6 is more flexible. It allows you to use final classes for embeddables and enables you to customize their instantiation. This enables you to use records as embeddables. </p>
+
+
+
+<p>If you&#8217;re using version 6.0 or 6.1, you need to implement your own <em>EmbeddableInstantiator</em> implementation for each embeddable record class. Since version 6.2, that class is no longer required. Hibernate now finds and uses the constructor provided by your embeddable record class.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

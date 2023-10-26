@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – Detecting Your Entity’s State</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JPA – Detecting Your Entity’s State</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Spring Data JPA&#8217;s repositories provide many methods that implement the standard operations you need to create a basic persistence layer. One of them is the&nbsp;<em>save(S entity)</em>&nbsp;method, which the CrudRepository defines. When you call this method, it depends on the entity object&#8217;s state which database operation Spring Data JPA performs. Spring Data JPA stores a new record in the database if you call the method with a new entity object. And if you provide an object that has already been persisted in the database, Spring Data JPA executes an SQL UPDATE statement instead.</p>
+
+
+
+<p>To decide which of these 2 operations it has to perform, Spring Data JPA needs to find out if the entity object represents an existing database record or not. This is called state detection and gets triggered by the <em>save(S entity)</em> implementation in Spring Data JPA&#8217;s <em>SimpleJpaRepository</em> class.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">/*
+ * (non-Javadoc)
+ * @see org.springframework.data.repository.CrudRepository#save(java.lang.Object)
+ */
+@Transactional
+@Override
+public &lt;S extends T&gt; S save(S entity) {
+
+	Assert.notNull(entity, &quot;Entity must not be null.&quot;);
+
+	if (entityInformation.isNew(entity)) {
+		em.persist(entity);
+		return entity;
+	} else {
+		return em.merge(entity);
+	}
+}</pre>
+
+
+
+<p>The call of the <em>isNew(S entity)</em> method returns the detected state. Spring Data JPA supports 3 different strategies to detect the state of an entity, which I will show you in the following sections.</p>
+
+
+
+<h2 class="wp-block-heading">Property-based state detection &#8211; the default</h2>
+
+
+
+<p>The default state detection strategy relies on your entity&#8217;s properties. If it includes a version property, Spring Data JPA uses it to detect the state. Otherwise, it uses the primary key attribute.</p>
+
+
+
+<h3 class="wp-block-heading">Version-based state detection</h3>
+
+
+
+<p>If you&#8217;re using optimistic locking to prevent concurrent modifications, you annotate one of your entity&#8217;s properties with <em>@Version</em>. Your persistence provider, which in most cases is Hibernate, then uses that property to track the version of that object and its mapped database record. The JPA specification defines different ways and data types to track the version of an entity. The easiest and most efficient one is a simple counter that your persistence provider increments during each write operation.</p>
+
+
+
+<p>Spring Data JPA also uses the version property to detect new entity objects it needs to persist. The persistence provider manages the property&#8217;s value and sets it for the first time when persisting the entity. Due to that, the version property of a new entity object is null. And if it contains any value, the entity object maps an existing database record, which Spring needs to update.</p>
+
+
+
+<h3 class="wp-block-heading">Primary key-based state detection</h3>
+
+
+
+<p>The primary key-based state detection is very similar to the version-based approach. The only difference is that Spring Data JPA checks if the primary key attribute is null instead of checking the version attribute. If it&#8217;s null, Spring treats the entity as a new object and persists it. Otherwise, it expects the entity to be an existing one and updates the corresponding database record.</p>
+
+
+
+<p>If you ever used an entity class with a programmatically assigned primary key, you might have already recognized a downside of this approach: It only works for automatically assigned primary keys, e.g., when using a database sequence or autoincrement column.</p>
+
+
+
+<p>The reason for that is that if you assign the primary key value of a new entity object programmatically, you need to do that before calling the <em>save</em> method on your repository. Otherwise, the primary key value will not be set when your persistence provider persists entity object. But if you set it before calling the <em>save</em> method, Spring Data JPA can&#8217;t detect that you want to persist a new entity object. </p>
+
+
+
+<h2 class="wp-block-heading">Implement <em>Persistable</em></h2>
+
+
+
+<p>The <em>Persistable</em> interface provides a simple option to customize the state detection algorithm used for a specific entity class. It defines the <em>isNew()</em> method, which Spring Data JPA calls to determine the state of an entity object. By implementing that method, you can adjust the detection algorithm to the specific needs of your domain model.</p>
+
+
+
+<p>The following code snippet shows an implementation commonly used with entity classes that use a programmatically assigned primary key and no version attribute. As explained in the previous section, Spring Data JPA&#8217;s default detection algorithm can&#8217;t handle these entities.</p>
+
+
+
+<p>In that case, you can use a transient boolean attribute to track the entity&#8217;s state and return it in the&nbsp;<em>isNew()</em>&nbsp;method. When you create a new object, the attribute gets initialized with true. The&nbsp;<em>@PostLoad</em>&nbsp;and&nbsp;<em>@PrePersist</em>&nbsp;annotations on the&nbsp;<em>trackNotNew()</em>&nbsp;method ensure that your persistence provider calls this method after it fetched an entity object from the database or before it persists it. The method then changes the&nbsp;<em>isNew</em>&nbsp;flag to false.</p>
+
+
+
+<pre class="wp-block-preformatted brush: xml; gutter: true">@Entity
+public class ChessGame implements Persistable&lt;Long&gt; {
+
+    @Id
+    private Long id;
+
+    @Transient
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PrePersist
+    void trackNotNew() {
+        this.isNew = false;
+    }
+	
+    ...
+}</pre>
+
+
+
+<p>If you need this type of check for multiple entity classes, I recommend <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">modeling and extending a <em>@MappedSuperclass</em></a> that provides the <em>isNew</em> attribute and both methods.</p>
+
+
+
+<h2 class="wp-block-heading">Implement EntityInformation</h2>
+
+
+
+<p>Implementing the <em>EntityInformation </em>interface is not a commonly used or recommended approach to customize the state detection algorithm. Most teams either rely on the default algorithm or let the entity classes implement the&nbsp;<em>Persistable&nbsp;</em>interface. Because of that, I’m only explaining this approach on a theoretical level and recommend using a&nbsp;<em>@MappedSuperclass</em>&nbsp;that implements the&nbsp;<em>Persistable&nbsp;</em>interface.</p>
+
+
+
+<p>To use this approach, you need to implement the <em>EntityInformation </em>interface. You also need to extend the <em>JpaRepositoryFactory </em>class and override the <em>getEntityInformation </em>method to return your <em>EntityInformation</em> implementation. </p>
+
+
+
+<p>Spring&#8217;s <em>SimpleJpaRepository </em>class will then call your implementation of the <em>EntityInformation</em> interface to detect the state of every entity object. So, better make sure to use a fast and generic algorithm that works for all your entity classes.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>When you call Spring Data JPA&#8217;s <em>save(S entity)</em> method, it has to decide if you provided a new entity object it needs to persist or if it has to update an existing database record. This process is called state detection.</p>
+
+
+
+<p>By default, Spring Data JPA checks if the entity object has a version attribute. If that&#8217;s the case and the attribute&#8217;s value is null, it considers the entity a new object. In case your entity doesn&#8217;t have a version attribute, Spring Data checks the primary key attribute. If the primary key is null, Spring Data JPA persists the object as a new entity. Otherwise, it tries updating an existing record.</p>
+
+
+
+<p>If you want to customize the state detection algorithm, your entity class must implement the&nbsp;<em>Persistable</em>&nbsp;interface with its&nbsp;<em>isNew()</em>&nbsp;method. Within that method, you can access all attributes of your entity and implement your own check. Developers often do this for entity classes that use a programmatically assigned primary key and don&#8217;t have a version attribute.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

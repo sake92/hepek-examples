@@ -1,0 +1,380 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Migrating to Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Migrating to Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Hibernate 6 has been released for a while, and I see more and more teams migrating their persistence layers or at least preparing for the migration. As so often, the work required for the migration to Hibernate 6 depends on your code quality and the Hibernate version you&#8217;re currently using.</p>
+
+
+
+<p>For most applications using Hibernate 5, the migration is relatively quick and easy. But you will have to fix and update a few things if you&#8217;re still using an older Hibernate version or some of the features deprecated in Hibernate 5.</p>
+
+
+
+<p>In this article, I will show you the most important steps to prepare your application for migration and what you need to do when migrating your application. </p>
+
+
+
+<p>If you want to get into more details, see an example migration, and learn what you should do after the migration, you should <a href="/join-persistence-hub/">join the Persistence Hub</a>. I showed all of that in great detail in a recent Expert Session, and Steve Ebersole (Hibernate 6 Lead Developer) did a deep dive into Hibernate 6 in a previous Expert Session. As a member, you can find the recording of both sessions in the archives.</p>
+
+
+
+<h2 class="wp-block-heading">Prepare your persistence layer for Hibernate 6</h2>
+
+
+
+<p>Not all of the changes introduced in Hibernate 6 are backward compatible. Luckily, you can handle most of them before you perform the migration. That enables you to implement the required changes step by step while still using Hibernate 5. So you will avoid breaking your application, and you can prepare the migration over multiple releases or sprints.</p>
+
+
+
+<h3 class="wp-block-heading">Update to JPA 3</h3>
+
+
+
+<p>One example of such a change is the migration to JPA 3. That version of the JPA specification didn&#8217;t bring any new features. But for legal reasons, all package and configuration parameter names got renamed from <em>javax.persistence.*</em> to <em>jakarta.persistence.*</em>. </p>
+
+
+
+<p>Besides other things, this change affects the import statements for all mapping annotations and the <em>EntityManager</em> and breaks all persistence layers. The easiest way to fix it is to use the search and replace feature in your IDE. Replacing all occurrences of <em>javax.persistence</em> with <em>jakarta.persistence</em> should fix the compiler errors and update your configuration.</p>
+
+
+
+<p>Hibernate 6 uses JPA 3 by default, and you could run the search and replace command as part of your migration. But I recommend changing your project&#8217;s dependency from <em>hibernate-core</em> to <em>hibernate-core-jakarta</em> and performing this change while you&#8217;re still using Hibernate 5.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;dependency&gt;
+	&lt;groupId&gt;org.hibernate&lt;/groupId&gt;
+	&lt;artifactId&gt;hibernate-core-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;5.6.12.Final&lt;/version&gt;
+&lt;/dependency&gt;
+</pre></div>
+
+
+<h3 class="wp-block-heading">Replace Hibernate&#8217;s Criteria API</h3>
+
+
+
+<p>Another important step to prepare your persistence layer for Hibernate 6 is to replace Hibernate’s Criteria API. That API has been deprecated since the first release of Hibernate 5, and you might have already replaced it. But I know that that’s not the case for many applications.</p>
+
+
+
+<p>You can easily check if you&#8217;re still using Hibernate&#8217;s proprietary Criteria API by checking your deprecation warnings. If you find any deprecation warning telling you that the method <em>createCriteria(Class)</em> is deprecated, you&#8217;re still using Hibernate&#8217;s old API and need to replace it. Unfortunately, you can no longer postpone that change. Hibernate 6 no longer supports the old, proprietary Criteria API.</p>
+
+
+
+<p>JPA&#8217;s and Hibernate&#8217;s Criteria API are similar. They enable you to build a query dynamically at runtime. Most developers use that to create a query based on user input or the result of some business rules. But even though both APIs share the same name and goals, there is no easy migration path.</p>
+
+
+
+<p>Your only option is to remove Hibernate’s Criteria API from your persistence layer. You need to reimplement your queries using JPA&#8217;s Criteria API. Depending on the number of queries you need to replace and their complexity, this might take a while. Hibernate 5 supports both Criteria APIs, and I recommend you replace the old queries one by one before you upgrade to Hibernate 6.</p>
+
+
+
+<p>Every query is different and requires different steps to migrate it. That makes it difficult to estimate how long such a replacement will take and how to do it. But a while ago, I wrote a guide explaining <a href="/migration-criteria-api">how to migrate the most commonly used query features from Hibernate&#8217;s to JPA&#8217;s Criteria API</a>.</p>
+
+
+
+<h3 class="wp-block-heading">Define SELECT clauses for your queries</h3>
+
+
+
+<p>For all the query statements you can statically define while implementing your application, you’re most likely using <a href="https://thorben-janssen.com/jpql/">JPQL</a> or the Hibernate-specific extension called HQL.</p>
+
+
+
+<p>When using HQL, Hibernate can generate the SELECT clause of your query based on the FROM clause. In that case, your query selects all entity classes referenced in the FROM clause. Unfortunately, this changed in Hibernate 6 for all queries that join multiple entity classes.</p>
+
+
+
+<p>In Hibernate 5, a query that joins multiple entity classes returns an <em>Object[]</em> or a <em>List&lt;Object[]&gt;</em> containing all entities joined in the FROM clause.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+// query with implicit SELECT clause
+List&lt;Object&#91;]&gt; results = em.createQuery(&quot;FROM Author a JOIN a.books b&quot;).getResultList();
+</pre></div>
+
+
+<p>So, for the query statement in the previous code snippet, Hibernate generated a SELECT clause that referenced the <em>Author </em>and the <em>Book </em>entity. The generated statement was identical to the following one.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+--generated query using Hibernate 5
+SELECT a, b FROM Author a JOIN a.books b
+</pre></div>
+
+
+<p>For the same HQL statement, Hibernate 6 only generates a SELECT clause that selects the root object of your FROM clause. In this example, it would only select the&nbsp;<em>Author&nbsp;</em>entity but not the&nbsp;<em>Book</em>&nbsp;entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+--generated query using Hibernate 6
+SELECT a FROM Author a JOIN a.books
+</pre></div>
+
+
+<p>This change doesn’t cause any compiler errors but causes problems in the code that processes the query result. In the best cases, you have some test cases that will find these bugs.</p>
+
+
+
+<p>But I recommend adding a SELECT clause that references the <em>Author </em>and <em>Book </em>entity while you&#8217;re still using Hibernate 5. This will not change anything for Hibernate 5, but it ensures that you get the same query result using Hibernate 6 as you got using Hibernate 5.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+// define SELECT clause
+List&lt;Object&#91;]&gt; results = em.createQuery(&quot;SELECT a, b FROM Author a JOIN a.books b&quot;).getResultList();
+</pre></div>
+
+
+<h2 class="wp-block-heading">Migrating to Hibernate 6</h2>
+
+
+
+<p>After implementing the changes described in the previous section, your migration to Hibernate 6 should be easy and only require a few configuration changes.</p>
+
+
+
+<h3 class="wp-block-heading">Default sequence names</h3>
+
+
+
+<p>The generation of unique primary key values is the 1st thing you should check after you migrate your persistence layer to Hibernate 6. You need to apply a small change if you use database sequences and don’t specify a sequence for every entity.</p>
+
+
+
+<p>Here you can see an example of an <em>Author </em>entity that only sets the <a href="/jpa-generate-primary-keys/">generation strategy to sequence</a> but doesn&#8217;t specify which sequence Hibernate shall use. In these situations, Hibernate uses a default sequence.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+	
+	...
+}
+</pre></div>
+
+
+<p>In versions 4 and 5, Hibernate used 1 default sequence for the entire persistence unit. It was called <em>hibernate_sequence</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+08:18:36,724 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('hibernate_sequence')
+08:18:36,768 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        Author
+        (firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?)
+</pre></div>
+
+
+<p>As I showed in a <a href="/sequence-naming-strategies-in-hibernate-6/">recent article</a>, Hibernate 6 changed this approach. By default, it uses a different sequence for every entity class. The name of that sequence consists of the entity&#8217;s name and the postfix <em>_SEQ</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+08:24:21,772 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('Author_SEQ')
+08:24:21,778 WARN  &#91;org.hibernate.engine.jdbc.spi.SqlExceptionHelper] - SQL Error: 0, SQLState: 42P01
+08:24:21,779 ERROR &#91;org.hibernate.engine.jdbc.spi.SqlExceptionHelper] - ERROR: relation &quot;author_seq&quot; does not exist
+  Position: 16
+</pre></div>
+
+
+<p>This approach is fine, and many developers will feel more comfortable with it. But it breaks existing applications because the entity-specific sequences don’t exist in the database.</p>
+
+
+
+<p>You have 2 options to solve this problem:</p>
+
+
+
+<ol>
+<li><a href="/database-migration/">Update your database schema</a> to add the new sequences.</li>
+
+
+
+<li>Add a configuration parameter to tell Hibernate to use the old default sequences.</li>
+</ol>
+
+
+
+<p>When working on the migration, I recommend using the 2nd approach. It&#8217;s the quickest and easiest way to solve the problem, and you can still add the new sequences in a future release.</p>
+
+
+
+<p>You can tell Hibernate to use the old default sequences by configuring the property <em>hibernate.id.db_structure_naming_strategy</em> in your <a href="https://thorben-janssen.com/jpa-persistence-xml/">persistence.xml</a>. Setting this value to&nbsp;<em>single</em>&nbsp;gets you the default sequences used by Hibernate &lt;5.3. And the configuration value&nbsp;<em>legacy</em>&nbsp;gets you the default sequence names used by Hibernate &gt;=5.3.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;!-- ensure backward compatibility --&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;legacy&quot; /&gt;
+
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>I explained all of this in more detail in my guide to the <a href="/sequence-naming-strategies-in-hibernate-6">sequence naming strategies used by Hibernate 6</a>.</p>
+
+
+
+<h3 class="wp-block-heading">Instant and Duration mappings</h3>
+
+
+
+<p>Another change that you can easily overlook until the deployment of your migrated persistence layer fails is the <a href="https://thorben-janssen.com/hibernate-jpa-date-and-time/">mapping of <em>Instant</em> and <em>Duration</em></a>. </p>
+
+
+
+<p>When Hibernate introduced the proprietary mapping for these types in version 5, it mapped <em>Instant</em> to <em>SqlType.TIMESTAMP</em> and <em>Duration </em>to <em>Types.BIGINT</em>. Hibernate 6 changes this mapping. It now maps <em>Instant </em>to <em>SqlType.TIMESTAMP_UTC</em> and <em>Duration </em>to <em>SqlType.INTERVAL_SECOND</em>.</p>
+
+
+
+<p>These new mappings seem to be a better fit than the old ones. So, it&#8217;s good that they changed it in Hibernate 6. But it still breaks the table mapping of existing applications. If you run into that problem, you can set the configuration property <em>hibernate.type.preferred_instant_jdbc_type</em> to <em>TIMESTAMP</em> and <em>hibernate.type.preferred_duration_jdbc_type</em> to <em>BIGINT</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        &lt;properties&gt;
+            &lt;!-- ensure backward compatibility --&gt;
+            &lt;property name=&quot;hibernate.type.preferred_duration_jdbc_type&quot; value=&quot;BIGINT&quot; /&gt;
+            &lt;property name=&quot;hibernate.type.preferred_instant_jdbc_type&quot; value=&quot;TIMESTAMP&quot; /&gt;
+
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>These are 2 new configuration parameters introduced in Hibernate 6. Both are marked as <a href="https://thorben-janssen.com/incubating-features-in-hibernate-6/">incubating</a>. This means that they might change in the future. I, therefore, recommend you use them during your migration to Hibernate 6 and adjust your table model soon after so that it matches Hibernate&#8217;s new standard mapping.</p>
+
+
+
+<h3 class="wp-block-heading">New logging categories</h3>
+
+
+
+<p>If you read some of my previous articles about Hibernate 6, you should know that the Hibernate team rewrote the code that generates the query statements. One of the side effects of that change was a small change in the <a href="https://thorben-janssen.com/hibernate-logging-guide/">logging configuration</a>.</p>
+
+
+
+<p>In Hibernate 5, you need to activate trace logging for the category <em>org.hibernate.type.descriptor.sql</em> to log all bind parameter values and the values extracted from the result set.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;Configuration&gt;
+  ...
+  &lt;Loggers&gt;
+    &lt;Logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot;/&gt;
+    &lt;Logger name=&quot;org.hibernate.type.descriptor.sql&quot; level=&quot;trace&quot;/&gt;
+    ...
+  &lt;/Loggers&gt;
+&lt;/Configuration&gt;
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+19:49:20,330 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        this_.id as id1_0_1_,
+        this_.firstName as firstnam2_0_1_,
+        this_.lastName as lastname3_0_1_,
+        this_.version as version4_0_1_,
+        books3_.authors_id as authors_2_2_,
+        book1_.id as books_id1_2_,
+        book1_.id as id1_1_0_,
+        book1_.publisher_id as publishe4_1_0_,
+        book1_.title as title2_1_0_,
+        book1_.version as version3_1_0_ 
+    from
+        Author this_ 
+    inner join
+        Book_Author books3_ 
+            on this_.id=books3_.authors_id 
+    inner join
+        Book book1_ 
+            on books3_.books_id=book1_.id 
+    where
+        book1_.title like ?
+19:49:20,342 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;%Hibernate%]
+19:49:20,355 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_1_0_] : &#91;BIGINT]) - &#91;1]
+19:49:20,355 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_0_1_] : &#91;BIGINT]) - &#91;1]
+19:49:20,359 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;publishe4_1_0_] : &#91;BIGINT]) - &#91;1]
+19:49:20,359 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;title2_1_0_] : &#91;VARCHAR]) - &#91;Hibernate]
+19:49:20,360 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;version3_1_0_] : &#91;INTEGER]) - &#91;0]
+19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;firstnam2_0_1_] : &#91;VARCHAR]) - &#91;Max]
+19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;lastname3_0_1_] : &#91;VARCHAR]) - &#91;WroteABook]
+19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;version4_0_1_] : &#91;INTEGER]) - &#91;0]
+19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_1_0_] : &#91;BIGINT]) - &#91;1]
+19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_0_1_] : &#91;BIGINT]) - &#91;3]
+19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;firstnam2_0_1_] : &#91;VARCHAR]) - &#91;Paul]
+19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;lastname3_0_1_] : &#91;VARCHAR]) - &#91;WritesALot]
+19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;version4_0_1_] : &#91;INTEGER]) - &#91;0]
+</pre></div>
+
+
+<p>Hibernate 6 introduced a separate logging category for the bind parameter values. You can activate the logging of those values by configuring trace logging for the <em>org.hibernate.orm.jdbc.bind</em> category.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;Configuration&gt;
+  ...
+  &lt;Loggers&gt;
+    &lt;Logger name=&quot;org.hibernate.SQL&quot; level=&quot;debug&quot;/&gt;
+    &lt;Logger name=&quot;org.hibernate.orm.jdbc.bind&quot; level=&quot;trace&quot;/&gt;
+    ...
+  &lt;/Loggers&gt;
+&lt;/Configuration&gt;
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+19:52:11,012 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        a1_0.id,
+        a1_0.firstName,
+        a1_0.lastName,
+        a1_0.version 
+    from
+        Author a1_0 
+    join
+        (Book_Author b1_0 
+    join
+        Book b1_1 
+            on b1_1.id=b1_0.books_id) 
+                on a1_0.id=b1_0.authors_id 
+        where
+            b1_1.title like ? escape ''
+19:52:11,022 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;%Hibernate%]
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Hibernate 6 introduced a few changes that break backward compatibility. Not all of them require huge changes to the code of your persistence layer. It might be enough to only add a few configuration parameters to keep the old behavior.</p>
+
+
+
+<p>But 2 changes will require special attention. These are the update to JPA 3 and the removal of Hibernate’s deprecated Criteria API. I recommend you handle both while you’re still using Hibernate 5.</p>
+
+
+
+<p>The update to JPA 3 requires you to change the configuration parameter&#8217;s names, and the import statements of all classes, interfaces and annotations defined by the specification. But don&#8217;t worry. This usually sounds worse than it actually is. I migrated several projects by doing a simple search and replace operation in my IDE. This was usually done in a few minutes.</p>
+
+
+
+<p>The removal of Hibernate&#8217;s deprecated Criteria API will cause bigger issues. You will need to rewrite all queries that use the old API. I recommend you do that while you&#8217;re still using Hibernate 5. It still supports Hibernate&#8217;s old Criteria API and JPA&#8217;s Criteria API. So, you can replace one query after the other without breaking your application.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

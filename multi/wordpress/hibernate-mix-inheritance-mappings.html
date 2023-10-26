@@ -1,0 +1,186 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Mixing Inheritance Mapping Strategies with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Mixing Inheritance Mapping Strategies with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Inheritance is one of the key concepts in Java, and most development teams prefer using it in their domain model. Unfortunately, relational table models don&#8217;t support the concept of inheritance. The JPA specification defines multiple mapping strategies to bridge the gap between the object-oriented and the relational world. I explained them in great detail in my <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">Ultimate Guide to Inheritance Mappings</a>.</p>
+
+
+
+<p>When I recently taught these mappings strategies in an in-house workshop, I was asked if it&#8217;s possible to combine <em>InheritanceType.SINGLE_TABLE</em> with <em>InheritanceType.JOINED</em>. This is not an uncommon question, especially if the team is working on huge and complex enterprise applications. But the answer to that question is: No. Based on the JPA specification, persistence providers can support this, but they don&#8217;t have to. Hibernate doesn&#8217;t support the mix of multiple strategies.</p>
+
+
+
+<p>But in most cases, you can combine your inheritance mapping with a <em>@SecondaryTable</em> mapping to achieve your mapping goals. In this article, I will show you how to map this inheritance hierarchy</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter size-full"><img decoding="async" loading="lazy" width="516" height="412" src="https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-class-model.png" alt="" class="wp-image-35220" srcset="https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-class-model.png 516w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-class-model-300x240.png 300w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-class-model-376x300.png 376w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-class-model-50x40.png 50w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-class-model-100x80.png 100w" sizes="(max-width: 516px) 100vw, 516px" /></figure></div>
+
+
+
+<p>to the following table model.</p>
+
+
+
+<figure class="wp-block-image size-full"><img decoding="async" loading="lazy" width="850" height="494" src="https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model.png" alt="" class="wp-image-35219" srcset="https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model.png 850w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model-300x174.png 300w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model-768x446.png 768w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model-400x232.png 400w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model-624x363.png 624w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model-50x29.png 50w, https://thorben-janssen.com/wp-content/uploads/2021/11/Mixing-inhertinace-mappings-table-model-100x58.png 100w" sizes="(max-width: 850px) 100vw, 850px" /></figure>
+
+
+
+<h2 class="wp-block-heading">Defining your inheritance mapping</h2>
+
+
+
+<p>In the first step, you need to define your inheritance mapping. When using <em>InheritanceType.SINGLE_TABLE</em>, you&#8217;re mapping all classes of the inheritance hierarchy to the same database table. The type of each record gets stored in a discriminator column. I explained other mapping strategies in my <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">guide to inheritance mappings</a>.</p>
+
+
+
+<p>To define this mapping, you need to annotate your superclass with <em>@Entity</em> and <em>@Inheritance(strategy = InheritanceType.SINGLE_TABLE)</em>. You can also add the <em>@DiscriminatorColumn</em> annotation to define the name of your discriminator column.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = &quot;type&quot;, discriminatorType = DiscriminatorType.STRING)
+public abstract class ChessTournament { ... }
+</pre></div>
+
+
+<p>The definition of the subclasses is straightforward. They only need to extend the superclass, and you have to annotate them with <em>@Entity</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessSwissTournament extends ChessTournament { ... }
+</pre></div>
+
+
+<p>And the same is the case for all other levels of the inheritance hierarchy.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessSwissTournamentForMen extends ChessSwissTournament { ... }
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessSwissTournamentForWomen extends ChessSwissTournament { ... }
+</pre></div>
+
+
+<p>All entity objects of this inheritance hierarchy will get mapped to the table defined for the superclass. If you don&#8217;t annotate it with a <em>@Table</em> annotation, your persistence provider will use the simple class name as the table name.</p>
+
+
+
+<h2 class="wp-block-heading">Combining inheritance mappings with a <em>@Secondary</em> Table</h2>
+
+
+
+<p>After you mapped all classes of your inheritance hierarchy to the same database table, you can define a <a href="https://thorben-janssen.com/hibernate-tips-how-to-map-an-entity-to-multiple-tables/">secondary table</a> for each of them. This distributes the attributes of the entity class to 2 or more database tables. By doing that, you get relatively close to the table mapping you would get using a combination of <em>InheritanceType.SINGLE_TABLE</em> and <em>InheritanceType.JOINED</em>.</p>
+
+
+
+<p>Let&#8217;s add a <em>@SecondaryTable</em> annotation to the <em>ChessSwissTournament</em>, <em>ChessSwissTournamentForMen </em>and <em>ChessSwissTournamentForWomen </em>entity classes.</p>
+
+
+
+<p>In the example of the <em>ChessSwissTournament</em> entity class, I want to store the maximum number of players allowed for this tournament in the <em>maxPlayers </em>attribute. I want to map it to a column with the same name in the <em>ChessSwissTournament</em> table. This requires a <em>@SecondaryTable</em> annotation on the class to define the name of the secondary database table. This <a href="https://thorben-janssen.com/benefits-repeatable-annotations-hibernate-5-2/">annotation is <a target="_blank" href="https://thorben-janssen.com/benefits-repeatable-annotations-hibernate-5-2/" rel="noreferrer noopener">repeatable</a></a>, and you could define multiple secondary tables for your entity class. And you need to annotate the attribute with a <em>@Column</em> annotation and reference the name of the secondary table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@SecondaryTable(name = ChessSwissTournament.TABLE_NAME)
+public class ChessSwissTournament extends ChessTournament { 
+    static final String TABLE_NAME = &quot;ChessSwissTournament&quot;;
+
+    @Column(table = TABLE_NAME)
+    private int maxPlayers;
+
+    private int rounds;
+
+    // getter and setter methods
+}
+</pre></div>
+
+
+<p>The secondary table mapping of the <em>ChessSwissTournament</em> class gets inherited by all subclasses. On each subclass, you can define additional secondary tables using <em>@SecondaryTable</em> annotations. In this example, I use that to map the number of players with a Grand Master title playing in a <em>ChessSwissTournamentForMen </em>to a column in a separate table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@SecondaryTable(name = ChessSwissTournamentForMen.TABLE_NAME)
+public class ChessSwissTournamentForMen extends ChessSwissTournament {
+
+    static final String TABLE_NAME = &quot;ChessSwissTournamentMen&quot;;
+
+    @Column(table = TABLE_NAME)
+    private int gm;
+
+    // getter and setter methods
+}
+</pre></div>
+
+
+<p>And for the <em>ChessSwissTournamentForWomen </em>entity, I want to map the number of players with a Woman Grand Master title to a column in a different, separate table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@SecondaryTable(name = ChessSwissTournamentForWomen.TABLE_NAME)
+public class ChessSwissTournamentForWomen extends ChessSwissTournament {
+
+    static final String TABLE_NAME = &quot;ChessSwissTournamentWomen&quot;;
+
+    @Column(table = TABLE_NAME)
+    private int wgm;
+
+    // getter and setter methods
+}
+</pre></div>
+
+
+<p>Based on this mapping, Hibernate maps the entity classes to the table model that I showed you in the introduction of this article. Let&#8217;s use this mapping to persist a new <em>ChessSwissTournamentForMen </em>entity object. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessSwissTournamentForMen chessSwissTournamentForMen = new ChessSwissTournamentForMen();
+chessSwissTournamentForMen.setName(&quot;My local tournament&quot;);
+chessSwissTournamentForMen.setMaxPlayers(64);
+chessSwissTournamentForMen.setRounds(7);
+chessSwissTournamentForMen.setGm(4);
+em.persist(chessSwissTournamentForMen);
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>After activating my recommended development configuration, you can see in the log output that Hibernate inserted new records into the:</p>
+
+
+
+<ul><li><em>ChessTournament </em>table with all attributes defined by the <em>ChessTournament </em>class,</li><li><em>ChessSwissTournament</em> table with all attributes added by the <em>ChessSwissTournament </em>class and</li><li><em>ChessSwissTournamentMen </em>table with all attributes added by the <em>ChessSwissTournamentMen </em>class.</li></ul>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:36:06,996 DEBUG SQL:144 - select nextval ('tournament_seq')
+17:36:07,032 DEBUG SQL:144 - insert into ChessTournament (endDate, name, startDate, version, rounds, type, id) values (?, ?, ?, ?, ?, 'ChessSwissTournamentForMen', ?)
+17:36:07,037 DEBUG SQL:144 - insert into ChessSwissTournament (maxPlayers, id) values (?, ?)
+17:36:07,039 DEBUG SQL:144 - insert into ChessSwissTournamentMen (gm, id) values (?, ?)
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>As you saw in this article, even though Hibernate doesn&#8217;t support the mixing of inheritance mapping strategies, you can use the <em>@SecondaryTable</em> annotation to define additional tables to which your entity class gets mapped. This enables you to map your entity classes to a table structure similar to the combination of <em>InheritanceType.SINGLE_TABLE</em> and <em>InheritanceType.JOINED</em>.</p>
+
+
+
+<p>When using this, please be aware that for every query that selects one of the subclasses Hibernate will include a JOIN clause to all secondary tables defined by that subclass and its superclasses. This increases the complexity of the SQL statement and slows down its execution. </p>
+
+
+
+<p>Such a complex mapping also makes it much harder to understand and maintain your persistence layer. Therefore, I recommend simplifying your mapping as far as possible and not using a secondary table mapping on multiple levels of your inheritance hierarchy.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

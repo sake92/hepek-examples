@@ -1,0 +1,320 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Using Window Functions with Hibernate 5 &amp; 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Using Window Functions with Hibernate 5 &amp; 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>SQL is an incredibly powerful query language. It provides sheer endless possibilities to extract and transform information. One example of that is a window function. It enables you to perform operations on subsets of the table rows available in your query. </p>
+
+
+
+<p>The PostgreSQL documentation explains window functions as:</p>
+
+
+
+<blockquote class="wp-block-quote">
+<p>A&nbsp;window function&nbsp;performs a calculation across a set of table rows that are somehow related to the current row. This is comparable to the type of calculation that can be done with an aggregate function.</p>
+
+
+
+<p>However, window functions do not cause rows to become grouped into a single output row like non-window aggregate calls would. Instead, the rows retain their separate identities.</p>
+<cite><a href="https://www.postgresql.org/docs/current/tutorial-window.html" target="_blank" rel="noreferrer noopener">https://www.postgresql.org/docs/current/tutorial-window.html</a></cite></blockquote>
+
+
+
+<p>A common example of a window function is a query that selects all employees with their salary and includes the average salary of each employee’s department. Here is an example of such a query in PostgreSQL’s SQL dialect.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+SELECT firstName, 
+	   lastName, 
+	   department, 
+	   salary, 
+	   avg(salary) OVER (PARTITION BY department)
+FROM Employee e
+</pre></div>
+
+
+<p>You define the window function by adding an <em>OVER</em> clause to the call of an aggregating function. Within that clause, you can then specify the partition on which you want to apply the function, define the ordering within the partition, and limit your partition size. In this example, I keep it simple and only define a simple partition.</p>
+
+
+
+<p>As you can see in the following screenshot, the query returned the selected columns of the <em>Employee </em>table, calculated the average salary of every department, and ordered the employees of each department by their <em>firstName</em>.</p>
+
+
+
+<figure class="wp-block-image size-full"><img decoding="async" loading="lazy" width="966" height="246" src="https://thorben-janssen.com/wp-content/uploads/2023/02/Result-window-function-1.png" alt="" class="wp-image-39448" srcset="https://thorben-janssen.com/wp-content/uploads/2023/02/Result-window-function-1.png 966w, https://thorben-janssen.com/wp-content/uploads/2023/02/Result-window-function-1-300x76.png 300w, https://thorben-janssen.com/wp-content/uploads/2023/02/Result-window-function-1-768x196.png 768w, https://thorben-janssen.com/wp-content/uploads/2023/02/Result-window-function-1-624x159.png 624w" sizes="(max-width: 966px) 100vw, 966px" /></figure>
+
+
+
+<p>As a Hibernate user, you might now ask yourself how to use window functions. The answer depends on your Hibernate version. Starting with version 6, you can use window functions in your <a href="https://thorben-janssen.com/jpql/">JPQL queries</a>. Older Hibernate versions only support them via native queries. But if you know how to map a native query&#8217;s resultset, this doesn&#8217;t introduce any limitations.</p>
+
+
+
+<h2 class="wp-block-heading">Window functions in Hibernate 6</h2>
+
+
+
+<p>Hibernate 6 brings several proprietary improvements to JPQL. One of them is the support for window functions. That makes supporting different RDBMS and mapping your query results to a DTO projection a little easier.</p>
+
+
+
+<p>The syntax for using a window function in JPQL is very similar to SQL. You have to add an OVER clause to your function call to define the window function. Within that window function, you can then:</p>
+
+
+
+<ul>
+<li>Use the PARTITION BY keyword to define the frame on which you want to apply the function. </li>
+
+
+
+<li>Add an ORDER BY clause to order the elements within the frame.</li>
+
+
+
+<li>Add a ROWS, RANGE, or GROUPS clause to define how many rows, which value range, or how many different value groups shall be included in the frame. Not all RDMBS support the modes RANGE and GROUPS. So, please check your database&#8217;s documentation for more information.<br>The default frame includes the current and all prior rows within the current partition.</li>
+</ul>
+
+
+
+<p>Let’s use these features to implement the query I showed you in the introduction. As you can see in the code snippet, the JPQL statement looks identical to the SQL statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;Object&#91;]&gt; result = em.createQuery(&quot;&quot;&quot;
+										SELECT firstName, 
+											   lastName, 
+											   department, 
+											   salary, 
+											   avg(salary) OVER (PARTITION BY department)
+										FROM Employee e&quot;&quot;&quot;, Object&#91;].class)
+						  .getResultList();
+</pre></div>
+
+
+<p>You might now wonder why the JPQL statement looks identical to the previously shown SQL statement. The reason is simple. You define the JPQL statement based on your entity classes and their attributes and not based on your table model. Hibernate then generates an SQL statement based on the provided JPQL statement and your mapping definitions. In this example, the attribute names of the&nbsp;<em>Employee&nbsp;</em>entity class are identical to the columns of the&nbsp;<em>Employee&nbsp;</em>table. So, there is no visible difference between both statements.</p>
+
+
+
+<p>By defining your query as a JPQL statement, you get the benefit that Hibernate generates a database-specific SQL statement based on the provided JPQL statement. So, if you need to support multiple RDBMS, Hibernate handles the differences in the supported SQL dialects.</p>
+
+
+
+<h3 class="wp-block-heading">Mapping the query results</h3>
+
+
+
+<p>As you saw in the previous code snippet, my query returned a <em>List&lt;Object[]&gt;</em>. That data structure isn&#8217;t very comfortable to use, and you should better map it to a <em>List</em> of DTO projections. In this example, I will map each result record to an <em>EmployeeInfo</em> object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class EmployeeInfo {
+    
+    private String firstName;
+
+    private String lastName;
+
+    private String department;
+
+    private Double salary;
+
+    private Double avgSalary;
+
+    public EmployeeInfo() {}
+    
+    public EmployeeInfo(String firstName, String lastName, String department, Double salary, Double avgSalary) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.department = department;
+        this.salary = salary;
+        this.avgSalary = avgSalary;
+    }
+
+    // getter and setter methods
+
+}
+</pre></div>
+
+
+<p>You have 2 main options to do that when executing a JPQL query. You can either use JPA&#8217;s constructor expressions or Hibernate&#8217;s <em>ResultTransformer</em>.</p>
+
+
+
+<h4 class="wp-block-heading">Mapping the query results using a constructor expression</h4>
+
+
+
+<p>You probably already know JPA&#8217;s constructor expressions from your other JPQL queries. It starts with the keyword new, followed by the fully qualified class name, and defines the call of a constructor that sets all attribute values.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;EmployeeInfo&gt; emps = em.createQuery(&quot;&quot;&quot;
+											SELECT new com.thorben.janssen.EmployeeInfo(firstName, 
+																						lastName, 
+																						department, 
+																						salary, 
+																						avg(salary) OVER (PARTITION BY department))
+											FROM Employee e&quot;&quot;&quot;, EmployeeInfo.class)
+							.getResultList();
+</pre></div>
+
+
+<p>For this JPQL query, Hibernate executes the following SQL query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:26:08,677 DEBUG &#91;org.hibernate.SQL] - select e1_0.firstName,e1_0.lastName,e1_0.department,e1_0.salary,avg(e1_0.salary) over(partition by e1_0.department order by e1_0.firstName) from Employee e1_0
+</pre></div>
+
+
+<p>As you can see in the log output, the constructor call isn&#8217;t part of the executed SQL statement. The SQL statement only selects all values required to call the constructor, and Hibernate calls the constructor when processing the query result.</p>
+
+
+
+<h4 class="wp-block-heading">Mapping the query results using a <em>TupleTransformer</em> (aka <em>ResultTransformer</em>)</h4>
+
+
+
+<p>Hibernate&#8217;s <em>TupleTransformer </em>gets you the same result but provides more flexibility. As I explained in my <a href="/hibernate-resulttransformer/">guide to <em>ResultTransformer</em>s</a>, you can either implement Hibernate&#8217;s <em>TupleTransformer</em> interface or use one of Hibernate&#8217;s standard transformers. Hibernate then calls that transformer when processing each record of the query result.</p>
+
+
+
+<p>In this example, I&#8217;m using Hibernate&#8217;s <em>AliasToBeanResultTransformer</em>. It calls the no-arguments constructor of my <em>EmployeeInfo </em>class and tries to find a setter method for each alias defined in the query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;EmployeeInfo&gt; emps = session.createQuery(&quot;&quot;&quot;
+										SELECT firstName as firstName,
+											   lastName as lastName, 
+											   department as department,
+											   salary as salary,
+											   avg(salary) OVER (PARTITION BY department) as avgSalary
+										FROM Employee e&quot;&quot;&quot;, Object&#91;].class)
+								.setTupleTransformer(new AliasToBeanResultTransformer&lt;EmployeeInfo&gt;(EmployeeInfo.class))
+								.getResultList();
+</pre></div>
+
+
+<h2 class="wp-block-heading">Window functions in Hibernate 5</h2>
+
+
+
+<p>As mentioned earlier, Hibernate 5&#8217;s JPQL implementation doesn&#8217;t support window functions. If you want to use them, you have to define and execute a <a href="https://thorben-janssen.com/jpa-native-queries/">native SQL query</a>. Hibernate doesn&#8217;t parse these queries. It only takes the provided statement and executes it. That means you can use all features supported by your database. But you must also handle the differences in the supported SQL dialects if you&#8217;re working with different RDBMS.</p>
+
+
+
+<p>I use that approach in the following examples to execute the SQL statement I showed you in the introduction.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;Object&#91;]&gt; result = em.createNativeQuery(&quot;&quot;&quot;
+										SELECT firstName, 
+											   lastName, 
+											   department, 
+											   salary, 
+											   avg(salary) OVER (PARTITION BY department)
+										FROM Employee e&quot;&quot;&quot;)
+						  .getResultList();
+</pre></div>
+
+
+<p>As explained earlier, Hibernate doesn&#8217;t modify the provided native SQL statement. It simply executes it and returns the result.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+14:53:00,980 DEBUG &#91;org.hibernate.SQL] - SELECT firstName,
+	   lastName,
+	   department,
+	   salary,
+	   avg(salary) OVER (PARTITION BY department) as avgSalary
+FROM Employee e
+</pre></div>
+
+
+<h3 class="wp-block-heading">Mapping the query results</h3>
+
+
+
+<p>The native query in the previous example returns the result as a <em>List </em>of <em>Object[]</em>. That&#8217;s not very comfortable to use, especially if you want to call any other methods with it. But as a reader of my blog, you probably already know that you can tell Hibernate to map the result to a different data structure.</p>
+
+
+
+<h4 class="wp-block-heading">Mapping the query results using an <em>@SqlResultSetMapping</em></h4>
+
+
+
+<p>I explained JPA&#8217;s <em>@SqlResultSetMapping</em> in great detail in a series of blog posts. If you&#8217;re not already familiar with it, I recommend reading the following articles:</p>
+
+
+
+<ul>
+<li><a href="/result-set-mapping-basics/">@SqlResultSetMapping &#8211; The basics</a></li>
+
+
+
+<li><a href="/result-set-mapping-constructor-result-mappings/">@SqlResultSetMapping &#8211; Constructor result mappings</a></li>
+
+
+
+<li><a href="/result-set-mapping-complex-mappings/">@SqlResultSetMapping &#8211; Complex mappings</a></li>
+</ul>
+
+
+
+<p>You can use the <em>@SqlResultSetMapping</em> annotation to specify how Hibernate shall map your query result. You can map it to managed entities, DTOs, scalar values, and combinations of these 3. In this example, I want Hibernate to call the <em>EmployeeInfo</em>&#8216;s constructor that we used in the previous example. It accepts all attribute values and returns a fully initialized <em>EmployeeInfo </em>object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@SqlResultSetMapping(name = &quot;EmpInfoMapping&quot;,
+                     classes = @ConstructorResult(targetClass = EmployeeInfo.class,
+                                                  columns = {@ColumnResult(name = &quot;firstName&quot;),
+                                                             @ColumnResult(name = &quot;lastName&quot;),
+                                                             @ColumnResult(name = &quot;department&quot;),
+                                                             @ColumnResult(name = &quot;salary&quot;),
+                                                             @ColumnResult(name = &quot;avgSalary&quot;),}))
+public class Employee { ... }
+</pre></div>
+
+
+<p>Like the constructor expression I showed you for Hibernate 6, Hibernate applies the&nbsp;<em>@SqlResultSetMapping</em>&nbsp;when processing the query result. So, the mapping doesn’t affect the executed statement. It only changes how Hibernate handles the query result.</p>
+
+
+
+<h4 class="wp-block-heading">Mapping the query result using a ResultTransformer</h4>
+
+
+
+<p>You can also use Hibernate&#8217;s proprietary <em>ResultTransformer</em> to define the mapping of the query result. The <em>ResultTransformer </em>interface is deprecated in version 5, but that shouldn&#8217;t prevent you from using them. As I explain in my <a href="/hibernate-resulttransformer/">guide to Hibernate&#8217;s ResultTransformer</a>, the Hibernate team split that interface into 2 interfaces in version 6, and you can easily migrate your implementations.</p>
+
+
+
+<p>But in this case, you don&#8217;t even need to implement a custom transformer. Hibernate&#8217;s <em>AliasToBeanResultTransformer</em> easily maps your query result to your DTO class. You only need to define an alias for the return value of your window function.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;EmployeeInfo&gt; emps = session.createNativeQuery(&quot;&quot;&quot;
+										SELECT firstName as &quot;firstName&quot;,
+											   lastName as &quot;lastName&quot;, 
+											   department as &quot;department&quot;,
+											   salary as &quot;salary&quot;,
+											   avg(salary) OVER (PARTITION BY department) as &quot;avgSalary&quot;
+										FROM Employee e&quot;&quot;&quot;)
+								.setResultTransformer(new AliasToBeanResultTransformer(EmployeeInfo.class))
+								.getResultList();
+</pre></div>
+
+
+<p>Hibernate then executes the native query and calls the <em>AliasToBeanResultTransformer </em>for every record of the result set.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Window functions are a powerful SQL feature. Starting with Hibernate 6, you can also use them in your JPQL query. As you saw in the code examples, the JPQL syntax is very similar to SQL. So, if you already know SQL window functions, you will not encounter any issues using them with JPQL.</p>
+
+
+
+<p>If you&#8217;re still using Hibernate 5, you can use window functions in native SQL statements. Hibernate executes these statements without parsing them. So, you can use all features supported by your database. But Hibernate also no longer adjusts your query based on the database-specific SQL dialect.</p>
+
+
+
+<p>Independent of the Hibernate version and the kind of query you&#8217;re executing, your query will return an <em>Object[]</em> or a List of <em>Object[]</em>s. You can map these using Hibernate&#8217;s proprietary <em>ResultTransformer</em>, or you can use JPA&#8217;s constructor expression in your JPQL query or an @SqlResultSetMapping annotation for your  native query.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to persist additional attributes for an association with JPA and Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to persist additional attributes for an association with JPA and Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>JPA and Hibernate allow you to define associations between entities with just a few annotations, and you don&#8217;t have to care about the underlying table model in the database. Even join tables for many-to-many associations are hidden behind a <em>@JoinTable</em> annotation, and you don&#8217;t need to model the additional table as an entity.</p>
+
+
+
+<p>That changes as soon as you have to persist additional attributes of an association.&nbsp;The obvious way to handle that is to create an entity for the join table and add the attributes there. But that immediately gets you to the next question: How do you model a primary key that consists of 2 foreign keys?</p>
+
+
+
+<p>That&#8217;s easier than you might think.</p>
+
+
+
+<h2 class="wp-block-heading">Model</h2>
+
+
+
+<p>You know the example for this post from a typical bookstore. There&nbsp;are books in multiple formats (e.g., hardcover, paperback, ebook), and each format was published by a different publisher.</p>
+
+
+
+<p>You can model that with 3 entity classes. The <em>Book </em>and <em>Publisher </em>entities are pretty obvious and model the two main domain objects.&nbsp;The third one is the <em>BookPublisher</em> entity which models the association between the <em>Book</em> and the <em>Publisher</em> and keeps the <em>Format</em> as an additional attribute.</p>
+
+
+<div class="wp-block-image">
+<figure class="aligncenter size-full"><img decoding="async" loading="lazy" width="1024" height="463" src="https://thorben-janssen.com/wp-content/uploads/2023/05/classdiagram-1024x463-2.png" alt="" class="wp-image-40502" srcset="https://thorben-janssen.com/wp-content/uploads/2023/05/classdiagram-1024x463-2.png 1024w, https://thorben-janssen.com/wp-content/uploads/2023/05/classdiagram-1024x463-2-300x136.png 300w, https://thorben-janssen.com/wp-content/uploads/2023/05/classdiagram-1024x463-2-768x347.png 768w, https://thorben-janssen.com/wp-content/uploads/2023/05/classdiagram-1024x463-2-624x282.png 624w" sizes="(max-width: 1024px) 100vw, 1024px" /></figure></div>
+
+
+<p>OK,&nbsp;if you have some experience with database modeling, you probably expected such an entity model. It is pretty close to the table model and not too difficult. </p>
+
+
+
+<p>Let&#8217;s take a closer look at the mapping definition.</p>
+
+
+
+<h3 class="wp-block-heading">The Book and Publisher entities</h3>
+
+
+
+<p>There is nothing too interesting about the <em>Book</em> and the <em>Publisher</em> entity. Both of them define a one-to-many association with the BookPublisher entity. The interesting parts of the mapping are in the BookPublisher entity, which I will show you in the next section.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Book {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+	@Version
+	private int version;
+
+	private String title;
+
+	@OneToMany(mappedBy = "book")
+	private Set&lt;BookPublisher&gt; publishers = new HashSet&lt;BookPublisher&gt;();
+	
+	...
+	
+}
+</pre>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class Publisher {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+	@Version
+	private int version;
+
+	private String name;
+
+	@OneToMany(mappedBy = "publisher")
+	private Set&lt;BookPublisher&gt; books = new HashSet&lt;BookPublisher&gt;();
+	
+	...
+	
+}
+</pre>
+
+
+
+<h3 class="wp-block-heading">The BookPublisher entity</h3>
+
+
+
+<p>OK, I promised you that&nbsp;the mapping of the <em>BookPublisher</em> entity&nbsp;is more interesting than the ones I showed you before. But that doesn&#8217;t mean that it&#8217;s more complex.</p>
+
+
+
+<p>As you have seen in the diagram, the <em>BookPublisher</em> entity maps the association between the Book and the Publisher entities and stores the format of the book as an additional attribute.&nbsp;At first look, the required mapping might seem easy. You only need 2 many-to-one associations and the additional attribute.</p>
+
+
+
+<p>But what about the primary key? </p>
+
+
+
+<p>As you have seen in the diagram, the <em>BookPublisher</em> entity uses&nbsp;the combination of the foreign key of the <em>Book</em> entity and the foreign key of the <em>Publisher</em> entity as&nbsp;the primary key. Both of them are hidden by the many-to-one association mapping.</p>
+
+
+
+<p>The best option to map such a composite primary key is to define an <em>@Embeddable</em> that represents it. In this example, I created the <em>BookPublisherId&nbsp;</em>class. It&#8217;s 2 attributes of type <em>Long</em> represent the 2 parts of the primary key.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class BookPublisher {
+
+	@Embeddable
+	public static class BookPublisherId implements Serializable {
+
+		protected Long bookId;
+
+		protected Long publisherId;
+
+		public BookPublisherId() {
+			
+		}
+		
+		public BookPublisherId(Long bookId, Long publisherId) {
+			this.bookId = bookId;
+			this.publisherId = publisherId;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((bookId == null) ? 0 : bookId.hashCode());
+			result = prime * result
+					+ ((publisherId == null) ? 0 : publisherId.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			
+			BookPublisherId other = (BookPublisherId) obj;
+			
+			if (bookId == null) {
+				if (other.bookId != null)
+					return false;
+			} else if (!bookId.equals(other.bookId))
+				return false;
+			
+			if (publisherId == null) {
+				if (other.publisherId != null)
+					return false;
+			} else if (!publisherId.equals(other.publisherId))
+				return false;
+			
+			return true;
+		}
+	}
+	
+	...
+	
+}
+</pre>
+
+
+
+<p>As you can see, the mapping of the <em>BookPublisherId</em> is simple. </p>
+
+
+
+<p>You have to annotate the class with an <em>@Embeddable</em> annotation. It&#8217;s now a standard embeddable that you can use at an attribute in all your entity classes.</p>
+
+
+
+<p>If you want to use an embeddable object as a primary key, there are 2 more things you need to do: </p>
+
+
+
+<ol>
+<li>Your class needs to implement the <em>Serializable</em> interface. </li>
+
+
+
+<li>You need to implement the <em>hashCode</em> and <em>equals</em> methods. </li>
+</ol>
+
+
+
+<p>That&#8217;s all you need to do to define an embeddable that can represent a primary key. You can now use it as an attribute type and annotate it with <em>@EmbeddedId</em>.</p>
+
+
+
+<p>Let&#8217;s take a look at the <em>BookPublisher</em> mapping next.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class BookPublisher {
+  
+	@EmbeddedId
+	private BookPublisherId id;
+
+	@ManyToOne
+	@JoinColumn(name = "bookid")
+	@MapsId("bookId")
+	private Book book;
+
+	@ManyToOne
+	@JoinColumn(name = "publisherid")
+	@MapsId("publisherId")
+	private Publisher publisher;
+
+	@Enumerated(EnumType.STRING)
+	private Format format;
+	
+	...
+	
+}
+</pre>
+
+
+
+<p>As you can see in the code snippet, the <em>id</em> attribute is of type <em>BookPublisherId</em>, and I annotated it with <em>@EmbeddedId</em>. That tells Hibernate to use the <em>BookPublisherId</em> class as the primary key class and&nbsp;use its mapping definition to map the attributes to the database columns.</p>
+
+
+
+<p>In the following lines, you can see the mapping definition of the 2 many-to-one associations to the <em>Book</em> and <em>Publisher</em> entities. These provide the foreign keys that form the primary key of each <em>BookPublisher </em>entity object.</p>
+
+
+
+<p>You can annotate them with a <em>@MapsId</em> annotations to tell Hibernate to use the primary keys of the referenced <em>Book</em> and <em>Publisher</em> entities as parts of the primary key of the <em>BookPublisher</em> entity. The provided <em>String</em>s reference the corresponding attributes of the <em>BookPublisherId</em> object.</p>
+
+
+
+<p>That&#8217;s all you need to do to define the mapping. Hibernate will now manage the primary key of all <em>BookPublisher </em>entities automatically based on the primary keys of the 2 associated entities. </p>
+
+
+
+<h2 class="wp-block-heading">How to use the mapping</h2>
+
+
+
+<p>You can use the <em>BookPublisher</em> entity in the same way as any other entity. The only thing you need to keep in mind is that you need to set the associations to the <em>Book</em> and the <em>Publisher</em> entity before persisting a new <em>BookPublisher</em> object.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+Book b = new Book();
+b.setTitle("My Book");
+em.persist(b);
+
+Publisher p = new Publisher();
+p.setName("My Publisher");
+em.persist(p);
+
+BookPublisher bp = new BookPublisher();
+bp.setBook(b);
+bp.setPublisher(p);
+bp.setFormat(Format.EBOOK);
+em.persist(bp);
+
+em.getTransaction().commit();
+em.close();
+</pre>
+
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>Hibernate&#8217;s standard mapping of a many-to-many association hides the mapping table. Due to that, you can&#8217;t use it if your association table includes additional columns.</p>
+
+
+
+<p>In that case, you need to add an entity class that maps the association table and split the many-to-many association mapping into 2 many-to-one associations. That entity can then map the additional columns of the association table and usually uses a composite primary key that consists of the 2 foreign keys to the associated database tables.</p>
+
+
+
+<p>The best way to map such a composite key is to define an <em>@Embeddable</em> with 2 attributes and annotate both associations with a <em>@MapsId</em> annotation.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

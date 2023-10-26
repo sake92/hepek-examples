@@ -1,0 +1,246 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to configure List semantics in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to configure List semantics in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Based on its javadoc, a <em>java.util.List</em> is supposed to represent an ordered collection of values. But that&#8217;s not necessarily the case if you use it as the type of a to-many association or an <em>ElementCollection</em>. As I explained before, Hibernate can <a href="/association-mappings-bag-list-set/">handle a <em>java.util.List</em> as a Bag or a List</a>. Only the&nbsp;<em>List</em>&nbsp;mapping persists the order of its elements. But by default, Hibernate handles a&nbsp;<em>java.util.List</em>&nbsp;as a&nbsp;<em>Bag</em>. After you have fetched it from the database, it contains the elements in an undefined order.</p>
+
+
+
+<p>Until Hibernate 6.0.0, you had to add an <em>@OrderColumn</em> annotation to your <em><a href="/collections-hibernate-jpa/#Map_a_Collection_as_an_ElementCollection">ElementCollection</a></em>, one-to-many association, or the owning side of your many-to-many association to persist the order of your <em>java.util.List</em>. Hibernate then persists the position of each element in a separate column and manages the index of all elements during all insert, update, and delete operations. </p>
+
+
+
+<p>Please note that the <em>@OrderColumn</em> annotation is <strong>not supported </strong>for the referencing side of many-to-many associations (<em>@ManyToMany(mappedBy = &#8220;&#8230;&#8221;)</em>).</p>
+
+
+
+<p>Since Hibernate 6, you can define the List semantics globally for the owning side of your many-to-many associations and ElementCollections by setting the configuration property <em>hibernate.mapping.default_list_semantics</em> to <em>LIST</em> in your <a href="https://thorben-janssen.com/jpa-persistence-xml/">persistence.xml</a>. If you want to apply the same handling to your one-to-many associations, you still have to add an <em>@OrderColumn</em> annotation.</p>
+
+
+
+<p>Let&#8217;s take a closer look at this new configuration parameter and the implications of managing and persisting the index of each element in the <em>List</em>.</p>
+
+
+
+<h2 class="wp-block-heading">How to configure Hibernate&#8217;s List semantics</h2>
+
+
+
+<p>By default, Hibernate doesn&#8217;t persist the order of the elements of any <em>ElementCollection </em>or to-many association. You can change that in 2 ways. You can either configure it globally or adjust the handling of a specific attribute. When doing that, please keep in mind that the global setting doesn&#8217;t affect the referencing side of a one-to-many or many-to-many association.</p>
+
+
+
+<h3 class="wp-block-heading">Changing global List semantics</h3>
+
+
+
+<p>Since Hibernate 6.0.0, you can set the property&nbsp;<em>hibernate.mapping.default_list_semantics&nbsp;</em>in your&nbsp;<em>persistence.xml</em>&nbsp;configuration to <em>LIST</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        &lt;description&gt;Hibernate example configuration - thorben-janssen.com&lt;/description&gt;
+        &lt;exclude-unlisted-classes&gt;false&lt;/exclude-unlisted-classes&gt;
+
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.mapping.default_list_semantics&quot; value=&quot;LIST&quot; /&gt;
+            
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>Hibernate then treats your <em>ElementCollection </em>and the owning side of your many-to-many associations in the same ways as if you annotated them with&nbsp;<em>@OrderColumn</em>. It persists the position of each element in a separate database column. To get the name of that column, Hibernate adds the postfix&nbsp;<em>_ORDER</em>&nbsp;to the name of the column that maps the association.</p>
+
+
+
+<p>Let&#8217;s use this in a simple test scenario based on the following <em>ChessPlayer </em>and <em>ChessTournament </em>entities. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;player_seq&quot;)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @OneToMany(mappedBy = &quot;playerWhite&quot;)
+    private Set&lt;ChessGame&gt; gamesWhite;
+
+    @OneToMany(mappedBy = &quot;playerBlack&quot;)
+    private Set&lt;ChessGame&gt; gamesBlack;
+
+    @Version
+    private int version;
+	
+	...
+}
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessTournament {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;tournament_seq&quot;)
+    private Long id;
+
+    private String name;
+
+    private LocalDate startDate;
+
+    private LocalDate endDate;
+
+    @Version
+    private int version;
+
+    @ManyToMany
+    private List&lt;ChessPlayer&gt; players = new ArrayList&lt;ChessPlayer&gt;();
+
+    @OneToMany
+    private Set&lt;ChessGame&gt; games = new HashSet&lt;&gt;();
+	
+	...
+}
+</pre></div>
+
+
+<p>As you can see, there is nothing special about these 2 entity classes. Both use a database sequence to <a href="/jpa-generate-primary-keys/">generate their primary key values</a> and a version attribute for optimistic locking. The configured list semantics will affect the <a href="https://thorben-janssen.com/best-practices-for-many-to-many-associations-with-hibernate-and-jpa/">many-to-many association</a> modeled by the&nbsp;<em>players&nbsp;</em>attribute of the&nbsp;<em>ChessTournament&nbsp;</em>entity.</p>
+
+
+
+<p>When you execute the following test case, you can see that Hibernate stores each <em>ChessPlayer</em>&#8216;s position in the <em>List players</em> in the <em>players_ORDER </em>column.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessTournament tournament = em.find(ChessTournament.class, 1L);
+ChessPlayer player1 = em.find(ChessPlayer.class, 1L);
+ChessPlayer player2 = em.find(ChessPlayer.class, 2L);
+ChessPlayer player3 = em.find(ChessPlayer.class, 3L);
+
+tournament.getPlayers().add(player1);
+tournament.getPlayers().add(player2);
+tournament.getPlayers().add(player3);
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+18:13:54,250 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
+18:13:54,277 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:13:54,281 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:13:54,284 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:13:54,295 DEBUG &#91;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
+18:13:54,326 DEBUG &#91;org.hibernate.SQL] - update ChessTournament set endDate=?, name=?, startDate=?, version=? where id=? and version=?
+18:13:54,334 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+18:13:54,340 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+18:13:54,343 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+</pre></div>
+
+
+<p>When Hibernate fetches the list of players, it doesn&#8217;t use an <em>ORDER BY </em>clause to get the players in the right order but orders them in memory instead.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+18:20:49,230 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
+18:20:49,234 DEBUG &#91;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
+</pre></div>
+
+
+<h3 class="wp-block-heading">Adjusting specific List semantics</h3>
+
+
+
+<p>If you only want to persist the order of the elements of a specific <em>ElementCollection </em>or many-to-many association, or if you want to persist the order of a one-to-many association, you need to annotate the attribute with an&nbsp;<em>@OrderColumn</em>&nbsp;annotation. When doing that, you can either provide the name of the order column or use the default, which adds the postfix&nbsp;<em>_ORDER</em>&nbsp;to the name of the column that maps the association.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+    @OneToMany(mappedBy = &quot;playerWhite&quot;)
+    @OrderColumn
+    private Set&lt;ChessGame&gt; gamesWhite;
+
+    @OneToMany(mappedBy = &quot;playerBlack&quot;)
+    @OrderColumn(name=&quot;myOrderColumn&quot;)
+    private Set&lt;ChessGame&gt; gamesBlack;
+	
+	...
+}
+</pre></div>
+
+
+<p>Hibernate then handles the association in the same way as in the previous example. It persists the index of each element in a separate column. In this example, Hibernate uses the default name <em>gamesWhite_ORDER </em>for the <em>gamesWhite</em> attribute and the <em>myOrderColumn</em> specified by the <em>@OrderColumn</em> annotation for the <em>gamesBlack</em> attribute.</p>
+
+
+
+<h2 class="wp-block-heading">Implications of persisting the element&#8217;s order</h2>
+
+
+
+<p>Persisting the order of the elements of an association might sound like a great idea. But it requires a management effort that can slow down your write operations. Because Hibernate persists each element&#8217;s position, it has to update multiple records if you&#8217;re adding or removing any element that&#8217;s not the last one in the&nbsp;<em>List</em>.</p>
+
+
+
+<p>In the previous examples, I added an element to the end of the <em>List</em>. That didn&#8217;t require any changes to the index of the other elements. But that changes when you add an element somewhere in the middle.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+tournament = em.find(ChessTournament.class, 1L);
+ChessPlayer player4 = em.find(ChessPlayer.class, 4L);
+tournament.getPlayers().add(1, player4);
+</pre></div>
+
+
+<p>By adding the <em>ChessPlayer </em>on position 1, the index of all elements that were on position 1 or higher gets incremented by one. Hibernate then needs to update that in the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+18:32:07,152 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
+18:32:07,159 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:32:07,164 DEBUG &#91;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
+18:32:07,177 DEBUG &#91;org.hibernate.SQL] - update ChessTournament set endDate=?, name=?, startDate=?, version=? where id=? and version=?
+18:32:07,183 DEBUG &#91;org.hibernate.SQL] - update ChessTournament_ChessPlayer set players_id=? where ChessTournament_id=? and players_ORDER=?
+18:32:07,187 DEBUG &#91;org.hibernate.SQL] - update ChessTournament_ChessPlayer set players_id=? where ChessTournament_id=? and players_ORDER=?
+18:32:07,191 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+</pre></div>
+
+
+<p>And the same, of course, happens if you remove any element except for the last one.</p>
+
+
+
+<p>As you can see in this example, persisting the order of the <em>List </em>creates an overhead. Depending on the size of the <em>List</em> and the kind of operations you perform, this can cause severe performance problems. I, therefore, recommend sticking to Hibernate&#8217;s old&nbsp;<em>List</em>&nbsp;semantics and using the new handling with great care.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>A <em>List</em> is supposed to be an ordered collection of elements. But by default, Hibernate doesn&#8217;t persist the order, and the database returns the elements in random order. Due to that, the initial order of the elements is lost after Hibernate fetches the <em>List </em>from the database.</p>
+
+
+
+<p>Previous to Hibernate 6, you can avoid that by annotating your <em>ElementCollection</em>, one-to-many association, or the owning side of your many-to-many association with an <em>@OrderColumn</em> annotation. Hibernate then stores the position of each element in a separate database column.</p>
+
+
+
+<p>Since Hibernate 6, you can use a new configuration parameter to change the handling of your <em>List</em>s globally for all your <em>ElementCollection</em>s and the owning sides of your many-to-many associations. To do that, you only need to set the <em>hibernate.mapping.default_list_semantics</em> configuration property to <em>LIST</em>.</p>
+
+
+
+<p>When you decide to persist the order of your <em>List</em>s, please keep in mind that this can slow down your write operations. Hibernate needs to manage the index of all <em>List</em> elements, which requires multiple update operations if you&#8217;re inserting or removing an element that&#8217;s not the last one.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

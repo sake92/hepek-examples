@@ -1,8 +1,9 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Naming Strategies in Hibernate 5</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Naming Strategies in Hibernate 5</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>JPA and Hibernate provide a default mapping that maps each entity class to a database table with the same name. Each of its attributes gets mapped to a column with the same. But what if you want to change this default, e.g., because it doesn&#8217;t match your company&#8217;s naming conventions?</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s Naming Strategies</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s Naming Strategies</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>JPA and Hibernate provide a default mapping that maps each entity class to a database table with the same name. Each of its attributes gets mapped to a column with the same. But what if you want to change this default, e.g., because it doesn&#8217;t match your company&#8217;s naming conventions?</p>
 
 
 
-<p>You can, of course, specify the table name for each entity and the column name for each attribute. That requires a <a href="https://thorben-janssen.com/hibernate-tips-define-schema-table-names/"><em>@Table</em> annotation on each class</a> and a <em>@Column</em> annotation on each attribute. This is called an explicit naming.</p>
+<p>You can, of course, specify the table name for each entity and the column name for each attribute. That requires a <a href="https://thorben-janssen.com/hibernate-tips-define-schema-table-names/"><em>@Table</em> annotation on each class</a> and a <em>@Column</em> annotation on each attribute. This is called explicit naming.</p>
 
 
 
@@ -14,12 +15,7 @@
 
 
 
-
-
-
-
-<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#A_2-step_approach"><span class="toc_number toc_depth_1">1</span> A 2-step approach</a></li><li><a href="#Logical_naming_strategy"><span class="toc_number toc_depth_1">2</span> Logical naming strategy</a><ul><li><a href="#Explicit_naming_strategy"><span class="toc_number toc_depth_2">2.1</span> Explicit naming strategy</a></li><li><a href="#Implicit_naming_strategy"><span class="toc_number toc_depth_2">2.2</span> Implicit naming strategy</a></li></ul></li><li><a href="#Physical_naming_strategy"><span class="toc_number toc_depth_1">3</span> Physical naming strategy</a><ul><li><a href="#Table_postfix_strategy"><span class="toc_number toc_depth_2">3.1</span> Table postfix strategy</a><ul><li><a href="#Implementing_a_custom_strategy"><span class="toc_number toc_depth_3">3.1.1</span> Implementing a custom strategy</a></li><li><a href="#Using_the_table_postfix_strategy"><span class="toc_number toc_depth_3">3.1.2</span> Using the table postfix strategy</a></li></ul></li><li><a href="#Names_in_snake_case_instead_of_camel_case"><span class="toc_number toc_depth_2">3.2</span> Names in snake case instead of camel case</a><ul><li><a href="#Implementing_a_custom_strategy-2"><span class="toc_number toc_depth_3">3.2.1</span> Implementing a custom strategy</a></li><li><a href="#Using_the_snake_case_strategy"><span class="toc_number toc_depth_3">3.2.2</span> Using the snake case strategy</a></li></ul></li></ul></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">4</span> Conclusion</a></li></ul></div>
-<h2><span id="A_2-step_approach">A 2-step approach</span></h2>
+<h2 class="wp-block-heading">A 2-step approach</h2>
 
 
 
@@ -27,7 +23,13 @@
 
 
 
-<ol><li>It first determines&nbsp;the logical name of an entity or attribute. You can explicitly set the logical name using the <a href="https://thorben-janssen.com/key-jpa-hibernate-annotations/"><em>@Table</em> and <em>@Column</em> annotations</a>. If you don&#8217;t do that, Hibernate will use one of its implicit naming strategies.</li><li>It then maps&nbsp;the logical name to a physical name. By default, Hibernate uses the logical name as the physical name. But you can also a <em>PhysicalNamingStrategy </em>that maps the logical name to a physical one that follows your internal naming convention.</li></ol>
+<ol>
+<li>It first determines&nbsp;the logical name of an entity or attribute. You can explicitly set the logical name using the <a href="https://thorben-janssen.com/key-jpa-hibernate-annotations/"><em>@Table</em> and <em>@Column</em> annotations</a>. If you don&#8217;t do that, Hibernate will use one of its implicit naming strategies.</li>
+
+
+
+<li>It then maps the logical name to a physical name. By default, Hibernate uses the logical name as the physical name. But you can also implement a&nbsp;<em>PhysicalNamingStrategy&nbsp;</em>that maps the logical name to a physical one that follows your internal naming convention. Or, since Hibernate 5.5.4, you can activate Hibernate&#8217;s <em>CamelCaseToUnderscoresNamingStrategy</em>.</li>
+</ol>
 
 
 
@@ -47,7 +49,7 @@
 
 
 
-<h2><span id="Logical_naming_strategy">Logical naming strategy</span></h2>
+<h2 class="wp-block-heading">Logical naming strategy</h2>
 
 
 
@@ -55,19 +57,19 @@
 
 
 
-<h3 id="explicitNamingStrategy"><span id="Explicit_naming_strategy">Explicit naming strategy</span></h3>
+<h3 class="wp-block-heading" id="explicitNamingStrategy">Explicit naming strategy</h3>
 
 
 
-<p>The explicit naming strategy is very easy to use. You probably already used it yourself. The only thing you need to do is to annotate your entity class with <em>@Table</em> or your entity attribute with <em>@Column</em> and provide your preferred name as a value to the name attribute.</p>
+<p>The explicit naming strategy is very easy to use. You probably already used it yourself. The only thing you need to do is annotate your entity class with <em>@Table</em> or your entity attribute with <em>@Column</em> and provide your preferred name as a value to the name attribute.</p>
 
 
 
 <pre class="wp-block-preformatted brush: java; gutter: true">@Entity
-@Table(name = &quot;AUTHORS&quot;)
+@Table(name = "AUTHORS")
 public class Author {
 
-    @Column(name = &quot;author_name&quot;)
+    @Column(name = "author_name")
     private String name;
 
     ...
@@ -84,7 +86,7 @@ public class Author {
 
 
 
-<h3><span id="Implicit_naming_strategy">Implicit naming strategy</span></h3>
+<h3 class="wp-block-heading">Implicit naming strategy</h3>
 
 
 
@@ -92,7 +94,41 @@ public class Author {
 
 
 
-<ul><li><strong>default</strong><br>By default, Hibernate uses the implicit naming strategy defined by the JPA specification. This value is an alias for <strong>jpa</strong>.</li><li><strong>jpa</strong><br>This is the naming strategy defined by the JPA 2.0 specification.<br>The logical name of an entity class is either the name provided in the <em>@Entity</em> annotation or the unqualified class name. For basic attributes, it uses the name of the attributes as the logical name. To get the logical name of a <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">join column of an association</a>, this strategy concatenates the name of the referencing attribute, an &#8220;_&#8221; and the name of the primary key attribute of the referenced entity. The logical name of a join column of an element collection consists of the name of the entity that owns the association, an &#8220;_&#8221; and the name of the <a href="https://thorben-janssen.com/jpa-generate-primary-keys/">primary key</a> attribute of the referenced entity. And the logical name of a join table starts with the physical name of the owning table, followed by an &#8220;_&#8221; and the physical name of the referencing table.</li><li><strong>legacy-hbm<br></strong>This is Hibernate&#8217;s original naming strategy. It doesn&#8217;t recognize any of JPA&#8217;s annotations. But you can use Hibernate&#8217;s proprietary configuration file and annotations to define a column or entity name.<br>In addition to that, there are a few other differences to the JPA specification:<ul><li>The logical name of a join column is only its attribute name.</li><li>For join tables, this strategy concatenates the name of the physical table that owns the association, an &#8220;_&#8221; and the name of the attribute that owns the association.</li></ul></li><li><strong>legacy-jpa</strong><br>The legacy-jpa strategy implements the naming strategy defined by JPA 1.0.<br>The main differences to the jpa strategy are:<ul><li>The logical name of a join table consists of the physical table name of the owning side of the association, an &#8220;_&#8221; and either the physical name of the referencing side of the association or the owning attribute of the association.</li><li>To get the logical name of the join column of an <a href="https://thorben-janssen.com/hibernate-tips-query-elementcollection/">element collection</a>, the legacy-jpa strategy uses the physical table name instead of the entity name of the referenced side of the association. That means the logical name of the join column consists of the physical table name of the referenced side of the association, an &#8220;_&#8221; and the name of the referenced primary key column.</li></ul></li><li><strong>component-path<br></strong>This strategy is almost identical to the jpa strategy. The only difference is that it includes the name of the composite in the logical attribute name.</li></ul>
+<ul>
+<li><strong>default</strong><br>By default, Hibernate uses the implicit naming strategy defined by the JPA specification. This value is an alias for <strong>jpa</strong>.</li>
+
+
+
+<li><strong>jpa</strong><br>This is the naming strategy defined by the JPA 2.0 specification.<br>The logical name of an entity class is either the name provided in the <em>@Entity</em> annotation or the unqualified class name. For basic attributes, it uses the name of the attributes as the logical name. To get the logical name of a <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">join column of an association</a>, this strategy concatenates the name of the referencing attribute, an &#8220;_&#8221; and the name of the primary key attribute of the referenced entity. The logical name of a join column of an element collection consists of the name of the entity that owns the association, an &#8220;_&#8221; and the name of the <a href="https://thorben-janssen.com/jpa-generate-primary-keys/">primary key</a> attribute of the referenced entity. And the logical name of a join table starts with the physical name of the owning table, followed by an &#8220;_&#8221; and the physical name of the referencing table.</li>
+
+
+
+<li><strong>legacy-hbm<br></strong>This is Hibernate&#8217;s original naming strategy. It doesn&#8217;t recognize any of JPA&#8217;s annotations. But you can use Hibernate&#8217;s proprietary configuration file and annotations to define a column or entity name.<br>In addition to that, there are a few other differences to the JPA specification:
+<ul>
+<li>The logical name of a join column is only its attribute name.</li>
+
+
+
+<li>For join tables, this strategy concatenates the name of the physical table that owns the association, an &#8220;_&#8221; and the name of the attribute that owns the association.</li>
+</ul>
+</li>
+
+
+
+<li><strong>legacy-jpa</strong><br>The legacy-jpa strategy implements the naming strategy defined by JPA 1.0.<br>The main differences to the jpa strategy are:
+<ul>
+<li>The logical name of a join table consists of the physical table name of the owning side of the association, an &#8220;_&#8221; and either the physical name of the referencing side of the association or the owning attribute of the association.</li>
+
+
+
+<li>To get the logical name of the join column of an <a href="https://thorben-janssen.com/hibernate-tips-query-elementcollection/">element collection</a>, the legacy-jpa strategy uses the physical table name instead of the entity name of the referenced side of the association. That means the logical name of the join column consists of the physical table name of the referenced side of the association, an &#8220;_&#8221; and the name of the referenced primary key column.</li>
+</ul>
+</li>
+
+
+
+<li><strong>component-path<br></strong>This strategy is almost identical to the jpa strategy. The only difference is that it includes the name of the composite in the logical attribute name.</li>
+</ul>
 
 
 
@@ -101,11 +137,11 @@ public class Author {
 
 
 <pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
-    &lt;persistence-unit name=&quot;naming&quot;&gt;
+    &lt;persistence-unit name="naming"&gt;
         ...
         &lt;properties&gt;
-            &lt;property name=&quot;hibernate.implicit_naming_strategy&quot;
-                      value=&quot;jpa&quot; /&gt;
+            &lt;property name="hibernate.implicit_naming_strategy"
+                      value="jpa" /&gt;
             ...
         &lt;/properties&gt;
     &lt;/persistence-unit&gt;
@@ -113,27 +149,123 @@ public class Author {
 
 
 
-<h2><span id="Physical_naming_strategy">Physical naming strategy</span></h2>
+<h2 class="wp-block-heading">Physical naming strategy</h2>
 
 
 
-<p>Implementing your own physical naming strategy isn&#8217;t complicated. You can either implement the <em>PhysicalNamingStrategy </em>interface or extend Hibernate&#8217;s <em>PhysicalNamingStrategyStandardImpl </em>class.</p>
+<p>As mentioned earlier, Hibernate&#8217;s default physical naming strategy uses the logical name without changing it. So, whatever the logic name is, it will also be the name of the database table or column.</p>
 
 
 
-<p>I prefer extending Hibernate&#8217;s <em>PhysicalNamingStrategyStandardImpl</em>. In the following examples, to create a naming strategy that adds the postfix &#8220;_TBL&#8221; to each table name and to create a naming strategy that converts camel case names into snake case.</p>
+<p>If you prefer a different mapping, you can define a custom strategy. I will show you how to do that later in this article. But before that, I want to show you the&nbsp;<em>CamelCaseToUnderscoresNamingStrategy&nbsp;</em>that was introduced in Hibernate 5.5.4. It replicates the mapping used by Spring Boot’s&nbsp;<em>SpringPhysicalNamingStrategy</em>.</p>
 
 
 
-<h3><span id="Table_postfix_strategy">Table postfix strategy</span></h3>
+<h3 class="wp-block-heading"><em>CamelCaseToUnderscoresNamingStrategy </em>in Hibernate &gt;5.5.4</h3>
 
 
 
-<p>The only thing I want to change in this naming strategy is the handing of the table name. So, extending Hibernate&#8217;s <em>PhysicalNamingStrategyStandardImpl </em>class it the easiest way to achieve that.</p>
+<p>Spring&#8217;s <em>SpringPhysicalNamingStrategy</em> has become very popular. It not only gets used by default in Spring Boot applications, but many developers also started to apply it to non-Spring projects. It replaces all dots and camel casing with underscores and generates all tables names in lower case.</p>
 
 
 
-<h4><span id="Implementing_a_custom_strategy">Implementing a custom strategy</span></h4>
+<h4 class="wp-block-heading">Activating Hibernate&#8217;s <em>CamelCaseToUnderscoresNamingStrategy</em></h4>
+
+
+
+<p>The Hibernate team replicated that mapping strategy in the <em>CamelCaseToUnderscoresNamingStrategy</em>. Since Hibernate 5.5.4.Final, you can activate this strategy by setting the configuration property <em>hibernate.physical_naming_strategy</em> in your persistence.xml file to <em>org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+
+        &lt;properties&gt;
+            ...
+			
+            &lt;property name=&quot;hibernate.physical_naming_strategy&quot;
+                      value=&quot;org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy&quot;/&gt;
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<h4 class="wp-block-heading">Using Hibernate&#8217;s <em>CamelCaseToUnderscoresNamingStrategy</em></h4>
+
+
+
+<p>We need an entity class name in camel case to show this strategy in all details. Because of that, I’m using the&nbsp;<em>ChessPlayer</em>&nbsp;entity instead of the&nbsp;<em>Author&nbsp;</em>entity you saw in previous examples.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;player_seq&quot;)
+    @SequenceGenerator(name = &quot;player_seq&quot;, sequenceName = &quot;player_seq&quot;, initialValue = 100)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @OneToMany(mappedBy = &quot;playerWhite&quot;)
+    private Set&lt;ChessGame&gt; gamesWhite;
+
+    @OneToMany(mappedBy = &quot;playerBlack&quot;)
+    private Set&lt;ChessGame&gt; gamesBlack;
+
+    @Version
+    private int version;
+	
+	...
+	
+}
+</pre></div>
+
+
+<p>As you can see in the code snippet, I don&#8217;t define any logical names for the entity class and its attributes. By default, Hibernate then uses the Java class&#8217;s name and the names of each of its attributes as their logical names.</p>
+
+
+
+<p>Hibernate&#8217;s&nbsp;<em>CamelCaseToUnderscoresNamingStrategy&nbsp;</em>physical naming strategy replaces all dots and camel casing with underscores and changes the logical class name to lower case. Based on this mapping, the <em>ChessGame</em> entity class gets mapped to the <em>chess_game </em>table. And the attributes <em>firstName</em>, <em>lastName</em>, and <em>birthDate</em> get mapped to the columns <em>first_name</em>, <em>last_name</em>, and <em>birth_date</em>.</p>
+
+
+
+<p>You can see that when I persist a new <em>ChessGame</em> entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+19:27:25,995 DEBUG SQL:144 - select chessplaye0_.id as id1_1_0_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_ from chess_player chessplaye0_ where chessplaye0_.id=?
+</pre></div>
+
+
+<h3 class="wp-block-heading">Implementing a custom physical naming strategy</h3>
+
+
+
+<p>If none of Hibernate&#8217;s physical naming strategies fulfill your requirements, you can implement your own strategy. Doing that isn&#8217;t complicated. You can either implement the&nbsp;<em>PhysicalNamingStrategy&nbsp;</em>interface or extend Hibernate&#8217;s&nbsp;<em>PhysicalNamingStrategyStandardImpl&nbsp;</em>class.</p>
+
+
+
+<p>I extend Hibernate’s&nbsp;<em>PhysicalNamingStrategyStandardImpl</em>&nbsp;in the following example to create a naming strategy that adds the postfix “_TBL” to each table name And in the 2nd example, we will define a naming strategy that converts camel case names into snake case.</p>
+
+
+
+<h4 class="wp-block-heading">Table postfix strategy</h4>
+
+
+
+<p>The only thing I want to change in this naming strategy is the handing of the table name. Extending Hibernate’s&nbsp;<em>PhysicalNamingStrategyStandardImpl&nbsp;</em>class is the easiest way to achieve that.</p>
+
+
+
+<h5 class="wp-block-heading">Implementing a custom strategy</h5>
 
 
 
@@ -143,7 +275,7 @@ public class Author {
 
 <pre class="wp-block-preformatted brush: java; gutter: true">public class TablePostfixPhysicalNamingStrategy extends PhysicalNamingStrategyStandardImpl {
 
-    private final static String POSTFIX = &quot;_TBL&quot;;
+    private final static String POSTFIX = "_TBL";
     
     @Override
     public Identifier toPhysicalTableName(final Identifier identifier, final JdbcEnvironment jdbcEnv) {
@@ -165,11 +297,11 @@ public class Author {
 
 
 <pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
-    &lt;persistence-unit name=&quot;naming&quot;&gt;
+    &lt;persistence-unit name="naming"&gt;
         ...
         &lt;properties&gt;
-            &lt;property name=&quot;hibernate.physical_naming_strategy&quot;
-                      value=&quot;org.thoughtsonjava.naming.config.TablePostfixPhysicalNamingStrategy&quot; /&gt;
+            &lt;property name="hibernate.physical_naming_strategy"
+                      value="org.thoughtsonjava.naming.config.TablePostfixPhysicalNamingStrategy" /&gt;
             ...
         &lt;/properties&gt;
     &lt;/persistence-unit&gt;
@@ -177,7 +309,7 @@ public class Author {
 
 
 
-<h4><span id="Using_the_table_postfix_strategy">Using the table postfix strategy</span></h4>
+<h5 class="wp-block-heading">Using the table postfix strategy</h5>
 
 
 
@@ -197,7 +329,7 @@ public class Author {
 
     private String name;
 
-    @ManyToMany(mappedBy = &quot;authors&quot;, fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "authors", fetch = FetchType.LAZY)
     private Set&lt;Book&gt; books;
 
     ...
@@ -213,7 +345,7 @@ public class Author {
 
 
 
-<h3><span id="Names_in_snake_case_instead_of_camel_case">Names in snake case instead of camel case</span></h3>
+<h4 class="wp-block-heading">Names in snake case instead of camel case</h4>
 
 
 
@@ -233,7 +365,7 @@ public class Author {
 
 
 
-<h4><span id="Implementing_a_custom_strategy-2">Implementing a custom strategy</span></h4>
+<h5 class="wp-block-heading">Implementing a custom strategy</h5>
 
 
 
@@ -269,7 +401,7 @@ public class Author {
             return id;
             
         String name = id.getText();
-        String snakeName = name.replaceAll(&quot;([a-z]+)([A-Z]+)&quot;, &quot;$1\\_$2&quot;).toLowerCase();
+        String snakeName = name.replaceAll("([a-z]+)([A-Z]+)", "$1\\_$2").toLowerCase();
         if (!snakeName.equals(name))
             return new Identifier(snakeName, id.isQuoted());
         else
@@ -292,11 +424,11 @@ public class Author {
 
 
 <pre class="wp-block-preformatted brush: xml; gutter: true">&lt;persistence&gt;
-    &lt;persistence-unit name=&quot;naming&quot;&gt;
+    &lt;persistence-unit name="naming"&gt;
         ...
         &lt;properties&gt;
-            &lt;property name=&quot;hibernate.physical_naming_strategy&quot;
-                      value=&quot;org.thoughtsonjava.naming.config.SnakeCasePhysicalNamingStrategy&quot; /&gt;
+            &lt;property name="hibernate.physical_naming_strategy"
+                      value="org.thoughtsonjava.naming.config.SnakeCasePhysicalNamingStrategy" /&gt;
             ...
         &lt;/properties&gt;
     &lt;/persistence-unit&gt;
@@ -304,7 +436,7 @@ public class Author {
 
 
 
-<h4><span id="Using_the_snake_case_strategy">Using the snake case strategy</span></h4>
+<h5 class="wp-block-heading">Using the snake case strategy</h5>
 
 
 
@@ -345,11 +477,7 @@ public class Book {
 
 
 
-
-
-
-
-<h2><span id="Conclusion">Conclusion</span></h2>
+<h2 class="wp-block-heading">Conclusion</h2>
 
 
 
@@ -361,4 +489,5 @@ public class Book {
 
 
 
-<p>After the logical name got determined, Hibernate applies a physical naming strategy. By default, it returns the logical name. But you can use it to implement a conversion that gets applied to all logical names. As you have seen in the examples, this provides an easy way to fulfill your internal naming conventions.</p></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>
+<p>After the logical name got determined, Hibernate applies a physical naming strategy. By default, it returns the logical name. Since version 5.5.4, Hibernate also offers the CamelCaseToUnderscoresNamingStrategy. It replaces all dots and camel casing with underscores and generates all tables names in lower case. And you can also implement your own physical naming strategy. Most teams use this to apply a naming convention to all logical entity and attribute names. As you have seen in the examples, this provides an easy way to fulfill your internal naming conventions.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

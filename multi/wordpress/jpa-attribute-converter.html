@@ -1,0 +1,197 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to implement an AttributeConverter to support custom types</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to implement an AttributeConverter to support custom types</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>All JPA implementations, including Hibernate, provide default mappings for a huge set of standard Java classes. You could model the attributes of all your entity classes using those mappings, and you would be able to map all columns of your table model. But this is often not the best fit for your business logic. A mapping to a domain-specific type or any other Java type that adds semantics to your entity attribute is often more helpful. You could, for example, map a column of type varchar to your domain-specific type&nbsp;<em>Name</em>, which extends the standard class&nbsp;<em>String&nbsp;</em>and adds domain-specific validation. Or you could map a 8-digit hexadecimal color code to an object of type&nbsp;<em>java.awt.Color</em>.</p>
+
+
+
+<p>JPA&#8217;s <em>AttributeConverter</em> interface provides an easy way to define such a mapping. You only need to implement the 2 methods defined by the interface and specify for which entity attributes you want to use the converter. I&#8217;ll show you how to do that in this article.</p>
+
+
+
+<h2 class="wp-block-heading">Supported conversions and limitations</h2>
+
+
+
+<p>The general concept of the <em>AttributeConverter</em> is simple. The 2 methods of the <em>AttributeConverter </em>interface define 2 conversions. One that converts the type used for your entity attribute to a type that gets handled by the JDBC driver when inserting or updating a record in the database. And another one that converts the type returned by the JDBC driver when reading a record from the database to the type used as your entity attribute.</p>
+
+
+
+<p>Based on this simple concept, the capabilities and limitations of an attribute converter become obvious. </p>
+
+
+
+<p>You can use it on all basic attributes mapped to 1 column in your table model and defined by entity classes, <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">mapped superclasses</a>, or embeddable classes. </p>
+
+
+
+<p>But the converter can&#8217;t handle more complex types, like an entire <em><a href="/collections-hibernate-jpa/#Map_a_Collection_as_an_ElementCollection">ElementCollection</a></em>, a <a href="/ultimate-guide-association-mappings-jpa-hibernate/">to-many association</a>, or any attribute you want to map to multiple database columns. You can also not use an <em>AttributeConverter </em>on <a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">primary key attributes</a> or version attributes. The JPA specification defines a specific handling for those attributes, which could cause conflicts. And attributes that are annotated with&nbsp;<em>@Temporal</em>&nbsp;or&nbsp;<em><a href="https://thorben-janssen.com/hibernate-enum-mappings/">@Enumerated</a></em>&nbsp;are also not supported. That&#8217;s because those annotations already define a mapping to a database column. You need to decide if you want to use the <em>AttributeConverter</em> or the other type mapping and only add the corresponding annotations.</p>
+
+
+
+<p>The list of situations in which you can&#8217;t use an <em>AttributeConverter</em> might seem much longer than the one in which you can use it. But don&#8217;t worry, the&nbsp;<em>AttributeConverter&nbsp;</em>is incredibly useful and can handle almost all standard use cases.</p>
+
+
+
+<h2 class="wp-block-heading">Implementing an AttributeConverter</h2>
+
+
+
+<p>Let&#8217;s implement an&nbsp;<em>AttributeConverter&nbsp;</em>that converts between an entity attribute of type&nbsp;<em>java.awt.Color</em>&nbsp;and a&nbsp;<em>String&nbsp;</em>containing a 6-digit hex value.</p>
+
+
+
+<p>Implementing an <em>AttributeConverter</em> requires a class that implements the <em>javax.persistence.AttributeConverter</em> (JPA 1 &amp; 2) or <em>jakarta.persistence.AttributeConverter</em> (JPA 3) interface. Besides the package name, those 2 interfaces are identical. As you can see in the code snippet, the <em>AttributeConverter</em> interface uses generics. Those are the type of the entity attribute and the type handled by the JDBC driver. In this example, the attribute will be of type <em>Color </em>and the JDBC driver will handle a <em>String</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Converter(autoApply = true)
+public class ColorConverter implements AttributeConverter&lt;Color, String&gt; {
+
+    Logger log = LogManager.getLogger(this.getClass().getName());
+
+    @Override
+    public String convertToDatabaseColumn(Color attribute) {
+        String hex = &quot;#&quot;+Integer.toHexString(attribute.getRGB()).substring(0,6);
+        log.info(&quot;Convert &quot;+attribute+&quot; to &quot;+hex);
+        return hex;
+    }
+
+    @Override
+    public Color convertToEntityAttribute(String dbData) {
+        Color color = Color.decode(dbData);
+        log.info(&quot;Convert &quot;+dbData+&quot; to &quot;+color);
+        return color;
+    }
+}
+</pre></div>
+
+
+<p id="block-343816e9-df46-4502-9a55-bc5ed3170cf8">And you also need to annotate your converter class with JPA&#8217;s&nbsp;<em>@Converter</em>&nbsp;annotation. The&nbsp;<em>@Converter</em>&nbsp;annotation tells your persistence provider, e.g., Hibernate, that this is an attribute converter. And you can set its&nbsp;<em>autoApply&nbsp;</em>attribute to true if you want to use this converter for all entity attributes of type&nbsp;<em>Color</em>. If you don&#8217;t want to do that, please check the following section, where I show you how to activate the converter for a specific attribute.</p>
+
+
+
+<p>The implementation of the <em>AttributeConverter </em>is pretty simple. The interface defines the methods <em>convertToDatabaseColumn </em>and <em>convertToEntityAttribute</em>. Hibernate and any other JPA implementation call these methods to either convert the value of your entity attribute to the type handled by the JDBC driver or vice versa.</p>
+
+
+
+<h2 class="wp-block-heading">Activating an <em>AttributeConverter</em></h2>
+
+
+
+<p>You can activate an <em>AttributeConverter</em> in 3 ways: </p>
+
+
+
+<ol>
+<li>The easiest one is to set the <i>autoApply</i> attribute of the <i>@Converter</i> annotation to true. Your persistence provider will then use the converter for all entity attributes of the given type.</li>
+
+
+
+<li>Or you can annotate an entity attribute with the <i>javax.persistence.Convert</i> (JPA 1 &amp; 2) or <i>jakarta.persistence.Convert</i> (JPA 3) annotation and reference your <em>AttributeConverter</em> implementation. Your persistence provider then only uses the converter for that attribute. <br>The following code snippet shows an example of this approach:</li>
+</ol>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Rectangle {
+
+    @Id
+    @GeneratedValue
+    private Integer id;
+
+    private Integer x;
+
+    private Integer y;
+
+    @Convert(converter = ColorConverter.class)
+    private Color color;
+
+    ...
+}
+</pre></div>
+
+
+<ol start="3">
+<li>Since Hibernate 6.1, you can also use the <em>@ConverterRegistration</em> annotation to register your attribute converter. Using that annotation enables you to separate the implementation of the <em>AttributeConverter </em>from its registration. This enables you to control the active converters in your application, e.g. when using a library that provides multiple converter implementations.<br>Here you can see a <em>package-info.java </em>file that registers the previously defined <em>ColorConverter</em>. When using this annotation, you, of course, no longer need to set the <em>autoApply</em> attributer of the <em>@Converter</em> annotation to <em>true</em>.</li>
+</ol>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@org.hibernate.annotations.ConverterRegistration(converter=com.thorben.janssen.model.ColorConverter.class, autoApply=true)
+package com.thorben.janssen.model;
+</pre></div>
+
+
+<p>That&#8217;s all you need to do to implement an <em>AttributeConverter</em> that provides a custom type mapping. </p>
+
+
+
+<h2 class="wp-block-heading">The converter gets used transparently</h2>
+
+
+
+<p>After you activate the&nbsp;<em>AttributeConverter</em> for an attribute, your persistence provider uses the converter transparently for all operations that affect that entity attribute. That includes all read and write operations performed for that entity class and all bind parameters compared with that attribute.</p>
+
+
+
+<p>You can see that in the following example. It reads a <em>Rectangle </em>entity object with the color white and changes its color to black.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+Rectangle r = em.createQuery(&quot;SELECT r FROM Rectangle r WHERE r.color = :color&quot;, Rectangle.class)
+				.setParameter(&quot;color&quot;, Color.WHITE)
+				.getSingleResult();
+
+r.setColor(Color.BLACK);
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>I used Hibernate as my JPA implementation for the following log output and activated my&nbsp;<a href="https://thorben-janssen.com/hibernate-logging-guide/" target="_blank" rel="noreferrer noopener">recommended logging configuration</a>&nbsp;for development systems. You can see the executed SQL statements and the messages written by the&nbsp;<em>AttributeConverter</em>&nbsp;implementation in the log file.&nbsp;</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+19:11:37,114 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=255,g=255,b=255] to #ffffff
+19:11:37,170 DEBUG &#91;org.hibernate.SQL] - select r1_0.id,r1_0.color,r1_0.x,r1_0.y from Rectangle r1_0 where r1_0.color=?
+19:11:37,171 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;#ffffff]
+19:11:37,179 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert #ffffff to java.awt.Color&#91;r=255,g=255,b=255]
+19:11:37,181 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=255,g=255,b=255] to #ffffff
+19:11:37,181 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert #ffffff to java.awt.Color&#91;r=255,g=255,b=255]
+19:11:37,184 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT r FROM Rectangle r WHERE r.color = :color, time: 39ms, rows: 1
+19:11:37,192 DEBUG &#91;org.hibernate.SQL] - update Rectangle set color=?, x=?, y=? where id=?
+19:11:37,193 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=0,g=0,b=0] to #ff0000
+19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;#ff0000]
+19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;10]
+19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;20]
+19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;INTEGER] - &#91;1]
+19:11:37,196 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=0,g=0,b=0] to #ff0000
+19:11:37,196 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert #ff0000 to java.awt.Color&#91;r=255,g=0,b=0]
+19:11:37,203 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+    31200 nanoseconds spent acquiring 1 JDBC connections;
+    26100 nanoseconds spent releasing 1 JDBC connections;
+    191100 nanoseconds spent preparing 2 JDBC statements;
+    4859600 nanoseconds spent executing 2 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    13747100 nanoseconds spent executing 1 flushes (flushing a total of 1 entities and 0 collections);
+    770600 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>An <em>AttributeConverter </em>provides an easy and portable way to define a custom type mapping. You can use it for all basic attributes you want to map to 1 database column. In this article, I used that to to persist an entity attribute of type <em>java.awt.Color</em> as a 6-digit hex code. But that&#8217;s, of course, not the only kind of mapping you can implement. I used it in other articles to <a href="/jpa-21-type-converter-better-way-to">improve Hibernate&#8217;s standard enum mapping</a> and to <a href="/persist-localdate-localdatetime-jpa/">map <em>LocalDate</em> and <em>LocalDateTime</em></a><em> </em>in older Hibernate versions that didn&#8217;t support those types.</p>
+
+
+
+<p>As you saw in this article, implementing an <em>AttributeConverter</em> is simple. You only need to implement the <em>AttributeConverter </em>interface with its 2 conversion methods and annotate that class with a <em>@Converter</em> annotation. If you set the <em>autoApply </em>attribute of that annotation to <em>true</em>, your persistence provider will use the converter for all entity attributes of the supported type. If you don&#8217;t set that attribute or set it to <em>false</em>, you need to annotate each entity attribute on which you want to use the converter with <em>@Convert</em> and reference your converter implementation.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Defining custom queries and projections</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Defining custom queries and projections</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Some of the most important features in every persistence framework are the ones that enable us to query data and retrieve it in our preferred format. In the best case, you can easily define and execute standard queries, but you can also define very complex ones. Spring Data JDBC provides you with all of this, and I will show you how to use these features in this article.</p>
+
+
+
+<p>As the name indicates, Spring Data JDBC is one of the modules of Spring Data and follows the same concepts that you might already know from other Spring Data modules. You define a set of entities that get mapped to database tables and group them into aggregates. For each aggregate, you can define a repository. The best way to do that is to extend one of Spring Data JDBC’s standard repository interfaces. These provide you with standard operations to read and write entities and aggregates. For this article, I expect you to be familiar with repositories in Spring Data. If you&#8217;re not, please take a look at the <a href="/what-is-spring-data-jpa-and-why-should-you-use-it/#repositories">section about repositories in my introduction to Spring Data JPA</a>. They work in the same way as the repositories in Spring Data JDBC.</p>
+
+
+
+<p>By default, Spring Data JDBC&#8217;s repositories can only fetch all entities of a specific type or one entity by its primary key. If you need a different query, you need to define it yourself. You can use Spring Data’s popular <a href="#derivedQueries">derived query</a> feature for simple queries. And if it gets more complex, you can annotate the repository method with a <em>@Query</em> annotation and <a href="#customQuery">provide your own statement</a>. Before we take a closer look at both options and discuss non-entity projections, let&#8217;s take a quick look at the domain model used in this article.</p>
+
+
+
+<h2 class="wp-block-heading">Example domain model</h2>
+
+
+
+<p>The domain model that we will use in the examples of this post consists of 2 aggregates. The <em>ChessPlayer </em>aggregate only consists of the <em>ChessPlayer </em>entity. The <em>ChessGame</em> aggregate is independent of the <em>ChessPlayer </em>and consists of the entity classes <em>ChessGame </em>and <em>ChessMove</em> with a one-to-many association between them. The <em>ChessGame</em> entity class also maps 2 foreign key references to the <em>ChessPlayer</em> aggregate. One of them references the player with the white and the other to the player playing the black pieces.</p>
+
+
+
+<div class="wp-block-image"><figure class="aligncenter size-full"><img decoding="async" loading="lazy" width="638" height="349" src="https://thorben-janssen.com/wp-content/uploads/2022/05/Spring-Data-JDBC-Queries-and-Projections-Class-diagram.png" alt="Class diagram showing the 2 aggregates ChessGame and ChessPlayer. The ChessPlayer aggregate consists of the class ChessPlayer with the attributes id, firstName, and lastName.
+The ChessGame aggregate consists of the composition of the classes ChessGame and ChessMove. The ChessGame class has the attributes id, playedOn, 2 references of type Long to ChessPlayer objects named playerWhite and playerBlack, and a List of ChessMove objects. The ChessMove class has the attributes moveNumber, moveColor, and move." class="wp-image-37265" srcset="https://thorben-janssen.com/wp-content/uploads/2022/05/Spring-Data-JDBC-Queries-and-Projections-Class-diagram.png 638w, https://thorben-janssen.com/wp-content/uploads/2022/05/Spring-Data-JDBC-Queries-and-Projections-Class-diagram-300x164.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/05/Spring-Data-JDBC-Queries-and-Projections-Class-diagram-624x341.png 624w, https://thorben-janssen.com/wp-content/uploads/2022/05/Spring-Data-JDBC-Queries-and-Projections-Class-diagram-50x27.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/05/Spring-Data-JDBC-Queries-and-Projections-Class-diagram-100x55.png 100w" sizes="(max-width: 638px) 100vw, 638px" /></figure></div>
+
+
+
+<h2 class="wp-block-heading" id="derivedQueries">Derived queries in Spring Data JDBC</h2>
+
+
+
+<p>Similar to other Spring Data modules, Spring Data JDBC can generate a query statement based on the name of a repository method. This is called a derived query. A derived query is a great way to generate a simple query statement that doesn&#8217;t require JOIN clauses and doesn&#8217;t use more than 3 query parameters.</p>
+
+
+
+<p>Here you can see a few typical examples of such queries.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessGameRepository extends CrudRepository&lt;ChessGame, Long&gt; {
+
+    List&lt;ChessGame&gt; findByPlayedOn(LocalDateTime playedOn);
+
+    List&lt;ChessGame&gt; findByPlayedOnIsBefore(LocalDateTime playedOn);
+
+    int countByPlayedOn(LocalDateTime playedOn);
+
+    List&lt;ChessGame&gt; findByPlayerBlack(AggregateReference&lt;ChessPlayer, Long&gt; playerBlack);
+
+    List&lt;ChessGame&gt; findByPlayerBlack(ChessPlayer playerBlack);
+}
+</pre></div>
+
+
+<p>Derived queries in Spring Data JDBC follow the same principles as in other Spring Data modules. If your method name matches one of the following patterns, Spring Data JDBC tries to generate a query statement:</p>
+
+
+
+<ul><li><em>find&lt;some string&gt;By&lt;where clause&gt;</em></li><li><em>get&lt;some string&gt;By&lt;where clause&gt;</em> </li><li><em>query&lt;some string&gt;By&lt;where clause&gt;</em> </li><li><em>exists&lt;some string&gt;By&lt;where clause&gt;</em></li><li><em>count&lt;some string&gt;By&lt;where clause&gt;</em></li></ul>
+
+
+
+<p>Spring Data JDBC parses the <em>&lt;where clause&gt;</em> and maps it to attributes of the entity class managed by the repository interface. Joins to other entity classes are not supported. </p>
+
+
+
+<p>By default, Spring Data JDBC generates an equal comparison for each referenced attribute and compares it with a method parameter with the same name. You can customize the comparison by using keywords like “After”, “Greater Than”, “Like”, and “IsTrue”. You can find a full list of all supported keywords in the <a href="https://docs.spring.io/spring-data/jdbc/docs/current/reference/html/#jdbc.query-methods" target="_blank" rel="noreferrer noopener nofollow">official documentation</a>. You can also combine multiple parameters in your WHERE clause declaration using the keywords &#8220;And&#8221; and &#8220;Or&#8221;.</p>
+
+
+
+<p>Based on this information, Spring Data JDBC generates an SQL statement and executes it when you call the repository method in your business code.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessGame&gt; games = gameRepo.findByPlayedOnIsBefore(LocalDateTime.of(2022, 05, 19, 18, 00, 00));
+games.forEach(g -&gt; log.info(g.toString()));
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-05-20 18:39:56.561 DEBUG 2024 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 18:39:56.562 DEBUG 2024 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;played_on&quot; AS &quot;played_on&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;played_on&quot; &lt; ?]
+</pre></div>
+
+
+<p>Please remember that this feature is designed for simple queries. As a rule of thumb, I recommend only using it for queries that don&#8217;t require more than 2-3 query parameters.</p>
+
+
+
+<h2 class="wp-block-heading" id="customQuery">Custom queries in Spring Data JDBC</h2>
+
+
+
+<p>If your query is too complex for a derived query, you can annotate your repository method with a&nbsp;<em>@Query</em>&nbsp;annotation and provide a database-specific SQL statement. If you&#8217;re familiar with Spring Data JPA, this is basically the same as the <a href="https://thorben-janssen.com/native-queries-with-spring-data-jpa/">native query feature</a>, but it doesn&#8217;t require you to set the <em>nativeQuery </em>flag because Spring Data JDBC doesn&#8217;t provide its own query language.</p>
+
+
+
+<p>As you can see in the following code snippet, defining your own query is as simple as it sounds, and you can use all features supported by your database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessGameRepository extends CrudRepository&lt;ChessGame, Long&gt; {
+
+    @Query(&quot;&quot;&quot;
+            SELECT g.*
+            FROM chess_game g 
+                JOIN chess_move m ON g.id = m.chess_game
+            WHERE m.move = :move
+            &quot;&quot;&quot;)
+    List&lt;ChessGame&gt; findByMovesMove(String move);
+}
+</pre></div>
+
+
+<p>In this case, I use a statement that selects all columns of the&nbsp;<em>chess_game</em>&nbsp;table of each game in which the provided move was played. The moves are stored in the <em>chess_move </em>table, which gets mapped to the <em>ChessMove</em> entity class. In the SQL statement, I use a simple JOIN clause to join the 2 tables and provide a WHERE clause to filter the result. </p>
+
+
+
+<p>The WHERE clause uses the named bind parameter <em>:move</em>, and the repository method defines a method parameter with the same name. When executing this statement, Spring Data JDBC automatically sets the value of the method parameter <em>move </em>as the bind parameter with name <em>move</em>.</p>
+
+
+
+<p>As you can see, the query itself doesn&#8217;t provide any information about the format in which I want to retrieve the selected information. This is defined by the return type of the repository method. In this case, the SQL statement selects all columns of the <em>chess_game </em>table, and Spring Data JDBC will map the result to <em>ChessGame</em> entity objects. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessGame&gt; games = gameRepo.findByMove(&quot;e4&quot;);
+games.forEach(g -&gt; log.info(g.toString()));
+</pre></div>
+
+
+<p>As you can see in the log output, Spring Data JDBC used the provided SQL statement, set all method parameters as bind parameter values, and executed the query. And when it mapped the query result to <em>ChessGame </em>objects, it had to execute an additional query to get all moves played in the game and initialize the <em>List&lt;ChessMove> moves</em> association. This is called an n+1 select issue, which can cause performance problems. The best way to reduce the performance impact is to keep your aggregates small and concise or use non-entity projections, which I will show in the next section.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-05-20 19:06:16.903 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 19:06:16.905 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT g.*
+FROM chess_game g
+    JOIN chess_move m ON g.id = m.chess_game
+WHERE m.move = ?
+]
+2022-05-20 19:06:17.018 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 19:06:17.018 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
+2022-05-20 19:06:17.037  INFO 16976 --- &#91;           main] com.thorben.janssen.TestQueryMethod      : ChessGame &#91;id=16, playerBlack=IdOnlyAggregateReference{id=10}, playerWhite=IdOnlyAggregateReference{id=9}, moves=&#91;ChessMove &#91;moveNumber=1, color=WHITE, move=e4], ChessMove &#91;moveNumber=1, color=BLACK, move=e5]]]
+</pre></div>
+
+
+<h2 class="wp-block-heading">Non-entity/non-aggregate projections in Spring Data JDBC</h2>
+
+
+
+<p>Entity objects are not the only projection supported by Spring Data JDBC. You can also retrieve your query result as <em>Object[]</em> or map each record to a DTO object. Working with <em>Object[]</em>s is very uncomfortable and gets only rarely used. I recommend using the DTO projection for all use cases that don&#8217;t require the entire aggregate. That ensures that you don&#8217;t execute any unnecessary statements to initialize associations you&#8217;re not using and improves the performance of your application.</p>
+
+
+
+<p>To use a DTO projection, you need to define a DTO class. That&#8217;s a simple Java class with an attribute for each database column you want to select. Unfortunately, Spring Data JDBC doesn&#8217;t support <a href="/spring-data-jpa-query-projections/#DTOs_as_Interfaces">interface-based projections</a>, which you might know from Spring Data JPA.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessGamePlayerNames {
+
+    private Long gameId;
+    private LocalDateTime playedOn;
+    private String playerWhiteFirstName;
+    private String playerWhiteLastName;
+    private String playerBlackFirstName;
+    private String playerBlackLastName;
+
+    // omitted getter and setter methods for readability
+
+    @Override
+    public String toString() {
+        return &quot;ChessGamePlayerNames &#91;gameId=&quot; + gameId + &quot;, playedOn=&quot; + playedOn + &quot;, playerBlackFirstName=&quot;
+                + playerBlackFirstName + &quot;, playerBlackLastName=&quot; + playerBlackLastName + &quot;, playerWhiteFirstName=&quot;
+                + playerWhiteFirstName + &quot;, playerWhiteLastName=&quot; + playerWhiteLastName + &quot;]&quot;;
+    }
+
+}
+</pre></div>
+
+
+<p>As long as the aliases of the selected database columns match the attribute names of your DTO class, Spring Data JDBC can map each record of your query&#8217;s result set automatically. The only thing you need to do is to set the return type of your repository method to your DTO class or a <em>List </em>of your DTO classes.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessGameRepository extends CrudRepository&lt;ChessGame, Long&gt; {
+
+    @Query(&quot;&quot;&quot;
+            SELECT g.id as game_id,
+                   g.played_on as played_on,
+                   w.first_name as player_white_first_name,
+                   w.last_name as player_white_last_name,
+                   b.first_name as player_black_first_name,
+                   b.last_name as player_black_last_name
+            FROM chess_game g
+                JOIN chess_player w ON g.player_white = w.id
+                JOIN chess_player b ON g.player_black = b.id
+            &quot;&quot;&quot;)
+    List&lt;ChessGamePlayerNames&gt; findGamePlayerNamesBy();
+}
+</pre></div>
+
+
+<p>As you can see, the query statement and the projection are independent of your aggregates and their boundaries. That&#8217;s another benefit of a non-entity projection. It gives you the freedom and flexibility to fetch the data in the form that best fits your business logic.</p>
+
+
+
+<p>Spring Data JDBC executes the provided SQL statement when you use that repository method in your business code. And when it retrieves the result, it maps each record of the result set to a&nbsp;<em>ChessGamePlayerNames</em>&nbsp;object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessGamePlayerNames&gt; games = gameRepo.findGamePlayerNamesBy();
+games.forEach(g -&gt; log.info(g.toString()));
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-05-20 19:09:16.592 DEBUG 12120 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 19:09:16.593 DEBUG 12120 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT g.id as game_id,
+       g.played_on as played_on,
+       w.first_name as player_white_first_name,
+       w.last_name as player_white_last_name,
+       b.first_name as player_black_first_name,
+       b.last_name as player_black_last_name
+FROM chess_game g
+    JOIN chess_player w ON g.player_white = w.id
+    JOIN chess_player b ON g.player_black = b.id
+]
+2022-05-20 19:09:16.675  INFO 12120 --- &#91;           main] com.thorben.janssen.TestQueryMethod      : ChessGamePlayerNames &#91;gameId=16, playedOn=2022-05-19T18:00, playerBlackFirstName=A better, playerBlackLastName=player, playerWhiteFirstName=Thorben, playerWhiteLastName=Janssen]
+</pre></div>
+
+
+<p>In the log output, you can see that Spring Data JDBC only executed the query defined for the repository method. In the previous example, it had to perform an additional query to initialize the mapped association from the&nbsp;<em>ChessGame&nbsp;</em>to the&nbsp;<em>ChessMove&nbsp;</em>entities. DTOs don’t support mapped associations and, due to that, don’t trigger any additional query statements.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Spring Data JDBC provides 2 options to define custom queries: </p>
+
+
+
+<ul><li>Derived queries are a great fit for all simple queries that don’t require any JOIN clauses and don’t use more than 3 query parameters. They don’t require you to provide any custom SQL statements. You only need to define a method in your repository interface that follows Spring Data JDBC&#8217;s naming convention. Spring then generates the query statement for you.</li><li>If your query gets more complex, you should annotate your repository method with a&nbsp;<em>@Query&nbsp;</em>annotation and provide a custom SQL statement. You must ensure that your SQL statement is valid and matches your database&#8217;s SQL dialect. When you call the repository method, Spring Data JDBC takes that statement, sets the provided bind parameter values, and executes it.&nbsp;</li></ul>
+
+
+
+<p>You can use different projections for both types of queries: </p>
+
+
+
+<ul><li>The easiest one is the entity projection. Spring Data JDBC then applies the mapping defined for your entity class to each record in the result set. If your entity class contains mapped associations to other entity classes, Spring Data JDBC executes additional queries to initialize these associations.<br>Entity projections are a great fit if you want to change data or if your business logic requires the entire aggregate.</li><li><em>Object[]</em>s are a rarely used projection that can be a good fit for read-only operations. They enable you to only select the columns you need.</li><li>DTO projections provide the same benefits as&nbsp;<em>Object[]</em>&nbsp;projections but using them is much more comfortable. That&#8217;s why they are more commonly used and my preferred projection for read-only operations.<br>As you saw in the example, DTO projections are indepent of your aggregates and their boundaries. This enables you to query the data in the format that fits your business logic.</li></ul>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

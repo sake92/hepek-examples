@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to map composite column types with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to map composite column types with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>When most developers design their table and entity models, they create tables that only use basic column types and map these to basic entity attributes. Even though these are the most commonly used types, they are not the only ones supported by modern relational databases and Hibernate. You can also use composite, JSON, and XML types. I already showed you how to <a href="https://thorben-janssen.com/persist-postgresqls-jsonb-data-type-hibernate/">map a JSON column</a> using different Hibernate versions. In this article, I want to focus on mapping composite column types. Since Hibernate 6.2, this got incredibly simple if you’re using an Oracle, PostgreSQL, or DB2 database.</p>
+
+
+
+<p>A composite type represents a structure that consists of multiple fields. Each field has a name and can store a value. Here you can see an example of such a <a href="https://www.postgresql.org/docs/current/rowtypes.html">type definition for a PostgreSQL database</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+create type my_struct as (longProp bigint, stringProp varchar(255))
+</pre></div>
+
+
+<p>I will use the <em>my_struct</em> type in the examples of this article. It contains the <em>longProp </em>field, which stores a numerical value, and the <em>stringProp </em>field, which stores text. When creating your database table, you can use this type like any other column type.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+create table MyEntity (
+	id bigint not null,
+	structProperty my_struct,
+	primary key (id)
+)
+</pre></div>
+
+
+<p>Starting with Hibernate 6.2, you can easily map a composite type column to an embeddable, which you can then use as your entity attribute type.</p>
+
+
+
+<h2 class="wp-block-heading">Mapping composite types with Hibernate 6.2</h2>
+
+
+
+<p>A composite type consists of multiple fields. When mapping it to an entity attribute, you obviously want to map it to an attribute type that handles each field separately. That makes an embeddable an obvious choice.</p>
+
+
+
+<p>As I showed in a <a href="https://thorben-janssen.com/java-records-embeddables-hibernate/">recent article</a>, you can model an embeddable as a Java class or record. You can map both of them to a composite type. But how you define your embeddable has a small influence on Hibernate&#8217;s mapping.</p>
+
+
+
+<h3 class="wp-block-heading">Mapping an embeddable class or record to a composite type</h3>
+
+
+
+<p>The easiest way to map an embeddable to a composite type is to annotate your class with a <em>@Struct</em> annotation and reference the name of the composite type. This works in the same way for embeddable implemented as a class or as a record.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+@Struct(name = &quot;my_struct&quot;)
+public class MyStructure {
+
+	private String stringProp;
+	
+	private Long longProp;
+
+	...
+}
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+@Struct(name = &quot;my_struct&quot;)
+public record MyStructureRecord(String stringProp, Long longProp) {}
+</pre></div>
+
+
+<p>Since version 6.2, Hibernate supports <a href="https://thorben-janssen.com/java-records-embeddables-hibernate/">records as embeddable</a> by default. If you’re using Hibernate 6.0 or 6.1, you have to implement an <em><a href="https://thorben-janssen.com/hibernate-embeddableinstantiator/">EmbeddableInstantiator</a></em>, which tells Hibernate how to instantiate the record.</p>
+
+
+
+<p>In the following examples, I will use the embeddable class <em>MyStructure</em>. But you could use the embeddable record <em>MyStructureRecord </em>in the same way.</p>
+
+
+
+<p>After implementing your embeddable and defining the mapping to a composite type, you can use it like any other embeddable.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class MyEntity {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	@Embedded
+	private MyStructure structProperty;
+	
+	...
+}
+</pre></div>
+
+
+<p>You only see a difference when you check your table model or the executed SQL statements. Instead of mapping each attribute of your embeddable to a separate database column, Hibernate maps each attribute to a field of the referenced composite type.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+MyStructure p = new MyStructure();
+p.setLongProp(123L);
+p.setStringProp(&quot;abc&quot;);
+
+MyEntity e = new MyEntity();
+e.setStructProperty(p);
+em.persist(e);
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+11:43:52,494 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('MyEntity_SEQ')
+11:43:52,510 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        MyEntity
+        (structProperty,id) 
+    values
+        (?,?)
+11:43:52,510 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;STRUCT] - &#91;com.thorben.janssen.model.MyStructure@7c7e73c5]
+11:43:52,514 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;BIGINT] - &#91;1]
+</pre></div>
+
+
+<p>You can even use the embeddable in your JPQL queries. Like a normal embeddable, you use the path operator &#8220;.&#8221; to navigate from your entity to the embeddable and from there to a specific attribute.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+MyEntity e = em.createQuery(&quot;&quot;&quot;
+								SELECT e 
+								FROM MyEntity e 
+								WHERE e.structProperty.longProp = 456&quot;&quot;&quot;, 
+							MyEntity.class)
+				.getSingleResult();
+</pre></div>
+
+
+<p>Hibernate translates this into the SQL dialect of your database. I&#8217;m using a PostgreSQL database for this example, and Hibernate generates the following statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:06:43,917 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        m1_0.id,
+        (m1_0.structProperty).longProp,
+        (m1_0.structProperty).stringProp 
+    from
+        MyEntity m1_0 
+    where
+        (
+            m1_0.structProperty
+        ).longProp=456
+</pre></div>
+
+
+<h3 class="wp-block-heading">Adjusting the order of the composite&#8217;s fields</h3>
+
+
+
+<p>When you use the default mapping, you might run into the problem that the order in which Hibernate maps the attributes of your embeddable doesn&#8217;t match the structure of your composite type. The reason for that problem becomes obvious when you look at the data structure stored in a composite type. It&#8217;s a simple list of values. The order of the list&#8217;s elements has to match the order in which the fields of the composite type are defined.</p>
+
+
+
+<p>So, for the following definition of the <em>my_struct </em>type, Hibernate needs to provide the value of the <em>stringProp </em>attribute as the 1st and the value of the <em>longProp </em>attribute as the 2nd value in that list.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+create type my_struct as (stringProp varchar(255), longProp bigint)
+</pre></div>
+
+
+<p>Hibernate’s default order depends on how you implement your embeddable. If you implement an embeddable class, Hibernate maps the attributes in the alphabetical order of their names. If you implement it as a record, Hibernate maps the fields in the order listed in the record definition.</p>
+
+
+
+<p>You can adjust the default mapping by specifying the order in which Hibernate shall map the attributes. You do that by providing an array of attribute names to the <em>@Struct</em> annotation. Hibernate then maps the attributes of your embeddable class or record in the order defined by the <em>attributes </em>array.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+@Struct(name = &quot;my_struct&quot;, attributes = {&quot;stringProp&quot;, &quot;longProp&quot;})
+public class MyStructure {
+
+	private String stringProp;
+	
+	private Long longProp;
+
+	...
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>The <em>@Struct</em> annotation introduced in Hibernate 6.2 enables you to map an embeddable to a composite column type. As you saw in the examples, the mapping is straightforward. But you need to ensure that Hibernate maps the elements of the embeddable in the same order as the composite type defined its fields.</p>
+
+
+
+<p>After you have implemented your embeddable and defined the mapping to the composite type, you can use it in the same way as any other embeddable. This even includes your JPQL queries. You can use the path operator &#8220;.&#8221; to navigate from an entity object via the embeddable attribute to a specific field.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

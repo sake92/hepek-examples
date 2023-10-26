@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s ResultTransformer in Hibernate 4, 5 &amp; 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.3.7/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s ResultTransformer in Hibernate 4, 5 &amp; 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8"><p>Hibernate implements JPA&#8217;s standardized <a href="https://thorben-janssen.com/dto-projections/">constructor expressions</a> and <a href="https://thorben-janssen.com/result-set-mapping-basics/">@SqlResultSetMappings</a> to map the results of your queries. And it also supports proprietary ResultTransformers. They provide a powerful and flexible way to map the result of your <a href="https://thorben-janssen.com/jpql/">JPQL</a>, Criteria, and <a href="https://thorben-janssen.com/jpa-native-queries/">native SQL query</a> to a specific object structure. This can be entity or DTO objects, <em>java.util.List</em> or <em>java.util.Map</em> representations of each record, or a custom data structure.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s ResultTransformer in Hibernate 4, 5 &amp; 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s ResultTransformer in Hibernate 4, 5 &amp; 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Hibernate implements JPA&#8217;s standardized <a href="https://thorben-janssen.com/dto-projections/">constructor expressions</a> and <a href="https://thorben-janssen.com/result-set-mapping-basics/">@SqlResultSetMappings</a> to map the results of your queries. And it also supports proprietary ResultTransformers. They provide a powerful and flexible way to map the result of your <a href="https://thorben-janssen.com/jpql/">JPQL</a>, Criteria, and <a href="https://thorben-janssen.com/jpa-native-queries/">native SQL query</a> to a specific object structure. This can be entity or DTO objects, <em>java.util.List</em> or <em>java.util.Map</em> representations of each record, or a custom data structure.</p>
 
 
 
@@ -10,8 +11,7 @@
 
 
 
-<div id="toc_container" class="no_bullets"><p class="toc_title">Contents</p><ul class="toc_list"><li><a href="#ResultTransformer_in_Hibernate_4_and_5"><span class="toc_number toc_depth_1">1</span> ResultTransformer in Hibernate 4 and 5</a><ul><li><a href="#AliasToBeanResultTransformer"><span class="toc_number toc_depth_2">1.1</span> AliasToBeanResultTransformer</a></li><li><a href="#ToListResultTransformer_and_AliasToEntityMapResultTransformer"><span class="toc_number toc_depth_2">1.2</span> ToListResultTransformer and AliasToEntityMapResultTransformer</a></li><li><a href="#Implementing_your_own_ResultTransformer"><span class="toc_number toc_depth_2">1.3</span> Implementing your own ResultTransformer</a></li></ul></li><li><a href="#ResultTransformer_in_Hibernate_6"><span class="toc_number toc_depth_1">2</span> ResultTransformer in Hibernate 6</a></li><li><a href="#Conclusion"><span class="toc_number toc_depth_1">3</span> Conclusion</a></li></ul></div>
-<h2><span id="ResultTransformer_in_Hibernate_4_and_5">ResultTransformer in Hibernate 4 and 5</span></h2>
+<h2 class="wp-block-heading">ResultTransformer in Hibernate 4 and 5</h2>
 
 
 
@@ -19,17 +19,7 @@
 
 
 
-<p>You only need to provide an instance of your ResultTransformer to the setResultTransformer method of Hibernate&#8217;s&nbsp;<em>Query</em>&nbsp;interface. If you&#8217;re using JPA&#8217;s <em>EntityManager </em>and <em>Query </em>interface, you need to unwrap them. If you unwrap the <em>EntityManager</em>, you get the associated Hibernate <em>Session</em>. If you unwrap JPA&#8217;s <em>Query </em>interface, you get Hibernate&#8217;s <em>Query</em> interface. I explained that in more detail in the <a href="https://thorben-janssen.com/hibernate-tips-access-hibernate-apis-jpa/">Hibernate Tip: How to access Hibernate APIs from JPA</a>.</p>
-
-
-
-<p>In the following example, I tell Hibernate to apply the <em>AliasToBeanResultTransformer </em>to each record in the result set.</p>
-
-
-
-<pre class="wp-block-preformatted brush: java; gutter: true">Query query = session.createQuery(&quot;select p.id as personId,p.firstName as firstName, p.lastName as lastName from Person p&quot;)
-                .setResultTransformer(new AliasToBeanResultTransformer(PersonDTO.class));
-        List&lt;PersonDTO&gt; personDTOS = query.list();</pre>
+<p>You only need to provide an instance of your <em>ResultTransformer </em>to the <em>setResultTransformer</em> method of Hibernate&#8217;s&nbsp;<em>Query</em>&nbsp;interface. If you&#8217;re using JPA&#8217;s <em>EntityManager </em>and <em>Query </em>interface, you need to unwrap them. If you unwrap the <em>EntityManager</em>, you get the associated Hibernate <em>Session</em>. If you unwrap JPA&#8217;s <em>Query </em>interface, you get Hibernate&#8217;s <em>Query</em> interface. I explained that in more detail in the <a href="https://thorben-janssen.com/hibernate-tips-access-hibernate-apis-jpa/">Hibernate Tip: How to access Hibernate APIs from JPA</a>.</p>
 
 
 
@@ -37,7 +27,7 @@
 
 
 
-<h3><span id="AliasToBeanResultTransformer">AliasToBeanResultTransformer</span></h3>
+<h3 class="wp-block-heading">AliasToBeanResultTransformer</h3>
 
 
 
@@ -48,18 +38,18 @@
 <p>Hibernate&#8217;s <em>AliasToBeanResultTransformer </em>provides another way based on the bean specification. It uses the default constructor of the DTO class to instantiate a new object. In the next step, Hibernate uses reflection to call a setter method for each aliased value in the query. That makes it a great fit for DTOs that are implemented as a standard Java class but not as a <a href="/java-records-hibernate-jpa/">Java record</a>.</p>
 
 
-
-<pre class="wp-block-preformatted brush: java; gutter: true">Query query = session.createQuery(&quot;select p.id as personId,p.firstName as firstName, p.lastName as lastName from Person p&quot;)
-	.setResultTransformer(new AliasToBeanResultTransformer(PersonDTO.class));
-List&lt;PersonDTO&gt; personDTOS = query.list();</pre>
-
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query query = session.createQuery(&quot;select p.id as personId,p.firstName as firstName, p.lastName as lastName from Person p&quot;)
+    .setResultTransformer(new AliasToBeanResultTransformer(PersonDTO.class));
+List&lt;PersonDTO&gt; personDTOS = query.list();
+</pre></div>
 
 
 <p>In this example, the <em>AliasToBeanResultTransformer </em>uses the default constructor to instantiate a new <em>PersonDTO </em>object for each record returned by the query. In the next step, Hibernate calls the methods <em>setPersonId</em>, <em>setFirstName, </em>and <em>setLastName </em>with the values returned by the query.</p>
 
 
 
-<h3><span id="ToListResultTransformer_and_AliasToEntityMapResultTransformer">ToListResultTransformer and AliasToEntityMapResultTransformer</span></h3>
+<h3 class="wp-block-heading">ToListResultTransformer and AliasToEntityMapResultTransformer</h3>
 
 
 
@@ -70,18 +60,18 @@ List&lt;PersonDTO&gt; personDTOS = query.list();</pre>
 <p>Here you can see an example of the <em>AliasToEntityMapResultTransformer</em>. You can use the <em>ToListResultTransformer </em>in the same way.</p>
 
 
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query selectPerson = session.createQuery(
+    &quot;Select p.id as id, &quot; +
+    &quot;p.firstName as firstName, &quot; +
+    &quot;p.lastName as lastName &quot; +
+    &quot;from Person p&quot;)
+    .setResultTransformer(AliasToEntityMapResultTransformer.INSTANCE);
+List&lt;Map&gt; list = selectPerson.list();
+</pre></div>
 
-<pre class="wp-block-preformatted brush: java; gutter: true">Query selectPerson = session.createQuery(
-	&quot;Select p.id as id, &quot; +
-	&quot;p.firstName as firstName, &quot; +
-	&quot;p.lastName as lastName &quot; +
-	&quot;from Person p&quot;)
-	.setResultTransformer(AliasToEntityMapResultTransformer.INSTANCE);
-List&lt;Map&gt; list = selectPerson.list();</pre>
 
-
-
-<h3><span id="Implementing_your_own_ResultTransformer">Implementing your own ResultTransformer</span></h3>
+<h3 class="wp-block-heading">Implementing your own ResultTransformer</h3>
 
 
 
@@ -96,61 +86,101 @@ List&lt;Map&gt; list = selectPerson.list();</pre>
 <p>I use that approach in the following code snippet to implement my own <em>ResultTransformer </em>that maps each record to a <em>PersonDTO </em>object.</p>
 
 
-
-<pre class="wp-block-preformatted brush: java; gutter: true">Query query = session.createNativeQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;)
-	.setResultTransformer(new ResultTransformer(){
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query query = session.createNativeQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;)
+    .setResultTransformer(new ResultTransformer(){
             @Override
-            public Object transformTuple(Object[] tuples, String[] aliases) {
+            public Object transformTuple(Object&#91;] tuples, String&#91;] aliases) {
                 PersonDTO personDTO = new PersonDTO();
-                personDTO.setPersonId((int)tuples[0]);
-                personDTO.setFirstName((String)tuples[1]);
-                personDTO.setLastName((String)tuples[2]);
+                personDTO.setPersonId((int)tuples&#91;0]);
+                personDTO.setFirstName((String)tuples&#91;1]);
+                personDTO.setLastName((String)tuples&#91;2]);
                 return personDTO;
             }
-
+ 
             @Override
             public List transformList(List list) {
                 return list;
             }
         });
-List&lt;PersonDTO&gt; list = query.list();</pre>
+List&lt;PersonDTO&gt; list = query.list();
+</pre></div>
+
+
+<h2 class="wp-block-heading">ResultTransformer in Hibernate 6</h2>
 
 
 
-<h2><span id="ResultTransformer_in_Hibernate_6">ResultTransformer in Hibernate 6</span></h2>
+<p>When I described the implementation of a custom <em>ResultTransformer </em>in Hibernate 4 and 5, I also mentioned one of the downsides of the <em>ResultTransformer </em>interface. It defines the <em>transformTuple </em>and <em>transformList </em>methods that both need to be implemented. Most applications implement only 1 of these 2 methods in a meaningful way. But because both methods are part of the interface definition, you need to implement both of them and can&#8217;t use the <em>ResultTransformer </em>as a functional interface in lambda expressions.</p>
 
 
 
-<p>When I described the implementation of a custom <em>ResultTransformer </em>implementation, I also mentioned one of the downsides of the current <em>ResultTransformer </em>interface. It defines the <em>transformTuple </em>and <em>transformList </em>methods that both need to be implemented. Most applications implement only 1 of these 2 methods in a meaningful way. But because both methods are part of the interface definition, you can&#8217;t use the <em>ResultTransformer </em>as a functional interface in lambda expressions.</p>
+<p>This changed in Hibernate 6. The Hibernate team has split the <em>ResultTransformer </em>interface into the 2 functional interfaces: <em>TupleTransformer </em>and <em>ResultListTransformer</em>. You can set them by calling the <em>setTupleTransformer</em> and <em>setResultListTransformer </em>methods on Hibernate&#8217;s <em>Query </em>interface.</p>
 
 
 
-<p>This will change in Hibernate 6. The Hibernate team has split the <em>ResultTransformer </em>interface into the 2 functional interfaces: <em>TupleTransformer </em>and <em>ResultListTransformer</em>.</p>
+<p>The Hibernate team also converted the <em>ResultTransformer </em>implementations provided by Hibernate 4 and 5 to <em>TupleTransformer</em> or <em>ResultListTransformer</em> implementations in Hibernate 6. Due to that, the required changes when migrating your application to Hibernate 6 should be minimal.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query query = session.createQuery(&quot;select p.id as personId,p.firstName as firstName, p.lastName as lastName from Person p&quot;)
+    .setTupleTransformer(new AliasToBeanResultTransformer&lt;PersonDTO&gt;(PersonDTO.class)).getSingleResult();
+List&lt;PersonDTO&gt; personDTOS = query.list();
+</pre></div>
+
+
+<p>And as you can see in the following code snippet, the implementation of a custom transformer in Hibernate 6 is much more concise.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+PersonDTO person = (PersonDTO) session
+        .createQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;, Object&#91;].class)
+        .setTupleTransformer((tuples, aliases) -&gt; {
+                log.info(&quot;Transform tuple&quot;);
+                PersonDTO personDTO = new PersonDTO();
+                personDTO.setPersonId((int)tuples&#91;0]);
+                personDTO.setFirstName((String)tuples&#91;1]);
+                personDTO.setLastName((String)tuples&#91;2]);
+                return personDTO;
+        }).getSingleResult();
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
 
 
 
-<p>Based on the <em>ResultTransformer </em>implementations provided by Hibernate 4 and 5, this will be a small but nice improvement. We will need to wait and see how this will affect the existing <em>ResultTransformer </em>implementations.</p>
+<p>Hibernate&#8217;s <em>ResultTransformers </em>provide various ways to map the result of your query to different data structures. They were commonly used in Hibernate 4, got deprecated in Hibernate 5 and got replaced by the functional interfaces <em>TupleTransformer</em> and <em>ResultListTransformer</em> in Hibernate 6.</p>
 
 
 
-<h2><span id="Conclusion">Conclusion</span></h2>
+<p>The following list shows the 3 most commonly used <em>ResultTransformer</em>s in Hibernate 4 and 5. These are still available in Hibernate 6 and now implement the <em>TupleTransformer</em> and/or <em>ResultListTransformer </em>interfaces.</p>
 
 
 
-<p>Hibernate&#8217;s <em>ResultTransformers </em>provide various ways to map the result of your query to different data structures. They were commonly used in Hibernate 4, got deprecated in Hibernate 5 and will be replaced by a functional interfaces in Hibernate 6.</p>
+<ul>
+<li><em>AliasToBeanResultTransformer</em> &#8211; Instantiates and sets attributes on DTO objects based on the alias defined in the query.</li>
 
 
 
-<p>Commonly used ResultTransformers for Hibernate 4 and 5 are:</p>
+<li><em>ToListResultTransformer</em>&#8211; Maps each record in the query result to a <em>java.util.List</em>.</li>
 
 
 
-<ul><li>AliasToBeanResultTransformer &#8211; Instantiates and sets attributes on DTO objects based on the alias defined in the query.</li><li>ToListResultTransformer- Maps each record in the query result to a java.util.List.</li><li>AliasToEntityMapResultTransformer &#8211; Maps the aliased values of each record in the query result to a java.util.Map.</li></ul>
+<li><em>AliasToEntityMapResultTransformer</em> &#8211; Maps the aliased values of each record in the query result to a java.util.Map.</li>
+</ul>
 
 
 
-<p>You can also implement your own ResultTransformer: </p>
+<p>You can also implement your own transformation: </p>
 
 
 
-<ul><li>In Hibernate 4 and 5, you need to implement the ResultTransformer interface and handle the mapping of each result set record in the transformTuple method.</li><li>Hibernate 6 splits the ResultTransformer interface into the functional interfaces TupleTransformer and ResultListTransformer. </li></ul></div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script></body></html>
+<ul>
+<li>In Hibernate 4 and 5, you need to implement the <em>ResultTransformer </em>interface and handle the mapping of each result set record in the <em>transformTuple</em> method.</li>
+
+
+
+<li>In Hibernate 6, you need to implement the functional interfaces <em>TupleTransformer</em> or <em>ResultListTransformer</em>. </li>
+</ul>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

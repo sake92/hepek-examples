@@ -1,0 +1,350 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to generate UUIDs as primary keys with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to generate UUIDs as primary keys with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Most developers prefer numerical primary keys because they are efficient to use and <a href="//thorben-janssen.com/jpa-generate-primary-keys/">easy to generate</a>. But that doesn&#8217;t mean that a primary key has to be a number.</p>
+
+
+
+<p>UUIDs, for example, have gained some popularity over recent years. The main advantage of a UUID is its (practical) global uniqueness which provides a huge advantage for distributed systems.</p>
+
+
+
+<p>If you use the typical numerical ID that gets incremented for each new record, you need to generate all IDs by the same system component. In most cases, this is a sequence for each table that&#8217;s managed by your database. This makes that sequence the single source of failure. Other approaches, e.g., a clustered database or any other horizontally scaled number generator, require communication between the nodes. That obviously creates some effort that slows down the generation of your primary key values. </p>
+
+
+
+<p>You don&#8217;t need any of this when using a globally unique UUID. Each component can generate its own UUIDs, and there will not be any conflicts. That&#8217;s why UUIDs have become popular in microservice-based architectures or when developing offline clients.</p>
+
+
+
+<p>On the other hand, the UUID also has some disadvantages. The most obvious one is its size. It&#8217;s 4 times larger than a numerical ID and can&#8217;t be handled as efficiently. You should, therefore, decide carefully if you want to use UUIDs or numeric IDs and discuss it with your database administrator.</p>
+
+
+
+<p>If you decide to use UUIDs, you can, of course, also persist them with Hibernate. When doing that, you need to decide how you want to generate the UUID value. You can, of course, generate it yourself and set it on your entity object before persisting it. Or, if you&#8217;re using Hibernate 4, 5, or 6 or JPA 3.1, you can define a generation strategy in your entity mappings. I will show you how to do that in this article.</p>
+
+
+
+<h2 class="wp-block-heading">Generating UUIDs using JPA 3.1 </h2>
+
+
+
+<p>Since JPA 3.1, you can annotate a primary key attribute with <em>@GeneratedValue</em> and set the strategy to <em>GenerationType.UUID. </em>Based on the specification, your persistence provider shall generate a UUID value based on <a href="https://www.ietf.org/rfc/rfc4122.txt" target="_blank" rel="noopener noreferrer">IETF RFC 4122</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Book {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
+	
+	…
+}
+</pre></div>
+
+
+<p>Let&#8217;s try this mapping and persist a new&nbsp;<em>Book&nbsp;</em>entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Book b = new Book();
+b.setTitle(&quot;The Hound of the Baskervilles&quot;);
+b.setPublishingDate(LocalDate.of(1902, 4, 30));
+em.persist(b);
+</pre></div>
+
+
+<p>You can see in the log output that Hibernate generated a <em>UUID </em>value and set it on the <em>Book </em>entity object before it persisted it in the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+18:27:50,009 DEBUG AbstractSaveEventListener:127 - Generated identifier: 21e22474-d31f-4119-8478-d9d448727cfe, using strategy: org.hibernate.id.UUIDGenerator
+18:27:50,035 DEBUG SQL:128 - insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
+18:27:50,039 TRACE bind:28 - binding parameter &#91;1] as &#91;DATE] - &#91;1902-04-30]
+18:27:50,040 TRACE bind:28 - binding parameter &#91;2] as &#91;VARCHAR] - &#91;The Hound of the Baskervilles]
+18:27:50,040 TRACE bind:28 - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+18:27:50,040 TRACE bind:28 - binding parameter &#91;4] as &#91;BINARY] - &#91;21e22474-d31f-4119-8478-d9d448727cfe]
+</pre></div>
+
+
+<h3 class="wp-block-heading">Limitations and portability issues</h3>
+
+
+
+<p><a href="https://www.ietf.org/rfc/rfc4122.txt" target="_blank" rel="noopener noreferrer">IETF RFC 4122</a> defines 4 different strategies to generate UUIDs. But unfortunately, JPA 3.1 doesn&#8217;t specify which version your persistence provider shall use. It also doesn&#8217;t define any portable mechanism to customize this generation process.</p>
+
+
+
+<p>Due to that, your persistence provider can decide how it generates UUID values. And this behavior might differ between JPA implementations.</p>
+
+
+
+<p>When you use Hibernate as your persistence provider, it generates the UUID value based on random numbers, as defined by IETF RFC 4122 Version 4. I get into more details about that when I show you <a href="#randomNumber">Hibernate&#8217;s proprietary UUID generators</a>.</p>
+
+
+
+<h2 class="wp-block-heading">Generating UUIDs using Hibernate 4, 5 and 6</h2>
+
+
+
+<p>As mentioned earlier, <a href="https://www.ietf.org/rfc/rfc4122.txt" target="_blank" rel="noopener noreferrer">IETF RFC 4122</a> defines 4 different strategies to generate UUIDs. Hibernate supports 2 of them:</p>
+
+
+
+<ol>
+<li>The default strategy generates the UUID based on random numbers (IETF RFC 4122 Version 4).</li>
+
+
+
+<li>You can also configure a generator that uses the IP address of the machine and a timestamp (IETF RFC 4122 Version 1).</li>
+</ol>
+
+
+
+<p>The definition of the strategy you want to use depends on your Hibernate version. Let&#8217;s have a look at the default strategy first.</p>
+
+
+
+<h3 class="wp-block-heading" id="randomNumber">Random number based UUID (IETF RFC 4122 version 4)</h3>
+
+
+
+<p>By default, Hibernate uses a random number based generation strategy. This is also the strategy that Hibernate uses if you use the previously described, JPA-based definition.</p>
+
+
+
+<h4 class="wp-block-heading">Random number based UUID in Hibernate 6</h4>
+
+
+
+<p>Using Hibernate 6, you can annotate your primary key attribute with <em>@UuidGenerator</em> and set the <em>style</em> to <em>RANDOM</em>, <em>AUTO</em>, or don&#8217;t specify it. In all 3 cases, Hibernate will apply its default strategy.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Book {
+	
+	@Id
+	@GeneratedValue
+    @UuidGenerator
+	private UUID id;
+
+	...
+}
+</pre></div>
+
+
+<p>Let&#8217;s use this mapping with the test as I showed you before.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Book b = new Book();
+b.setTitle(&quot;The Hound of the Baskervilles&quot;);
+b.setPublishingDate(LocalDate.of(1902, 4, 30));
+em.persist(b);
+</pre></div>
+
+
+<p>Unsurprisingly, this gets you the same log output as in the previous test case. Internally, Hibernate used the same&nbsp;<em>style</em>&nbsp;when I used JPA&#8217;s mapping annotations.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+18:28:25,859 DEBUG AbstractSaveEventListener:127 - Generated identifier: ac864ed4-bd3d-4ca0-8ba2-b49ec74465ff, using strategy: org.hibernate.id.uuid.UuidGenerator
+18:28:25,879 DEBUG SQL:128 - insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
+18:28:25,886 TRACE bind:28 - binding parameter &#91;1] as &#91;DATE] - &#91;1902-04-30]
+18:28:25,887 TRACE bind:28 - binding parameter &#91;2] as &#91;VARCHAR] - &#91;The Hound of the Baskervilles]
+18:28:25,887 TRACE bind:28 - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+18:28:25,888 TRACE bind:28 - binding parameter &#91;4] as &#91;BINARY] - &#91;ac864ed4-bd3d-4ca0-8ba2-b49ec74465ff]
+</pre></div>
+
+
+<h4 class="wp-block-heading">Random number based UUID in Hibernate 4 and 5</h4>
+
+
+
+<p>If you&#8217;re using Hibernate 4 or 5, you can use the same feature. But you need to put a little extra effort into your mapping definition. </p>
+
+
+
+<p>You need to annotate your primary key attribute with a <em>@GeneratedValue</em> annotation. In that annotation, you need to reference a custom generator and define that generator using Hibernate&#8217;s @<em>GenericGenerator</em> annotation. The <em>@GenericGenerator</em> annotation requires 2 parameters, the name of the generator and the name of the class that implements the generator. In this case, I called the generator &#8220;UUID&#8221; and Hibernate shall use the class <em>org.hibernate.id.UUIDGenerator</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Book {
+
+	@Id
+	@GeneratedValue(generator = &quot;UUID&quot;)
+	@GenericGenerator(
+		name = &quot;UUID&quot;,
+		strategy = &quot;org.hibernate.id.UUIDGenerator&quot;
+	)
+	private UUID id;
+	
+	…
+}
+</pre></div>
+
+
+<p>That&#8217;s all you need to do to tell Hibernate to generate a UUID as a primary key. Let&#8217;s use this mapping to persist a new <em>Book</em> entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Book b = new Book();
+b.setTitle(&quot;The Hound of the Baskervilles&quot;);
+b.setPublishingDate(LocalDate.of(1902, 4, 30));
+em.persist(b);
+</pre></div>
+
+
+<p>As you can see in the <a href="https://thorben-janssen.com/hibernate-logging-guide/">log output</a>, Hibernate generates a UUID and sets it as the <em>id</em> value before it writes the new record to the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:23:19,356 DEBUG AbstractSaveEventListener:118 – Generated identifier: d7cd23b8-991c-470f-ac63-d8fb106f391e, using strategy: org.hibernate.id.UUIDGenerator
+12:23:19,388 DEBUG SQL:92 – insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
+12:23:19,392 TRACE BasicBinder:65 – binding parameter &#91;1] as &#91;DATE] – &#91;1902-04-30]
+12:23:19,393 TRACE BasicBinder:65 – binding parameter &#91;2] as &#91;VARCHAR] – &#91;The Hound of the Baskervilles]
+12:23:19,393 TRACE BasicBinder:65 – binding parameter &#91;3] as &#91;INTEGER] – &#91;0]
+12:23:19,394 TRACE BasicBinder:65 – binding parameter &#91;4] as &#91;OTHER] – &#91;d7cd23b8-991c-470f-ac63-d8fb106f391e]
+</pre></div>
+
+
+<h3 class="wp-block-heading">IP and timestamp based UUID (IETF RFC 4122 version 1)</h3>
+
+
+
+<p>Hibernate can also generate a UUID based on IETF RFC 4122 version 1. Following the specification, you should generate the UUID with the MAC address instead of the IP address. As long as nobody is messing around with it, the MAC address of each device should be unique, and due to this help to create a unique UUID.</p>
+
+
+
+<p>Hibernate uses the IP address instead of the MAC address. In general, this is not an issue. But if the servers of your distributed system are running on different networks, you should make sure that none of them share the same IP address.</p>
+
+
+
+<p>The configuration of the IETF RFC 4122 version 1 based UUID generator is very similar to the previous one.  </p>
+
+
+
+<h4 class="wp-block-heading">IP and timestamp based UUID in Hibernate 6</h4>
+
+
+
+<p>The <em>@UuidGenerator </em>annotation introduced in Hibernate 6 has a <em>style </em>attribute that you can use to define how Hibernate shall generate the UUID value. When you set it to <em>TIME</em>, it uses a timestamp and the IP address to generate the UUID value. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Book {
+	
+	@Id
+	@GeneratedValue
+    @UuidGenerator(style = Style.TIME)
+	private UUID id;
+
+	...
+}
+</pre></div>
+
+
+<p>As you can see in the code snippet, the only difference from the previous section is the value of the strategy attribute. Everything else is still the same.</p>
+
+
+
+<p>Let&#8217;s use this mapping to persist a new <em>Book </em>entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Book b = new Book();
+b.setTitle(&quot;The Hound of the Baskervilles&quot;);
+b.setPublishingDate(LocalDate.of(1902, 4, 30));
+em.persist(b);
+</pre></div>
+
+
+<p>As you can see, the log output looks similar to the previous test executions. Hibernate generates a new UUID value and uses it to set the <em>id</em> attribute, before it persists a new record in the <em>Book </em>table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+18:28:57,068 DEBUG AbstractSaveEventListener:127 - Generated identifier: c0a8b235-8207-1771-8182-07d7756a0000, using strategy: org.hibernate.id.uuid.UuidGenerator
+18:28:57,095 DEBUG SQL:128 - insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
+18:28:57,101 TRACE bind:28 - binding parameter &#91;1] as &#91;DATE] - &#91;1902-04-30]
+18:28:57,101 TRACE bind:28 - binding parameter &#91;2] as &#91;VARCHAR] - &#91;The Hound of the Baskervilles]
+18:28:57,102 TRACE bind:28 - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
+18:28:57,102 TRACE bind:28 - binding parameter &#91;4] as &#91;BINARY] - &#91;c0a8b235-8207-1771-8182-07d7756a0000]
+</pre></div>
+
+
+<h4 class="wp-block-heading">IP and timestamp based UUID in Hibernate 4 and 5</h4>
+
+
+
+<p>If you&#8217;re using Hibernate 4 or 5, you need to set an additional parameter on the <em>@GenericGenerator</em> annotation to define the generation strategy. You can see an example of it in the following code snippet. </p>
+
+
+
+<p>You define the strategy by providing a <em>@Parameter</em> annotation with the name <em>uuid_gen_strategy_class</em> and the fully qualified class name of the generation strategy as the value.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Book {
+
+	@Id
+	@GeneratedValue(generator = &quot;UUID&quot;)
+	@GenericGenerator(
+		name = &quot;UUID&quot;,
+		strategy = &quot;org.hibernate.id.UUIDGenerator&quot;,
+		parameters = {
+			@Parameter(
+				name = &quot;uuid_gen_strategy_class&quot;,
+				value = &quot;org.hibernate.id.uuid.CustomVersionOneStrategy&quot;
+			)
+		}
+	)
+	@Column(name = &quot;id&quot;, updatable = false, nullable = false)
+	private UUID id;
+	
+	…
+}
+</pre></div>
+
+
+<p>When you now persist the new <em>Book</em> entity, Hibernate will use the <em>CustomVersionOneStrategy</em> class to generate the UUID based on IETF RFC 4122 version 1.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Book b = new Book();
+b.setTitle(&quot;The Hound of the Baskervilles&quot;);
+b.setPublishingDate(LocalDate.of(1902, 4, 30));
+em.persist(b);
+</pre></div>
+
+
+<p>As you can see in the log output, Hibernate uses both strategies in the same way. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:35:22,760 DEBUG AbstractSaveEventListener:118 – Generated identifier: c0a8b214-578f-131a-8157-8f431d060000, using strategy: org.hibernate.id.UUIDGenerator
+12:35:22,792 DEBUG SQL:92 – insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
+12:35:22,795 TRACE BasicBinder:65 – binding parameter &#91;1] as &#91;DATE] – &#91;1902-04-30]
+12:35:22,795 TRACE BasicBinder:65 – binding parameter &#91;2] as &#91;VARCHAR] – &#91;The Hound of the Baskervilles]
+12:35:22,796 TRACE BasicBinder:65 – binding parameter &#91;3] as &#91;INTEGER] – &#91;0]
+12:35:22,797 TRACE BasicBinder:65 – binding parameter &#91;4] as &#91;OTHER] – &#91;c0a8b214-578f-131a-8157-8f431d060000]
+</pre></div>
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>As you&#8217;ve seen, you can use UUIDs as primary keys, and JPA and Hibernate define different ways to generate UUID values. </p>
+
+
+
+<p>JPA 3.1 adds the value <em>UUID</em> to the <em>GenerationType </em>enum and requires the persistence provider to generate a UUID based on IETF RFC 4122. But it doesn&#8217;t define which of the 4 approaches shall be used and doesn&#8217;t provide any portable way to customize the UUID generation.</p>
+
+
+
+<p>Hibernate can generate UUID values for several years now. In versions 4 and 5, you need to use a <em>@GenericGenerator</em> and provide the class of the generator you want to use. Hibernate 6 simplified this by  introducing the <em>@UuidGenerator</em> annotation for it. </p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

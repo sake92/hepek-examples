@@ -1,0 +1,225 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to fix Hibernate’s Warning “HHH000104: firstResult/maxResults specified with collection fetch”</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to fix Hibernate’s Warning “HHH000104: firstResult/maxResults specified with collection fetch”</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>One of the most common recommendations to improve the performance of your persistence layer is to use <em>JOIN FETCH</em> clauses or <em>EntityGraph</em>s to fetch required associations when loading an entity. I entirely agree with these recommendations, and we discuss this in great detail in the Hibernate Performance Tuning course in the <a href="/join-persistence-hub/">Persistence Hub</a>. But if you follow this advice and call the <em>setFirstResult </em>and <em>setMaxResult </em>methods to limit the size of the result set, you will see the following warning in your log file:</p>
+
+
+
+<blockquote class="wp-block-quote">
+<p>HHH000104: firstResult/maxResults specified with collection fetch; applying in memory!</p>
+</blockquote>
+
+
+
+<p>Hibernate 5 shows that warning if you call the <em>setFirstResult</em> or <em>setMaxResults</em> methods on a query that uses a <a href="/5-ways-to-initialize-lazy-relations-and-when-to-use-them/"><em>JOIN FETCH</em> clause or an <em>EntityGraph</em></a>. <a href="/category/hibernate-6/">Hibernate 6</a> improved the handling of <em>EntityGraph</em>s and only shows the warning if your query contains a <em>JOIN FETCH</em> clause.</p>
+
+
+
+<h2 class="wp-block-heading">Why Hibernate shows the HHH000104 warning</h2>
+
+
+
+<p>The reason for this warning becomes obvious when you take a look at the SQL statement that Hibernate has to generate when you use a <em>JOIN FETCH </em>clause or an <em>EntityGraph</em>. Both approaches tell Hibernate to initialize a managed association between 2 entity classes. To do that, Hibernate needs to join the associated tables and select all columns mapped by the entity classes. This combines the records in both tables and increases the size of the result set. That causes problems if you want to limit its size by calling the&nbsp;<em>setFirstResult</em>&nbsp;and&nbsp;<em>setMaxResults</em>&nbsp;methods.</p>
+
+
+
+<p>Let&#8217;s take a look at an example. </p>
+
+
+<div class="wp-block-image">
+<figure class="aligncenter size-full"><img decoding="async" loading="lazy" width="433" height="240" src="https://thorben-janssen.com/wp-content/uploads/2022/05/classDiagram.png" alt="" class="wp-image-37108" srcset="https://thorben-janssen.com/wp-content/uploads/2022/05/classDiagram.png 433w, https://thorben-janssen.com/wp-content/uploads/2022/05/classDiagram-300x166.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/05/classDiagram-50x28.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/05/classDiagram-100x55.png 100w" sizes="(max-width: 433px) 100vw, 433px" /></figure></div>
+
+
+<p>I modeled a <a href="/ultimate-guide-association-mappings-jpa-hibernate/#manyToMany">many-to-many association</a> between the <em>ChessTournament</em> and the <em>ChessPlayer </em>entity classes. The best practice to work with this association is to use the default <em><a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">FetchType.LAZY</a></em> and a <em>JOIN FETCH</em> clause or <em><a href="https://thorben-janssen.com/jpa-21-entity-graph-part-1-named-entity/">EntityGraph</a></em> to initialize it if needed. </p>
+
+
+
+<p>Hibernate then fetches all the required information using 1 SQL statement. But it triggers the previously shown warning if you limit the size of your query result. You can see an example of that in the following code snippet.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+TypedQuery&lt;ChessTournament&gt; q = em.createQuery(&quot;&quot;&quot;
+                                                  SELECT t 
+                                                  FROM ChessTournament t 
+                                                      LEFT JOIN FETCH t.players
+                                                  WHERE t.name LIKE :name&quot;&quot;&quot;, 
+                                               ChessTournament.class);
+q.setParameter(&quot;name&quot;, &quot;%Chess%&quot;);
+q.setFirstResult(0);
+q.setMaxResults(5);
+List&lt;ChessTournament&gt; tournaments = q.getResultList();
+</pre></div>
+
+
+<p>As expected, Hibernate wrote the HHH000104 warning to the log file. And it didn’t add a LIMIT or OFFSET clause to limit the result set size even though I set the&nbsp;<em>firstResult&nbsp;</em>to 0 and&nbsp;<em>maxResult&nbsp;</em>to 5.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+15:56:57,623 WARN  &#91;org.hibernate.hql.internal.ast.QueryTranslatorImpl] - HHH000104: firstResult/maxResults specified with collection fetch; applying in memory!
+15:56:57,626 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        chesstourn0_.id as id1_1_0_,
+        chessplaye2_.id as id1_0_1_,
+        chesstourn0_.endDate as enddate2_1_0_,
+        chesstourn0_.name as name3_1_0_,
+        chesstourn0_.startDate as startdat4_1_0_,
+        chesstourn0_.version as version5_1_0_,
+        chessplaye2_.birthDate as birthdat2_0_1_,
+        chessplaye2_.firstName as firstnam3_0_1_,
+        chessplaye2_.lastName as lastname4_0_1_,
+        chessplaye2_.version as version5_0_1_,
+        players1_.ChessTournament_id as chesstou1_2_0__,
+        players1_.players_id as players_2_2_0__ 
+    from
+        ChessTournament chesstourn0_ 
+    left outer join
+        ChessTournament_ChessPlayer players1_ 
+            on chesstourn0_.id=players1_.ChessTournament_id 
+    left outer join
+        ChessPlayer chessplaye2_ 
+            on players1_.players_id=chessplaye2_.id 
+    where
+        chesstourn0_.name like ?
+</pre></div>
+
+
+<p>The reason for that becomes visible when you execute the same statement in an SQL client. By joining the managed association and selecting all columns mapped by the <em>ChessTournament </em>and <em>ChessPlayer</em> entity classes, the query&#8217;s result set is a product of the records in the <em>ChessTournament </em>table and the associated records in the <em>ChessPlayer </em>table.</p>
+
+
+
+<figure class="wp-block-image size-large"><a href="https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult.png"><img decoding="async" loading="lazy" width="1024" height="212" src="https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-1024x212.png" alt="" class="wp-image-37103" srcset="https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-1024x212.png 1024w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-300x62.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-768x159.png 768w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-1536x318.png 1536w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-624x129.png 624w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-50x10.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult-100x21.png 100w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResult.png 1708w" sizes="(max-width: 1024px) 100vw, 1024px" /></a></figure>
+
+
+
+<p>Each record in the result set is a unique combination of a tournament and one of its players. That’s the expected way how relational databases handle such a query. But it creates a problem, in the special case of a&nbsp;<em>JOIN FETCH</em>&nbsp;clause or an&nbsp;<em>EntityGraph</em>.</p>
+
+
+
+<p>Usually, Hibernate uses the <em>firstResult </em>and <em>maxResult </em>values to apply the pagination in the SQL statement. These tell the database only to return a part of the result set. In the previous examples, I called the <em>setFirstResult </em>method with 0 and the <em>setMaxResults </em>method with <em>5</em>. If Hibernate would apply the standard handling of these parameters to the generated SQL statement, the database would only return the first 5 rows of the result set. As you can see in the following image, these records contain the Tata Steel Chess Tournament 2021 with 4 of its players and the Tata Steel Chess Tournament 2022 with 1 of its players.</p>
+
+
+
+<figure class="wp-block-image size-large"><a href="https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit.png"><img decoding="async" loading="lazy" width="1024" height="131" src="https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-1024x131.png" alt="" class="wp-image-37104" srcset="https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-1024x131.png 1024w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-300x38.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-768x98.png 768w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-1536x197.png 1536w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-624x80.png 624w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-50x6.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit-100x13.png 100w, https://thorben-janssen.com/wp-content/uploads/2022/05/queryResultLimit.png 1708w" sizes="(max-width: 1024px) 100vw, 1024px" /></a></figure>
+
+
+
+<p>But that&#8217;s not what we intended with the <a href="https://thorben-janssen.com/jpql/">JPQL query</a>. The provided <em>firstResult</em> and <em>maxResult </em>values were supposed to return the first 5 <em>ChessTournament </em>entities with all associated <em>ChessPlayer</em> entities. They were supposed to define pagination for the returned <em>ChessTournament</em> entity objects and not of the product in the SQL result set.</p>
+
+
+
+<p>That&#8217;s why Hibernate writes the warning to the log file and applies the pagination in memory. It executes the SQL statement without any pagination. The database then returns all <em>ChessTournament</em> entities and their associated <em>ChessPlayer</em>s. And Hibernate limits the size of the returned <em>List&lt;ChessTournament&gt;</em> when it parses the result set. </p>
+
+
+
+<p>Even though this approach provides the correct result, it puts you at the risk of severe performance problems. Depending on the size of your database, the query might select several thousand records and slow down your application.</p>
+
+
+
+<h2 class="wp-block-heading">How to avoid the HHH000104 warning</h2>
+
+
+
+<p>The best way to avoid Hibernate&#8217;s warning and potential performance problems is to execute 2 queries. The 1st query selects the primary keys of all <em>ChessTournament </em>entities you want to retrieve. This query doesn&#8217;t fetch the associations, and you can use the <em>setFirstResult</em> and <em>setMaxResult </em>methods to limit the size of the result set. The 2nd one fetches those entities and their associated <em>ChessPlayer</em>s.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+TypedQuery&lt;Long&gt; idQuery = em.createQuery(&quot;&quot;&quot;
+											SELECT t.id 
+											FROM ChessTournament t
+											WHERE t.name LIKE :name&quot;&quot;&quot;, 
+										  Long.class);
+idQuery.setParameter(&quot;name&quot;, &quot;%Chess%&quot;);
+idQuery.setFirstResult(0);
+idQuery.setMaxResults(5);
+List&lt;Long&gt; tournamentIds = idQuery.getResultList();
+
+TypedQuery&lt;ChessTournament&gt; tournamentQuery = em.createQuery(&quot;&quot;&quot;
+																SELECT t 
+																FROM ChessTournament t 
+																	LEFT JOIN FETCH t.players
+																WHERE t.id IN :ids&quot;&quot;&quot;, 
+															 ChessTournament.class);
+tournamentQuery.setParameter(&quot;ids&quot;, tournamentIds);
+List&lt;ChessTournament&gt; tournaments = tournamentQuery.getResultList();
+tournaments.forEach(t -&gt; log.info(t));
+</pre></div>
+
+
+<p>The previous code snippet uses Hibernate 6. If you&#8217;re using Hibernate 5, you should add the <em>DISTINCT</em> keyword to your 2nd query and set the hint <em>hibernate.query.passDistinctThrough</em> to <em>false</em>. As I explained in a <a href="/tips-to-boost-your-hibernate-performance/#Use_a_JOIN_FETCH_clause">previous article about Hibernate performance tuning</a>, this prevents Hibernate from returning a reference to a <em>ChessTournament</em> object for each of its players.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+TypedQuery&lt;Long&gt; idQuery = em.createQuery(&quot;&quot;&quot;
+												SELECT t.id 
+												FROM ChessTournament t
+												WHERE t.name LIKE :name&quot;&quot;&quot;, 
+											   Long.class);
+idQuery.setParameter(&quot;name&quot;, &quot;%Chess%&quot;);
+idQuery.setFirstResult(0);
+idQuery.setMaxResults(5);
+List&lt;Long&gt; tournamentIds = idQuery.getResultList();
+
+TypedQuery&lt;ChessTournament&gt; tournamentQuery = em.createQuery(&quot;&quot;&quot;
+												SELECT DISTINCT t 
+												FROM ChessTournament t 
+													LEFT JOIN FETCH t.players
+												WHERE t.id IN :ids&quot;&quot;&quot;, 
+											   ChessTournament.class);
+tournamentQuery.setParameter(&quot;ids&quot;, tournamentIds);
+tournamentQuery.setHint(QueryHints.PASS_DISTINCT_THROUGH, false);
+List&lt;ChessTournament&gt; tournaments = tournamentQuery.getResultList();
+</pre></div>
+
+
+<p>This approach might look more complex and executes 2 statements instead of 1, but it separates the pagination of the query&#8217;s result set from the initialization of the <em>players</em> association. This enables Hibernate to add the pagination to the 1st query statement and prevents it from fetching the entire result set and applying the pagination in memory. That resolves the warning and improves your application&#8217;s performance if you&#8217;re working with a huge database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+07:30:04,557 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id 
+    from
+        ChessTournament c1_0 
+    where
+        c1_0.name like ? escape '' offset ? rows fetch first ? rows only
+07:30:04,620 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.endDate,
+        c1_0.name,
+        p1_0.ChessTournament_id,
+        p1_1.id,
+        p1_1.birthDate,
+        p1_1.firstName,
+        p1_1.lastName,
+        p1_1.version,
+        c1_0.startDate,
+        c1_0.version 
+    from
+        ChessTournament c1_0 
+    left join
+        (ChessTournament_ChessPlayer p1_0 
+    join
+        ChessPlayer p1_1 
+            on p1_1.id=p1_0.players_id) 
+                on c1_0.id=p1_0.ChessTournament_id 
+        where
+            c1_0.id in(?,?,?)
+07:30:04,666 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessTournament &#91;id=1, name=Tata Steel Chess Tournament 2021, startDate=2021-01-14, endDate=2021-01-30, version=0]
+07:30:04,666 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessTournament &#91;id=2, name=Tata Steel Chess Tournament 2022, startDate=2022-01-14, endDate=2022-01-30, version=0]
+07:30:04,666 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessTournament &#91;id=3, name=2022 Superbet Chess Classic Romania, startDate=2022-05-03, endDate=2022-05-15, version=0]
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>You should use <em>JOIN FETCH</em> clauses or <em>EntityGraphs</em> to initialize the associations you&#8217;re using in your business code. This avoids <a href="https://thorben-janssen.com/free-n1_select_course/">n+1 select issues</a> and improves the performance of your application.</p>
+
+
+
+<p>But if you want to limit the size of the result set by calling the <em>setFirstResult</em> and <em>setMaxResult</em> methods, the fetching of associated entities creates a problem. The result set then contains the combination of all matching records in the joined tables. If Hibernate limited the size of that result set, it would limit the number of combinations instead of the number of selected entities. It instead fetches the entire result set and applies the pagination in memory. Depending on the size of the result set, this can cause severe performance problems.</p>
+
+
+
+<p>You can avoid that by executing 2 query statements. The first one applies pagination when it fetches the primary keys of all records you want to retrieve. In the example of this post, these were the <em>id</em> values of all <em>ChessTournament </em>entities that matched the WHERE clause. The 2nd query then uses the list of primary key values to get the entity objects and initializes the required associations.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

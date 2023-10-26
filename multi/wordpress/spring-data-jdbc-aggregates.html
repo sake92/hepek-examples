@@ -1,0 +1,306 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Modelling and working with aggregates</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Modelling and working with aggregates</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Entities, aggregates, and aggregate roots are some of the core concepts used by Spring Data JDBC. Based on them, Spring Data JDBC decides which objects it loads or persists together. They also define which kind of associations you can model. That shows how important it is to understand both concepts and how they work together.</p>
+
+
+
+<p>Spring Data JDBC didn&#8217;t invent the concepts of entities, aggregates, and aggregate roots. They are defined by Domain Driven Design. An entity is a domain object with an id that can have multiple additional attributes. A cluster of entities that can be treated as a single unit is called an <a href="https://martinfowler.com/bliki/DDD_Aggregate.html">aggregate</a>. And the aggregate root is the root element of an aggregate. The aggregate root is the object that gets referenced from outside of the aggregate and that references other entities within the same aggregate. As you can see in the example in the following diagram, a typical aggregate structure looks like a tree with the aggregate root as its root.</p>
+
+
+<div class="wp-block-image">
+<figure class="aligncenter size-full"><img decoding="async" loading="lazy" width="638" height="349" src="https://thorben-janssen.com/wp-content/uploads/2022/07/Aggregates.png" alt="" class="wp-image-37482" srcset="https://thorben-janssen.com/wp-content/uploads/2022/07/Aggregates.png 638w, https://thorben-janssen.com/wp-content/uploads/2022/07/Aggregates-300x164.png 300w, https://thorben-janssen.com/wp-content/uploads/2022/07/Aggregates-624x341.png 624w, https://thorben-janssen.com/wp-content/uploads/2022/07/Aggregates-50x27.png 50w, https://thorben-janssen.com/wp-content/uploads/2022/07/Aggregates-100x55.png 100w" sizes="(max-width: 638px) 100vw, 638px" /></figure></div>
+
+
+<p>Spring Data JDBC was designed with these concepts in mind. You are supposed to model a repository for each aggregate. The repository handles the aggregate as a single unit when it fetches it from the database or persists any changes.</p>
+
+
+
+<p>Sounds simple, right?</p>
+
+
+
+<p>Well, handling an aggregate as a unit has some side effects you should know. And if you used Spring Data JPA for your previous projects, you might find some of them confusing. But don’t worry, none of this is complicated, and you will get used to it quickly.</p>
+
+
+
+<h2 class="wp-block-heading">Modelling an aggregate</h2>
+
+
+
+<p>As I mentioned earlier, an aggregate is treated as a single unit and consists of one or more entities. One of these entities is the aggregate root, which gets referenced from the outside and references other entities within the aggregate.</p>
+
+
+
+<p>None of this might sound special, and you’re probably wondering why I’m repeating all of that. The simple reason is that based on this description, you don’t need many-to-many associations, many-to-one associations, or any bidirectional associations in general. And that’s why Spring Data JDBC doesn’t support them.</p>
+
+
+
+<p>This might surprise you if you have used Spring Data JPA in previous projects. But you can model your domain and follow those constraints. Your model fits the concepts of Domain Driven Design, and avoiding those associations makes a few things easier.</p>
+
+
+
+<p>Let’s take a closer look at the&nbsp;<em>ChessGame&nbsp;</em>aggregate so that I can show you that you can model an aggregate without those associations. The&nbsp;<em>ChessGame&nbsp;</em>aggregate consists of the entities&nbsp;<em>ChessGame&nbsp;</em>and&nbsp;<em>ChessMove</em>. The&nbsp;<em>ChessGame&nbsp;</em>entity is the root of the&nbsp;<em>ChessGame&nbsp;</em>aggregate.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessGame {
+
+	@Id
+	private Long id;
+	
+    private LocalDateTime playedOn;
+
+    private AggregateReference&lt;ChessPlayer, Long&gt; playerWhite;
+
+    private AggregateReference&lt;ChessPlayer, Long&gt; playerBlack;
+
+    private List&lt;ChessMove&gt; moves = new ArrayList&lt;&gt;();
+	
+	...
+}
+</pre></div>
+
+
+<p>As you can see, the <em><em>ChessGame </em></em>entity models a one-to-many association to the <em>ChessMove </em>entity class. But the <em><em>ChessMove</em></em> entity doesn&#8217;t model a reference to its aggregate root. If you need to get the game in which a specific move was played, you need to execute a query. I explained how to define such queries in my <a href="/spring-data-jdbc-custom-queries-and-projections/">guide to custom queries and projections with Spring Data JDBC</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessMove {
+
+    private Integer moveNumber;
+
+    private MoveColor color;
+
+    private String move;
+	
+	...
+}
+</pre></div>
+
+
+<h3 class="wp-block-heading">Referencing other aggregates</h3>
+
+
+
+<p>Each&nbsp;<em>ChessGame</em>&nbsp;is played by 2 players. I modeled the&nbsp;<em>ChessPlayer</em>&nbsp;as a separate aggregate because the player is independent of a game or move.</p>
+
+
+
+<p>The&nbsp;<em>ChessPlayer</em>&nbsp;entity class models a player and is the only class of the&nbsp;<em>ChessPlayer&nbsp;</em>aggregate. Due to that, it’s also the aggregate root.&nbsp;</p>
+
+
+
+<p>In Domain Driven Design, the association to a different aggregate is modeled as an id reference to the associated aggregate. When using Spring Data JDBC, you can model it using the <em>AggregateReference</em> interface. I use it in the <em>ChessGame </em>entity class to model the references to the player who played the white and the one who played the black pieces.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessGame {
+
+    private AggregateReference&lt;ChessPlayer, Long&gt; playerWhite;
+
+    private AggregateReference&lt;ChessPlayer, Long&gt; playerBlack;
+	
+	...
+}
+</pre></div>
+
+
+<p>When fetching a <em>ChessGame</em> object, Spring Data JDBC uses the foreign key values stored in the database to initialize each <em>AggregateReference</em>. But in contrast to other ORM frameworks, e.g., Hibernate or Spring Data JPA, Spring Data JDBC can&#8217;t automatically fetch the referenced entity object. </p>
+
+
+
+<p>To get the referenced&nbsp;<em>ChessPlayer</em>, you need to use the&nbsp;<em>ChessPlayerRepository</em>&nbsp;to fetch it from the database. This gives you full control over the executed SQL statements and avoids lazy loading issues that you might know from other ORM frameworks.</p>
+
+
+
+<h2 class="wp-block-heading">Modelling a repository for an aggregate</h2>
+
+
+
+<p>After you have modeled an aggregate, you can define a repository for it. As mentioned earlier, an aggregate gets treated as a unit. That means you read and persist the entire aggregate, and all required operations are handled as 1 atomic operation. Due to that, there should only be 1 repository for each aggregate. This repository handles all database operations for the entire aggregate with all its entities.</p>
+
+
+
+<p>You can define a Spring Data JDBC repository in the same way as you define any other Spring Data repository. You define an interface that extends one of Spring Data JDBC&#8217;s standard repository interfaces, e.g., the <em>CrudRepository</em> interface. Spring Data JDBC then provides you with an implementation of that interface and a set of standard operations. In the case of the <em>CrudRepository</em>, these are methods to persist, update, delete and read an aggregate. If you need additional queries or other features, you can add the required methods to your interface definition.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessGameRepository extends CrudRepository&lt;ChessGame, Long&gt; {
+
+    List&lt;ChessGame&gt; findByPlayedOn(LocalDateTime playedOn);
+    List&lt;ChessGame&gt; findByPlayedOnIsBefore(LocalDateTime playedOn);
+
+    int countByPlayedOn(LocalDateTime playedOn);
+
+    List&lt;ChessGame&gt; findByPlayerBlack(AggregateReference&lt;ChessPlayer, Long&gt; playerBlack);
+    List&lt;ChessGame&gt; findByPlayerBlack(ChessPlayer playerBlack);
+}
+</pre></div>
+
+
+<p>For the scope of this article, I expect you to be familiar with Spring Data&#8217;s repository interfaces and their derived query feature. If you&#8217;re not familiar with it, please read my guide to <a href="/spring-data-jdbc-custom-queries-and-projections/">defining custom queries and projections with Spring Data JDBC</a>.</p>
+
+
+
+<p>Even though I explained repositories and their query capabilities in a previous article, there are a few things I need to show you to explain the implications of Spring Data JDBC&#8217;s handling of aggregates.</p>
+
+
+
+<h3 class="wp-block-heading">Reading an aggregate</h3>
+
+
+
+<p>Because Spring Data JDBC handles an aggregate as a unit, it always fetches the entire aggregate with all its entities. That can be problematic if your aggregate consists of several entities and multiple one-to-many associations.</p>
+
+
+
+<p>Let&#8217;s call the <em>findById </em>method of the <em>ChessGameRepository </em>and check the executed SQL statements.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+gameRepo.findById(gameId);
+</pre></div>
+
+
+<p>The <em><em>ChessGameRepository </em> </em>returns <em>ChessGame</em> aggregates. The aggregate consists of a <em><em>ChessGame</em> </em>entity and a List of <em>ChessMove </em>entities. As you can see in the log output, Spring Data JDBC executed 2 SQL statements. The 1st one fetched the <em><em>ChessGame</em> </em>entity, and the 2nd one all <em>ChessMove</em>s played in the game.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-07-05 18:33:05.328 DEBUG 8676 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-07-05 18:33:05.329 DEBUG 8676 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;played_on&quot; AS &quot;played_on&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;id&quot; = ?]
+2022-07-05 18:33:05.345 DEBUG 8676 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-07-05 18:33:05.345 DEBUG 8676 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
+</pre></div>
+
+
+<p>In this example, the performance impact of fetching the entire <em><em>ChessGame</em> </em>aggregate will be small. But that quickly changes if you fetch multiple aggregates or your aggregate becomes more complex and includes more entities and to-many associations.</p>
+
+
+
+<p>To avoid performance problems, you should keep your aggregates as small and concise as possible. So, if you see the chance to model something as a separate aggregate, it&#8217;s often a good idea to do that.</p>
+
+
+
+<h3 class="wp-block-heading">Persisting and updating an aggregate</h3>
+
+
+
+<p>Spring Data JDBC not only treats an aggregate as a unit when fetching it from the database. It does the same when persisting a new or updating an existing entity. </p>
+
+
+
+<h3 class="wp-block-heading">Persisting an aggregate is easy</h3>
+
+
+
+<p>This makes persisting a new aggregate very comfortable. You only need to instantiate your aggregate and provide the aggregate root to the save method of your repository. Spring Data JDBC will then automatically persist all entities that belong to the aggregate.</p>
+
+
+
+<p>I use that in the following test case to persist a new <em><em>ChessGame</em> </em>aggregate. I instantiate a new <em><em>ChessGame</em> </em>object, which is the root of the aggregate. Then I instantiate 4 <em>ChessMove</em>s and add them to the <em>List </em>of moves played in the game. In the final step, I call the <em>save</em> method of the <em>ChessGameRepository </em>and only provide my <em><em>ChessGame</em> </em>object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+ChessMove white1 = new ChessMove();
+white1.setColor(MoveColor.WHITE);
+white1.setMoveNumber(1);
+white1.setMove(&quot;e4&quot;);
+
+ChessMove black1 = new ChessMove();
+black1.setColor(MoveColor.BLACK);
+black1.setMoveNumber(2);
+black1.setMove(&quot;e5&quot;);
+
+ChessMove white2 = new ChessMove();
+white2.setColor(MoveColor.WHITE);
+white2.setMoveNumber(2);
+white2.setMove(&quot;Nf3&quot;);
+
+ChessMove black2 = new ChessMove();
+black2.setColor(MoveColor.BLACK);
+black2.setMoveNumber(2);
+black2.setMove(&quot;Nc6&quot;);
+
+ChessGame game = new ChessGame();
+game.setPlayedOn(LocalDateTime.now());
+game.setMoves(Arrays.asList(white1, black1, white2, black2));
+
+gameRepo.save(game);
+</pre></div>
+
+
+<p>As you can see in the log output, Spring Data JDBC executed 5 SQL INSERT statements to persist the entire aggregate. It 1st wrote 1 record to the&nbsp;<em>chess_game&nbsp;</em>table and then 4 records to the&nbsp;<em>chess_move&nbsp;</em>table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-07-05 18:36:03.474 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:36:03.475 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_game&quot; (&quot;played_on&quot;, &quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?, ?)]
+2022-07-05 18:36:03.503 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:36:03.503 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-07-05 18:36:03.510 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:36:03.511 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-07-05 18:36:03.515 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:36:03.515 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-07-05 18:36:03.519 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:36:03.519 DEBUG 28416 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+</pre></div>
+
+
+<h3 class="wp-block-heading">Updating an aggregate can be inefficient</h3>
+
+
+
+<p>As comfortable as persisting an aggregate is, the handling as a unit makes update operations inefficient. Let’s run the following test case in which I fetch a&nbsp;<em>ChessGame&nbsp;</em>object and only change the value of the&nbsp;<em>playedOn</em>&nbsp;attribute before I tell Spring Data JDBC to save the object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+ChessGame game = gameRepo.findById(gameId).orElseThrow();
+game.setPlayedOn(LocalDateTime.now());
+gameRepo.save(game);
+</pre></div>
+
+
+<p>Spring Data JDBC treats the aggregate as 1 unit and doesn&#8217;t keep track of the data it fetched from the database. Due to that, it can&#8217;t detect which part of the aggregate has changed. That becomes a problem for every to-many association.</p>
+
+
+
+<p>In this example, Spring Data JDBC doesn&#8217;t know if or which <em><em>ChessMove </em></em>object has changed. Due to that, it has to replace all of them.</p>
+
+
+
+<p>As you can see in the log output, it updates the record in the <em><em>ChessGame</em> </em>table, removes all records from the <em>ChessMove </em>table, and inserts a new one for each <em><em>ChessMove </em></em>object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-07-05 18:38:52.927 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-07-05 18:38:52.928 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;played_on&quot; AS &quot;played_on&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;id&quot; = ?]
+2022-07-05 18:38:52.945 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-07-05 18:38:52.946 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
+2022-07-05 18:38:52.972 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL update
+2022-07-05 18:38:52.973 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;UPDATE &quot;chess_game&quot; SET &quot;played_on&quot; = ?, &quot;player_black&quot; = ?, &quot;player_white&quot; = ? WHERE &quot;chess_game&quot;.&quot;id&quot; = ?]
+2022-07-05 18:38:52.987 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL update
+2022-07-05 18:38:52.987 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;DELETE FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ?]
+2022-07-05 18:38:52.993 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:38:52.994 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-07-05 18:38:53.000 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:38:53.000 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-07-05 18:38:53.005 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:38:53.005 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-07-05 18:38:53.010 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-07-05 18:38:53.010 DEBUG 34968 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+</pre></div>
+
+
+<p>Depending on the size and complexity of your aggregate, this handling of update operations can cause severe performance problems. The best way to avoid those problems is to keep your aggregates small and concise.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>An aggregate is a group of entity objects that are treated as a unit. As you saw in this article, this makes a few operations easier. E.g., you can easily persist an entire aggregate, and you don&#8217;t have to worry about <a href="https://thorben-janssen.com/lazyinitializationexception/" data-type="post" data-id="24513">LazyInitializationExceptions</a>, which you might know from other ORMs. </p>
+
+
+
+<p>But treating an aggregate as a unit also introduces performance issues if Spring Data JDBC has to fetch too many records from the database or has to replace lists of entities. To keep these effects as small as possible, I recommend keeping your aggregates concise and simple. The fewer associations and entities your aggregate includes, the lower the risk of performance problems. So, if you have the chance to model something as multiple, small aggregates, you should do that.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

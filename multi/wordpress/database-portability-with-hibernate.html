@@ -1,0 +1,327 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Database portability – Pitfalls when supporting multiple RDBMS with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Database portability – Pitfalls when supporting multiple RDBMS with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>The JPA specification and Hibernate, as its most popular implementation, claim to provide database portability. That means you don&#8217;t need to change your persistence code or mapping annotations when connecting your application to a different RDBMS. They achieve that by providing an automated object-relational mapping, an API that abstracts from the executed SQL statements, and their own query language. </p>
+
+
+
+<p>Based on this, developers often think they only need to change their <a href="https://thorben-janssen.com/jdbc-connection-and-dialect-in-hibernate/">JDBC driver and database connection</a> to switch to a different RDBMS. But unfortunately, that&#8217;s usually not the case. </p>
+
+
+
+<p>But JPA’s and Hibernate’s claim also isn’t entirely wrong. The provided abstractions hide most database-specific things and get you extremely close to a portable persistence layer. But there are a few pitfalls that often cause problems when you connect your application to a different RDBMS for the first time.</p>
+
+
+
+<p>In this article, I will show you how Hibernate achieves database portability, which features usually cause problems, and how you can solve them.</p>
+
+
+
+<h2 class="wp-block-heading">How Hibernate achieves database portability</h2>
+
+
+
+<p>One of the main challenges when providing database portability is to handle the small differences between most RDBMS&#8217;s SQL dialects and supported features. Hibernate solves this by offering a huge set of different <em>Dialect </em>implementations. </p>
+
+
+
+<p>The best part about this is that Hibernate can automatically pick and use a <em>Dialect</em>. But it&#8217;s nevertheless good to at least understand the basic concept. So, let&#8217;s take a quick look at it.</p>
+
+
+
+<h3 class="wp-block-heading">Hibernate&#8217;s database <em>Dialect</em>s</h3>
+
+
+
+<p>Each <em>Dialect </em>implementation provides the required information to adjust the mapping of your entity classes and the generated SQL statements to a specific database. It defines things like:</p>
+
+
+
+<ul><li>the name of the column type to which your entity&#8217;s attribute type, e.g., <em>Integer</em>, gets mapped,</li><li>the name, parameters, and return type of the supported database functions,</li><li>how the database can generate primary key values,</li><li>the support for LIMIT and OFFSET clauses in the generated query statements,</li><li>the support for timeouts and database locks</li><li>and much more.</li></ul>
+
+
+
+<p>You can find <em>Dialect </em>implementations for almost all commonly used databases in the <a href="https://docs.jboss.org/hibernate/stable/orm/javadocs/org/hibernate/dialect/package-summary.html" rel="nofollow"><em>org.hibernate.dialect</em> package</a>. </p>
+
+
+
+<p>Since Hibernate 6, each <em>Dialect </em>implementation handles all available versions of the corresponding database. Older versions often used separate <em>Dialect</em> implementations for different versions of the same RDBMS, e.g., <em>PostgreSQL95Dialect</em>, <em>PostgreSQL94Dialect</em>, and <em>PostgreSQL93Dialect</em>. Each of these version-specific <em>Dialect</em>s extended the implementation of the previous version and added support for new column types, functions, and other things that were added in the corresponding release of the RDBMS.</p>
+
+
+
+<h3 class="wp-block-heading">Configuring or resolving the <em>Dialect</em></h3>
+
+
+
+<p>Hibernate can pick the correct <em>Dialect </em>implementation automatically during startup. It does that by iterating through all <em>DialectResolver </em>implementations available on the classpath and calling their <em>resolveDialect</em> with the metadata information of the connected database. If a resolver knows how to handle this information, it instantiates a <em>Dialect</em> implementation.</p>
+
+
+
+<p>These <em>DialectResolver</em> implementations are available for all of Hibernate&#8217;s standard <em>Dialect</em>s. If you implement a custom <em>Dialect</em>, you either also need to provide an implementation of the <em>DialectResolver </em>interface or explicitly configure the <em>Dialect </em>implementation you want to use.</p>
+
+
+
+<p>If the <em>Dialect </em>resolution fails or you want to override it, you need to configure the <em>hibernate.dialect</em> property in your <a href="https://thorben-janssen.com/jpa-persistence-xml/"><em>persistence.xml</em> configuration</a>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+		...
+        &lt;properties&gt;
+ 			&lt;property name=&quot;hibernate.dialect&quot; value=&quot;org.hibernate.dialect.PostgreSQLDialect&quot; /&gt;
+
+			&lt;property name=&quot;jakarta.persistence.jdbc.driver&quot; value=&quot;org.postgresql.Driver&quot; /&gt;
+			&lt;property name=&quot;jakarta.persistence.jdbc.url&quot; value=&quot;jdbc:postgresql://localhost:5432/myDb&quot; /&gt;
+			&lt;property name=&quot;jakarta.persistence.jdbc.user&quot; value=&quot;postgres&quot; /&gt;
+			&lt;property name=&quot;jakarta.persistence.jdbc.password&quot; value=&quot;postgres&quot; /&gt;
+       &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<h2 class="wp-block-heading">Features that often break database portability</h2>
+
+
+
+<p>As I explained in the previous section, Hibernate&#8217;s <em>Dialect </em>implementations handle most differences between the various RDBMS. But there are a few features that often cause problems. That&#8217;s usually either because some databases don&#8217;t support a specific feature or because you use a Hibernate feature that doesn&#8217;t abstract from the underlying SQL statement.</p>
+
+
+
+<h3 class="wp-block-heading">Problem 1: Generating primary key values</h3>
+
+
+
+<p>You probably already know that you can use <a href="/jpa-generate-primary-keys/">autoincremented database columns or database sequences</a> to let your database generate unique primary key values. You can configure your preferred option by annotating the primary key attribute with a <em>@GeneratedValue </em>annotation and providing the <em>GenerationType</em> enum value for your preferred sequence.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;author_seq&quot;)
+    @SequenceGenerator(name = &quot;author_seq&quot;, sequenceName = &quot;author_seq&quot;)
+	private Long id;
+	
+	...
+}
+</pre></div>
+
+
+<p>For performance reasons, you should use <em>GenerationType.SEQUENCE</em>. It tells Hibernate to use a database sequence to generate unique primary key values. The main benefit of this approach is that it enables Hibernate to generate the primary key value without executing an SQL INSERT statement. And thanks to this separation, Hibernate can perform additional performance optimizations. I explain this in more detail in the Hibernate Performance Tuning course in the <a href="/join-persistence-hub/">Persistence Hub</a>.</p>
+
+
+
+<p>Unfortunately, MySQL databases don&#8217;t support sequences. You need to use <em>GenerationType.IDENTITY</em> instead. </p>
+
+
+
+<p>If you only need to support MySQL databases, you can annotate your primary key attribute with <em>@GeneratedValue(strategy = GenerationType.IDENTITY)</em> instead. But it gets a little more complicated if your application supports multiple RDBMS and you want to use <em>GenerationType.SEQUENCE</em> for some or most of them.</p>
+
+
+
+<p>In that case, many developers decide to use <em>GenerationType.AUTO</em> and let Hibernate pick the strategy. But that causes severe performance problems. If your database doesn&#8217;t support sequences, <em>GenerationType.AUTO</em> uses the very inefficient <em>GenerationType.TABLE</em> and not as many developers expect to <em>GenerationType.IDENTITY</em>. So, you should better avoid it and use the following solution.</p>
+
+
+
+<h4 class="wp-block-heading">Solution: Override the generation strategy for primary keys</h4>
+
+
+
+<p>The best way to use the most efficient generation strategy for your primary key values for each database is to define a default strategy and override it when necessary.</p>
+
+
+
+<p>I usually choose <em>GenerationType.SEQUENCE</em> as my default strategy. I annotate every primary key attribute of my entity classes with <em>@GeneratedValue(GenerationType.SEQUENCE)</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;author_seq&quot;)
+    @SequenceGenerator(name = &quot;author_seq&quot;, sequenceName = &quot;author_seq&quot;)
+	private Long id;
+	
+	...
+}
+</pre></div>
+
+
+<p>Then I create an <em>orm.xml</em> mapping file and put it next to my <em>persistence.xml</em> file. Hibernate will pick it up automatically.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;entity-mappings&gt;
+	&lt;entity class=&quot;com.thorben.janssen.model.Author&quot; name=&quot;Author&quot;&gt;
+		&lt;attributes&gt;
+			&lt;id name=&quot;id&quot;&gt;
+				&lt;generated-value strategy=&quot;IDENTITY&quot;/&gt;
+			&lt;/id&gt;
+		&lt;/attributes&gt;
+	&lt;/entity&gt;
+	...
+&lt;/entity-mappings&gt;
+</pre></div>
+
+
+<p>Hibernate will merge the mapping definitions defined via annotations and in the <em>orm.xml</em> file during the deployment. And if there is a conflict between these 2 definitions, it uses the mapping defined in the <em>orm.xml</em> file. You can learn more about all of this in my article <a href="/mapping-definitions-jpa-hibernate-annotations-xml/">Mapping Definitions in JPA and Hibernate – Annotations, XML or both?</a></p>
+
+
+
+<p>Using this approach, you can override the generation strategy defined by your <em>@GeneratedValue</em> annotation and set it to <em>GenerationType.IDENTITY</em>.</p>
+
+
+
+<h3 class="wp-block-heading">Problem 2: Native queries</h3>
+
+
+
+<p><a href="https://thorben-janssen.com/jpa-native-queries/">Native queries</a> are another feature that often breaks database portability. And the reason for that is simple. Your JPA implementation, e.g., Hibernate, doesn&#8217;t parse and transform the SQL statement you provide when creating the native query. It simply executes it. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Author a = (Author) em.createNativeQuery(&quot;select a.id, a.firstName, a.lastName, a.version from Author a WHERE a.id = :id&quot;, Author.class)
+					  .setParameter(&quot;id&quot;, author.getId())
+					  .getSingleResult();
+</pre></div>
+
+
+<p>So, it’s up to you to provide an SQL statement that works on all databases your application needs to support. That’s often harder than it might sound. There are 3 common solutions to this problem.</p>
+
+
+
+<h4 class="wp-block-heading">Solution 1: Don&#8217;t use native queries</h4>
+
+
+
+<p>The easiest way to avoid this problem is to avoid native queries in general. As long as you only use <a href="https://thorben-janssen.com/jpql/">JPQL</a> queries or the Criteria API, Hibernate generates the SQL statement and uses a <em>Dialect </em>implementation to adjust it to the RDBMS.</p>
+
+
+
+<p>Avoiding native queries might be the easiest approach, but it’s not very practical. Most applications require at least a few queries too complex for JPQL or the Criteria API. In those cases, you can try one of the following solutions.</p>
+
+
+
+<h4 class="wp-block-heading">Solution 2: Provide different sets of SQL statements</h4>
+
+
+
+<p>Ad-hoc native queries make it relatively easy to provide different SQL statements for each RDBMS. You only need to define multiple versions of a class that contains a <em>String </em>constant for every statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class NativeQueryStrings {
+    
+    public static String AUTHOR__FIND_BY_ID = &quot;select a.id, a.firstName, a.lastName, a.version from Author a WHERE a.id = :id&quot;;
+
+    public static String BOOK__FIND_BY_ID = &quot;select b.* from Book b WHERE b.id = :id&quot;;
+}
+</pre></div>
+
+
+<p>When you create multiple versions of the <em>NativeQueryStrings </em>class, please remember that you will not need to adjust every statement. Especially the simpler ones might work on every RDBMS you need to support. </p>
+
+
+
+<p>In that case, you can decide not to extract the query string into the <em>NativeQueryStrings </em>class. Or you create a class containing each query&#8217;s default version and extend that class to create a database-specific version.</p>
+
+
+
+<p>In your persistence code, you then use these constants to create an ad-hoc native query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Author a = (Author) em.createNativeQuery(NativeQueryStrings.AUTHOR__FIND_BY_ID, Author.class)
+					  .setParameter(&quot;id&quot;, author.getId())
+					  .getSingleResult();
+</pre></div>
+
+
+<p>When you package your application, you can pick the <em>NativeQueryStrings </em>class version that matches the RDBMS that you will use in production and include only that one in your deployment.</p>
+
+
+
+<p>Depending on your application’s stack, you might also be able to include all of those classes in your application and configure which one you want to use at runtime. For example, if you’re using CDI, you can do this by using a feature called <em>Alternatives</em>.</p>
+
+
+
+<h4 class="wp-block-heading">Solution 3: Use <em>@NamedNativeQuery</em> and override the statement</h4>
+
+
+
+<p>If you don&#8217;t want to manage multiple classes that define your ad-hoc queries, you can define each native query as a <em>@NamedNativeQuery</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@NamedNativeQuery(name = &quot;Author.selectByIdNative&quot;, query = &quot;select a.id, a.firstName, a.lastName, a.version from Author a WHERE a.id = :id&quot;, resultClass = Author.class)
+public class Author { ... }
+</pre></div>
+
+
+<p>After you define the named query, you can reference it by its name and instantiate it in your persistence code.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Author a = em.createNamedQuery(&quot;Author.selectByIdNative&quot;, Author.class)
+             .setParameter(&quot;id&quot;, a.getId())
+             .getSingleResult();
+</pre></div>
+
+
+<p>Similar to the previously discussed generation strategies for primary keys, you can override the statement of a <em>@NamedNativeQuery</em> in the <em>orm.xml</em> mapping file. That enables you to change the query&#8217;s statement without changing your persistence code.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;entity-mappings&gt;
+	&lt;entity class=&quot;com.thorben.janssen.model.Author&quot; name=&quot;Author&quot;&gt;
+		...
+		&lt;named-native-query name=&quot;Author.selectByIdNative&quot;
+			result-class=&quot;com.thorben.janssen.model.Author&quot;&gt;
+			&lt;query&gt;&lt;!&#91;CDATA&#91;
+                    select a.* 
+                    from Author a 
+                    WHERE a.id = :id
+                ]]&gt;&lt;/query&gt;
+		&lt;/named-native-query&gt;
+	&lt;/entity&gt;
+&lt;/entity-mappings&gt;
+</pre></div>
+
+
+<h3 class="wp-block-heading">Problem 3: Custom functions or stored procedures</h3>
+
+
+
+<p>Even if you don&#8217;t use native queries, <a href="https://thorben-janssen.com/database-functions/">custom functions</a> and stored procedures often cause problems if you need to support multiple RDBMS. But this time, it&#8217;s not a JPA or Hibernate problem. </p>
+
+
+
+<p>The problem is the missing standardization of <a href="https://thorben-janssen.com/call-stored-procedures-jpa/">stored procedures</a> and how you define database functions. That makes it often impossible to use the same code to deploy a stored procedure or database function on different RDBMS.</p>
+
+
+
+<p>You only have 2 options to avoid this problem. You either provide a database-specific definition of every custom function and stored procedure or you avoid using these database features entirely.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>RDBMS not only differ in the features and performance they provide. They also differ in the supported column types, the expected structure of the SQL statements, and the supported database functions. </p>
+
+
+
+<p>Hibernate tries to handle these differences automatically. It uses a database-specific <em>Dialect </em>implementation that provides all the required information to adjust the entity mappings and generated SQL statements.</p>
+
+
+
+<p>But if you’re using an API that doesn’t provide an abstraction of the executed query statements or if you use a feature that’s not supported by all databases, Hibernate can’t handle those problems for you. Typical examples are the generation of unique primary key values, native queries, and database functions.&nbsp;</p>
+
+
+
+<p>In those cases, you need to decide if you can avoid a specific feature entirely, e.g., only use JPQL or Criteria queries. Or you need to provide database-specific versions yourself. In that case, you can create an&nbsp;<em>orm.xml</em>&nbsp;file in which you adjust the mapping information you provided as annotations.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

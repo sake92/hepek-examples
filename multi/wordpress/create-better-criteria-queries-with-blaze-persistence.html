@@ -1,0 +1,650 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Create better Criteria queries with Blaze persistence</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Create better Criteria queries with Blaze persistence</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>The Blaze Persistence project provides an interesting alternative to JPA’s Criteria API. Both APIs enable you to define queries dynamically at runtime. Most developers use it to create query statements based on user input or the result of a business operation. Unfortunately, JPA’s Criteria API isn’t very popular because it’s hard to read and write. As I will show you in this tutorial, Blaze Persistence’s Criteria API provides an easier-to-use solution. It integrates with various JPA implementations and provides a huge set of query features.</p>
+
+
+
+<p>In this tutorial, I will give you a quick introduction to the Blaze Persistence Criteria API. In future articles, we will take a closer look at more advanced query features, like CTE and window functions, the extensions to JPA&#8217;s Criteria API, and the entity view feature.</p>
+
+
+
+<h2 class="wp-block-heading">Adding Blaze Persistence to your project</h2>
+
+
+
+<p>Blaze Persistence consists of multiple modules. You always need to add the core API and implementation to your project. And you combine it with an integration module for your specific JPA implementation. You can find a full list of all modules in the <a href="https://persistence.blazebit.com/documentation/1.6/core/manual/en_US/#getting-started-setup" rel="nofollow">documentation</a>.</p>
+
+
+
+<p>For this article, I’m using Blaze Persistence with Hibernate 6. So, I need to add dependencies to Hibernate and Blaze Persistence’s core API, core implementation, and Hibernate 6 integration to my&nbsp;<em>pom.xml</em>&nbsp;file.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;dependency&gt;
+	&lt;groupId&gt;org.hibernate.orm&lt;/groupId&gt;
+	&lt;artifactId&gt;hibernate-core&lt;/artifactId&gt;
+	&lt;version&gt;${version.hibernate}&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-core-api-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;compile&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-core-impl-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;runtime&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-integration-hibernate-6.0&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;runtime&lt;/scope&gt;
+&lt;/dependency&gt;
+</pre></div>
+
+
+<p>In the next step, you need to instantiate a <em>CriteriaBuilderFactory</em> instance. You will use that object in your persistence code to create new queries.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+CriteriaBuilderConfiguration config = Criteria.getDefault();
+CriteriaBuilderFactory cbf = config.createCriteriaBuilderFactory(this.emf);
+</pre></div>
+
+
+<p>You should instantiate the&nbsp;<em>CriteriaBuilderFactory</em>&nbsp;at application startup and only create 1 instance. Depending on your environment, you might want to do that in a CDI producer or define a singleton bean in Spring. The official documentation provides several <a href="https://persistence.blazebit.com/documentation/1.6/core/manual/en_US/#anchor-environment" rel="nofollow">detailed examples</a> of this.</p>
+
+
+
+<p>Let&#8217;s use the <em>CriteriaBuilderFactory cbf </em>to define some queries.</p>
+
+
+
+<h2 class="wp-block-heading">Creating a basic query</h2>
+
+
+
+<p>Using Blaze Persistence, it only takes 2 method calls to define a simple query and execute it. The following code snippet shows you the creation and execution of a query that selects all <em>ChessPlayer</em> entities from the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessPlayer&gt; players = cbf.create(em, ChessPlayer.class).getResultList();
+
+players.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>A call of the <em>create </em>method defines a query that will be executed using the provided <em>EntityManager</em> instance. The 2nd method parameter specifies the return type of the query. And it also acts as the default definition of the SELECT and FROM clauses. If you want to, you can, of course, overwrite these clauses.</p>
+
+
+
+<p>You can see the executed SQL statement in your log file when you execute this simple test case and use my&nbsp;<a href="https://thorben-janssen.com/hibernate-logging-guide/" target="_blank" rel="noreferrer noopener">recommended logging configuration for Hibernate</a>. As expected, the query selects all records from the&nbsp;<em>ChessPlayer</em>&nbsp;table and returns all columns mapped by the&nbsp;<em>ChessPlayer</em>&nbsp;entity class.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:53:39,968 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        c1_0.lastName,
+        c1_0.version 
+    from
+        ChessPlayer c1_0
+17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
+17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Jorden van Foreest
+17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
+17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+</pre></div>
+
+
+<p>Hibernate then maps the query result to managed <em>ChessPlayer</em> entity objects. You can use these objects in the same way as any entity object you fetched using a <a href="https://thorben-janssen.com/jpql/">JPQL</a> query or any of Hibernate&#8217;s APIs.</p>
+
+
+
+<p>This is obviously a very basic query that you will not use in your application. You will need to add a WHERE clause, join other tables, order the result and use pagination. So, let&#8217;s do that next.</p>
+
+
+
+<h2 class="wp-block-heading">Defining a WHERE clause</h2>
+
+
+
+<p>You can define the WHERE clause of your query by calling the <em>where</em> method on the <em>CriteriaBuilder</em> object returned by the <em>create</em> method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessPlayer&gt; players = cbf.create(em, ChessPlayer.class)
+							   .where(&quot;firstName&quot;).eq(&quot;Fabiano&quot;)
+							   .where(&quot;lastName&quot;).eq(&quot;Caruana&quot;)
+							   .getResultList();
+
+players.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the code snippet, Blaze Persistence provides a fluent API, and you can call the <em>where </em>method multiple times. Each call returns a <em>PredicateBuilder</em>. The builder provides a set of methods to define predicates, like equals, greater than, less, or equal than, and is empty. You can also check if an entity is a member of an association, define subselects, and much more.</p>
+
+
+
+<p>In this example, I keep it simple. I call the <em>eq </em>method to define equal comparisons of the <em>firstName </em>and <em>lastName</em> attributes of my <em>ChessPlayer </em>entity. </p>
+
+
+
+<p>The parameters that I provide to the&nbsp;<em>eq&nbsp;</em>method make the definition of this WHERE clause interesting. Instead of defining a bind parameter, I provide the parameter value. With other query languages and APIs, e.g., JPQL, that&#8217;s something you shouldn&#8217;t do because it causes SQL injection vulnerabilities. But you don&#8217;t have to worry about that when using Blaze Persistence. It automatically adds a bind parameter to the query statement and sets the provided value as the bind parameter value.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+19:03:52,772 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        c1_0.lastName,
+        c1_0.version 
+    from
+        ChessPlayer c1_0 
+    where
+        c1_0.firstName=? 
+        and c1_0.lastName=?
+19:03:52,824 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+</pre></div>
+
+
+<p>In the test case, I called the where method twice. As you can see in the log output, Blaze Persistence generated a compound predicate for it and connected the 2 predicates with AND. </p>
+
+
+
+<h3 class="wp-block-heading">Creating nested compound predicates</h3>
+
+
+
+<p>You can define your own compound predicates by calling the <em>whereAnd </em>or <em>whereOr </em>method. These methods return a <em>WhereAndBuilder </em>or <em>WhereOrBuilder</em> instance, which you can use to define a nested compound predicate by calling the <em>where </em>method one or more times. And after you&#8217;ve added all predicates to your compound predicate, you need to call the <em>endAnd</em> or <em>endOr</em> method to close your compound predicate.</p>
+
+
+
+<p>Don&#8217;t worry; it&#8217;s much easier than it might sound. I use these methods in the following example to select the chess players Fabiano Caruana and Magnus Carlsen.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessPlayer&gt; players = cbf.create(em, ChessPlayer.class)
+							   .whereOr()
+									.whereAnd().where(&quot;firstName&quot;).eq(&quot;Fabiano&quot;)
+										.where(&quot;lastName&quot;).eq(&quot;Caruana&quot;)
+									.endAnd()
+									.whereAnd().where(&quot;firstName&quot;).eq(&quot;Magnus&quot;)
+										.where(&quot;lastName&quot;).eq(&quot;Carlsen&quot;)
+									.endAnd()
+							   .endOr()
+							   .getResultList();
+
+players.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>When I execute this test case, you can see in the log output that Blaze Persistence generated the expected query. The WHERE clause checks the <em>firstName</em> and <em>lastName </em>of the player against 2 sets of bind parameter values. And it connects these 2 groups of predicates with OR.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+19:13:15,557 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        c1_0.lastName,
+        c1_0.version 
+    from
+        ChessPlayer c1_0 
+    where
+        (
+            c1_0.firstName=? 
+            and c1_0.lastName=?
+        ) 
+        or (
+            c1_0.firstName=? 
+            and c1_0.lastName=?
+        )
+19:13:15,598 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
+19:13:15,598 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+</pre></div>
+
+
+<p>As you can see, when you combine the <em>where</em>, <em>whereAnd</em>, and <em>whereOr</em> methods with the previously mentioned methods to define predicates, you can define complex WHERE clauses. Blaze Persistence even supports more advanced predicates than the JPA specification does. But those are a topic for another tutorial.</p>
+
+
+
+<h2 class="wp-block-heading">Defining a FROM clause</h2>
+
+
+
+<p>When I showed you how to define a basic query, I mentioned that Blaze Persistence generates a default FROM clause. It uses the entity class you referenced when calling the&nbsp;<em>create</em>&nbsp;method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessPlayer&gt; players = cbf.create(em, ChessPlayer.class).getResultList();
+
+players.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>So, in this example, Blaze Persistence uses a default FROM clause based on the <em>ChessPlayer</em> entity class. You can explicitly define the root of your FROM clause by calling the <em>from </em>method on the <em>CriteriaBuilder</em>. In that case, the entity class you reference in the <em>create </em>method only defines the return type of your query. And the entity class referenced in the <em>from </em>method becomes your query root. That<em> </em>method also allows you to provide a 2nd method parameter that defines the alias of your query root.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessPlayer&gt; players = cbf.create(em, ChessPlayer.class)
+							   .from(ChessPlayer.class, &quot;p&quot;)
+							   .getResultList();
+
+players.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>If you call the <em>from</em> method multiple times, Blaze Persistence will add each referenced entity class to the FROM clause. This generates a cross join. In the following sections, I will show you how to define inner and outer joins.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;Tuple&gt; result = cbf.create(em, Tuple.class)
+							   .from(ChessPlayer.class, &quot;p&quot;)
+							   .from(ChessTournament.class, &quot;t&quot;)
+							   .select(&quot;p&quot;, &quot;person&quot;)
+							   .select(&quot;t&quot;, &quot;tournament&quot;)
+							   .getResultList();
+
+result.forEach(r -&gt; log.info(((ChessPlayer)r.get(&quot;person&quot;)).getFirstName() + &quot; &quot; + ((ChessPlayer)r.get(&quot;person&quot;)).getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As soon as your query has more than 1 root, you also need to specify the SELECT clause. You can do that by calling the <em>select </em>method. </p>
+
+
+
+<p>The 1st method parameter defines the element you want to select. This can be a reference to an entity, an entity attribute, a database function, an expression, or an <em>ObjectBuilder</em>. For the scope of this tutorial, I will only use entity and entity attribute references. I will explain Blaze Persistence’s&nbsp;<em>ObjectBuilder&nbsp;</em>in more detail in a future article.</p>
+
+
+
+<p>When calling the <em>select</em> method, you can provide a 2nd method parameter to specify an alias. That makes it easier to reference the selected element when processing the returned <a href="/projections-with-jpa-and-hibernate/#Scalar_value_projections">Tuple instances</a>.</p>
+
+
+
+<h3 class="wp-block-heading">Using an implicit join </h3>
+
+
+
+<p>Similar to JPQL, Blaze Persistence also supports implicit joins. You define them by referencing an entity attribute that <a href="https://thorben-janssen.com/associations/">models an association</a> followed by the path operator &#8220;.&#8221; and the name of an attribute on the associated entity. Blaze Persistence then adds a LEFT JOIN clause for that association to the query statement.</p>
+
+
+
+<p>I&#8217;m using that in the following example to define an implicit join from the <em>ChessTournament </em>to the <em>ChessPlayer </em>entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessTournament&gt; tournaments = cbf.create(em, ChessTournament.class)
+										.where(&quot;players.firstName&quot;).eq(&quot;Fabiano&quot;)
+											.where(&quot;players.lastName&quot;).eq(&quot;Caruana&quot;)
+										.getResultList();
+
+tournaments.forEach(t -&gt; log.info(t.getName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>The WHERE clause of my query contains 2 implicit joins using the same association. Blaze Persistence expects that these are identical. The generated SQL statement only contains 1 LEFT JOIN from the <em>ChessPlayer </em>table to the association table representing the <a href="/ultimate-guide-association-mappings-jpa-hibernate/#manyToMany">many-to-many association</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+07:20:34,964 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.endDate,
+        c1_0.name,
+        c1_0.startDate,
+        c1_0.version 
+    from
+        ChessTournament c1_0 
+    left join
+        (ChessTournament_ChessPlayer p1_0 
+    join
+        ChessPlayer p1_1 
+            on p1_1.id=p1_0.players_id) 
+                on c1_0.id=p1_0.ChessTournament_id 
+        where
+            p1_1.firstName=? 
+            and p1_1.lastName=?
+07:20:34,994 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
+</pre></div>
+
+
+<h3 class="wp-block-heading">Using an explicit join</h3>
+
+
+
+<p>In addition to the implicit joins, Blaze Persistence offers multiple versions of the <em>innerJoin</em>, <em>leftJoin, </em>and <em>rightJoin </em>methods to define inner, left, and right join clauses. You can even define lateral joins and joins to subselects. Both are features not supported by JPQL and are out of scope for this basic introduction to Blaze Persistence&#8217;s query features.</p>
+
+
+
+<p>Here you can see a simple example that explicitly defines an inner join from the <em>ChessTournament </em>to the <em>ChessPlayer</em> entity class. It also defines <em>p</em> as the alias of the joined <em>ChessPlayer</em>, which makes it easier to reference the joined entity in the WHERE clause. By default, Blaze Persistence uses the lowercase version of the entity&#8217;s name as the alias.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessTournament&gt; tournaments = cbf.create(em, ChessTournament.class)
+										.innerJoin(&quot;players&quot;, &quot;p&quot;)
+										.where(&quot;p.firstName&quot;).eq(&quot;Fabiano&quot;)
+											.where(&quot;p.lastName&quot;).eq(&quot;Caruana&quot;)
+										.getResultList();
+
+tournaments.forEach(t -&gt; log.info(t.getName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>When executing this query, Blaze Persistence generates an SQL statement with the corresponding joins and a WHERE clause that limits the query result to all tournaments played by Fabiano Caruana.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+07:38:28,951 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.endDate,
+        c1_0.name,
+        c1_0.startDate,
+        c1_0.version 
+    from
+        ChessTournament c1_0 
+    join
+        (ChessTournament_ChessPlayer p1_0 
+    join
+        ChessPlayer p1_1 
+            on p1_1.id=p1_0.players_id) 
+                on c1_0.id=p1_0.ChessTournament_id 
+        where
+            p1_1.firstName=? 
+            and p1_1.lastName=?
+07:38:28,992 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
+</pre></div>
+
+
+<h3 class="wp-block-heading">Defining a JOIN FETCH</h3>
+
+
+
+<p>In addition to the inner and outer joins you know from SQL, the JPA specification supports a JOIN FETCH clause. It tells the persistence provider to fetch the referenced association when fetching the selected entity object. This is one of the most commonly used features to improve the performance of read operations, and Blaze Persistence supports it as well.</p>
+
+
+
+<p>You can define a JOIN FETCH clause similarly to the previously described inner and outer joins. The only difference is that you now need to call the <em>fetch</em>, <em>innerJoinFetch</em>, <em>leftJoinFetch</em>, or <em>rightJoinFetch </em>method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessTournament&gt; tournaments = cbf.create(em, ChessTournament.class)
+										.fetch(&quot;players&quot;)
+										.innerJoin(&quot;players&quot;, &quot;p&quot;)
+										.where(&quot;p.firstName&quot;).eq(&quot;Fabiano&quot;)
+											.where(&quot;p.lastName&quot;).eq(&quot;Caruana&quot;)
+										.getResultList();
+
+tournaments.forEach(t -&gt; log.info(t.getName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>When doing that, please keep in mind that you should use an additional join to define your WHERE clause. Otherwise, your query will only return the associated entities that match the predicates of your WHERE clause. This initializes the association incompletely.</p>
+
+
+
+<p>I did that in the previous code sample. As you can see in the log output, the executed SQL statement joins the association twice. The 1st join fetches all associated <em>ChessPlayers, </em>and the 2nd one limits the query result to the tournaments in which Fabiano Caruana participated.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:22:35,027 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.endDate,
+        c1_0.name,
+        p1_0.ChessTournament_id,
+        p1_1.id,
+        p1_1.birthDate,
+        p1_1.firstName,
+        p1_1.lastName,
+        p1_1.version,
+        c1_0.startDate,
+        c1_0.version 
+    from
+        ChessTournament c1_0 
+    left join
+        (ChessTournament_ChessPlayer p1_0 
+    join
+        ChessPlayer p1_1 
+            on p1_1.id=p1_0.players_id) 
+                on c1_0.id=p1_0.ChessTournament_id 
+        join
+            (ChessTournament_ChessPlayer p2_0 
+        join
+            ChessPlayer p2_1 
+                on p2_1.id=p2_0.players_id) 
+                    on c1_0.id=p2_0.ChessTournament_id 
+            where
+                p2_1.firstName=? 
+                and p2_1.lastName=?
+10:22:35,070 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
+</pre></div>
+
+
+<p>The last thing I want to show you in this article is how to paginate your query result. You should then have all the knowledge you need to start writing your first queries using Blaze Persistence.</p>
+
+
+
+<h2 class="wp-block-heading">Paginating your query result</h2>
+
+
+
+<p>Using SQL, you can choose between offset pagination and keyset pagination. Blaze Persistence offers an easy-to-use API for both options.</p>
+
+
+
+<h3 class="wp-block-heading">Applying offset pagination</h3>
+
+
+
+<p>Most developers are familiar with offset pagination. You simply add a LIMIT and OFFSET clause or a FETCH and OFFSET clause to your query or call the <em>setFirstResult </em>and <em>setMaxResult</em> methods on JPA&#8217;s query interface. Blaze Persistence&#8217;s CriteriaBuilder offers the same methods.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+List&lt;ChessPlayer&gt; players = cbf.create(em, ChessPlayer.class)
+							   .setFirstResult(2)
+							   .setMaxResults(3)
+							   .getResultList();
+
+players.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the log output, calling the <em>setFirstResult</em> and <em>setMaxResults</em> methods adds an OFFSET and a FETCH clause to the SQL statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:52:52,061 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        c1_0.lastName,
+        c1_0.version 
+    from
+        ChessPlayer c1_0 offset ? rows fetch first ? rows only
+10:52:52,112 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
+10:52:52,113 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+</pre></div>
+
+
+<p>When processing that query, the database has to order the result set first. It then iterates through the result set and skips the number of records defined as the OFFSET. It then returns the following records until it reaches the defined number of rows. The downside of this approach is that the database always has to read and skip the number of records defined by the OFFSET. Due to that, the query’s performance degrades based on the configured OFFSET.</p>
+
+
+
+<h3 class="wp-block-heading">Applying keyset pagination</h3>
+
+
+
+<p>Keyset pagination provides better performance for huge OFFSET values. Instead of telling the database to skip a defined number of records, it excludes them from the query result. This requires a unique order of your result set and a WHERE clause that filters all records you would otherwise have to skip. </p>
+
+
+
+<p>If you’re unfamiliar with keyset pagination, I recommend reading <a href="https://use-the-index-luke.com/no-offset" rel="nofollow">this article</a> by Markus Wienand. He explains in great detail how keyset pagination works and why it&#8217;s better than offset pagination.</p>
+
+
+
+<p>Using Blaze Persistence, you can call the <em>page</em> method to apply keyset pagination. It expects the previous keyset page and the <em>firstResult</em> and <em>maxResult </em>values you already know from offset pagination. If the previous keyset page is null, Blaze Persistence uses these values to apply offset pagination. Otherwise, it uses the lower or upper bound of the previous page and the <em>maxResults</em> value to get the next or previous page.</p>
+
+
+
+<p>I use that in the following example to iterate through the list of <em>ChessPlayer</em> entities in pages of 2. As I mentioned earlier, keyset pagination requires a unique order of the query result. I, therefore, called the <em>orderByAsc </em>method to get the <em>ChessPlayer</em>s in the ascending order of their <em>id</em> attribute.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+PagedList&lt;ChessPlayer&gt; players1 = cbf.create(em, ChessPlayer.class)
+									 .orderByAsc(&quot;id&quot;)
+									 .page(null, 0, 2)
+									 .getResultList();
+
+players1.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+PagedList&lt;ChessPlayer&gt; players2 = cbf.create(em, ChessPlayer.class)
+									 .orderByAsc(&quot;id&quot;)
+									 .page(players1.getKeysetPage(), 2, 2)
+									 .getResultList();
+
+players2.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>When you execute this test case, you can see in the log output that the 1st query used standard offset pagination. The 2nd one used the order criteria to exclude all records that we would otherwise have to skip and then used offset pagination with an offset of 0. So, it returns the first 2 and avoids skipping any records.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+11:31:07,257 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        c1_0.lastName,
+        c1_0.version,
+        (select
+            count(*) 
+        from
+            ChessPlayer c2_0) 
+    from
+        ChessPlayer c1_0 
+    order by
+        c1_0.id asc offset ? rows fetch first ? rows only
+11:31:07,259 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;INTEGER] - &#91;0]
+11:31:07,260 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;2]
+11:31:07,288 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
+11:31:07,288 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Jorden van Foreest
+11:31:07,508 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        c1_0.lastName,
+        c1_0.version,
+        (select
+            count(*) 
+        from
+            ChessPlayer c2_0) 
+    from
+        ChessPlayer c1_0 
+    where
+        (
+            ?
+        ) &lt; (
+            c1_0.id
+        ) 
+        and 0=0 
+    order by
+        c1_0.id asc offset ? rows fetch first ? rows only
+11:31:07,509 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;BIGINT] - &#91;2]
+11:31:07,509 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;0]
+11:31:07,509 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;2]
+11:31:07,513 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
+11:31:07,513 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+</pre></div>
+
+
+<p>Using this approach, it doesn&#8217;t matter which part of the query result you try to fetch. The database never has to skip any records, which can drastically improve the query&#8217;s performance.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Blaze Persistence provides a Criteria API that enables you to define your query dynamically at runtime and is easier to read and write than JPA’s Criteria API. It also extends the query capabilities provided by Hibernate and JPA. We will take a closer look at that in future articles.</p>
+
+
+
+<p>Blaze Persistence uses many default values that simplify the definition of a query and reduce the required boilerplate code. Good examples are the standard FROM and SELECT clauses that use the entity reference you provided when creating the query. You can, of course, override these defaults if they don&#8217;t match the requirements of your use case. This gives you full flexibility to define the queries you need for your use case.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

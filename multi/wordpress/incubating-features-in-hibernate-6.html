@@ -1,0 +1,242 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>@Incubating features in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>@Incubating features in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>If you tried Hibernate 6, you might have recognized the new <em>@Incubating</em> annotation. The Hibernate team introduces it to tell users about new APIs and interfaces that might still change. That&#8217;s a great addition because most developers expect new APIs and features to be stable after they are part of a final release. In general, that is the case. Hibernate&#8217;s APIs are incredibly stable. But not being able to change a new API after its 1st release makes it impossible to improve it based on user feedback. It also makes it hard to develop and release a set of interconnected features. So, allowing a little more flexibility might be good for everyone involved.</p>
+
+
+
+<h2 class="wp-block-heading">Incubation marker and report</h2>
+
+
+
+<p>The new <em>@Incubating</em> annotation gives Hibernate&#8217;s development team this flexibility. By annotating a configuration parameter or interface with <em>@Incubating</em>, the team warns their users that this feature might still change. <a href="https://in.relation.to/2022/03/31/orm-60-final/" target="_blank" rel="noreferrer noopener">Hibernate 6&#8217;s release announcement</a> stated that they, of course, aim to keep these APIs stable. But pending work on other features or user feedback might cause a few changes in the future.</p>
+
+
+
+<p>From now on, you should keep an eye on <a href="https://docs.jboss.org/hibernate/orm/6.0/incubating/incubating.txt">Hibernate&#8217;s incubation report</a> and double-check if a newly introduced feature is based on interfaces, classes, or configuration parameters annotated with <em>@Incubating</em>. If that&#8217;s the case, you can still use them. But you should be aware that a future release might introduce a change that could affect your code. </p>
+
+
+
+<h2 class="wp-block-heading">@Incubating features in Hibernate 6.0</h2>
+
+
+
+<p>Hibernate 6.0 includes several features marked as <em>@Incubating</em>. Most of them are SPI&#8217;s used to integrate Hibernate in different environments and aren&#8217;t relevant for us as application developers. But there are some new features that you should know that are marked as <em>@Incubating</em>.</p>
+
+
+
+<h3 class="wp-block-heading">Configuration parameters for preferred SQL types</h3>
+
+
+
+<p>Hibernate 6 introduces 4 configuration parameters that you can use to configure the JDBC type that Hibernate shall use to map attributes of type <em>boolean</em>, <em>UUID</em>, <em>Duration</em>, and <em>Instant</em>. You can use them in your <a href="https://thorben-janssen.com/jpa-persistence-xml/">persistence.xml configuration</a> and either set them to a numerical JDBC type code or reference the name of a constant defined in <em>org.hibernate.type.SqlTypes</em>.</p>
+
+
+
+<ul><li><em>hibernate.type.preferred_boolean_jdbc_type</em><br>sets the JDBC type code for attributes of type boolean. By default, Hibernate gets this type mapping from the database-specific dialect.</li><li><em>hibernate.type.preferred_uuid_jdbc_type</em><br>sets the JDBC type code for attributes of type UUID. By default, these get mapped to <em>org.hibernate.types.SqlTypes.UUID</em>, which represents the JDBC type code <em>3000</em>.</li><li><em>hibernate.type.preferred_duration_jdbc_type</em><br>sets the JDBC type code for attributes of type <em>Duration</em>. By default, these get mapped to <em>org.hibernate.types.SqlTypes.INTERVAL_SECOND</em>, which represents the JDBC type code <em>3100</em>.</li><li><em>hibernate.type.preferred_instant_jdbc_type</em><br>sets the JDBC type code for attributes of type <em>Instant</em>. By default, these get mapped to <em>org.hibernate.types.SqlTypes.TIMESTAMP_UTC</em>, which represents the JDBC type code <em>3003</em>.</li></ul>
+
+
+
+<p>Here you can see an example configuration that tells Hibernate to map attributes of type UUID to <em>java.sql.Types.CHAR</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+ 			...
+
+            &lt;property name=&quot;hibernate.type.preferred_uuid_jdbc_type&quot; value=&quot;CHAR&quot; /&gt;
+       &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>If you use this configuration and persist an <em>Author</em> entity that uses an attribute of type <a href="https://thorben-janssen.com/generate-uuids-primary-keys-hibernate/">UUID as its primary key</a>, you can see in the log output that Hibernate mapped that attribute as type <em>CHAR</em> instead of <em>UUID</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+15:24:58,715 DEBUG &#91;org.hibernate.SQL] - insert into Author (city, postalCode, street, firstName, lastName, version, id) values (?, ?, ?, ?, ?, ?, ?)
+15:24:58,716 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;homeCity]
+15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;12345]
+15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;homeStreet]
+15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;VARCHAR] - &#91;firstName]
+15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;VARCHAR] - &#91;lastName]
+15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;6] as &#91;INTEGER] - &#91;0]
+15:24:58,719 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;7] as &#91;CHAR] - &#91;c4e6a76d-d241-4806-aeae-8afca5598cf2]
+</pre></div>
+
+
+<h3 class="wp-block-heading">Separate query interfaces for reading and writing</h3>
+
+
+
+<p>The <em>SelectionQuery</em> and <em>MutationQuery</em> interfaces introduced in Hibernate 6.0.0 are marked as <em>@Incubating</em>. They try to improve an unfortunate design decision by the JPA specification and older Hibernate versions. </p>
+
+
+
+<p>Based on the JPA specification and previous Hibernate versions, all reading and modifying queries are represented by a <em>Query </em>interface, or its stronger typed version, the <em>TypedQuery</em> interface. If you look at the code that uses these interfaces, you quickly recognize that reading and modifying queries are different. But that&#8217;s not obvious when you look at the <em>Query</em> interface. It defines several methods that you can only use with one type of query. Two examples are: </p>
+
+
+
+<ul><li>the <em>executeUpdate </em>method that executes a modifying statement and </li><li>the <em>setFirstResult </em>and <em>setMaxResults</em> methods that paginate the result of a selecting statement.</li></ul>
+
+
+
+<p>The new <em>SelectionQuery </em>and <em>MutationQuery </em>interfaces separate these responsibilities and provide much cleaner APIs. I described both interfaces in more detail in my <a href="/mutationquery-and-selectionquery/">Guide to <em>MutationQuery</em> and <em>SelectionQuery</em> in Hibernate 6</a>. </p>
+
+
+
+<p>Don&#8217;t worry; you don&#8217;t need to immediately update your entire application to use the new interfaces. Hibernate 6 still supports the <em>Query</em> and <em>TypedQuery</em> interfaces, and the backward compatibility requirements of the JPA specification make it unlikely that this will change. The <em>Query</em> interface now extends the new <em>SelectionQuery</em> and <em>MutationQuery </em>interfaces. </p>
+
+
+
+<p>The following code snippet shows a simple example of a <em>SelectionQuery</em>. As you can see, this code snippet would look almost the same if I used the standard <em>Query</em> interface instead. The only difference is that I&#8217;m calling the <em>createSelectionQuery </em>method instead of the <em>createQuery</em> method to create the query. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+SelectionQuery&lt;Book&gt; q = s.createSelectionQuery(&quot;SELECT b FROM Book b WHERE b.title = :title&quot;, Book.class);
+q.setParameter(&quot;title&quot;, &quot;Hibernate Tips - More than 70 solutions to common Hibernate problems&quot;);
+List&lt;Book&gt; books = q.getResultList();
+</pre></div>
+
+
+<p>The main difference only becomes visible while you&#8217;re writing your code. The <em>SelectionQuery</em> interface only defines the methods that you can use on a query that selects data.</p>
+
+
+
+<p>And the same is true for a <em>MutationQuery</em> interface. Using this interface, you benefit even more from the separation between read and write operations. You can use most methods defined by the <em>Query </em>interface only on statements that select data from your database. The <em>MutationQuery</em> interface doesn&#8217;t define these methods, which provides a cleaner and easier-to-use API.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+MutationQuery q = s.createNamedMutationQuery(&quot;Book.updateTitle&quot;);
+q.executeUpdate();
+</pre></div>
+
+
+<p>Find out more about the new <em>MutationQuery </em>and <em>SelectionQuery </em>interfaces in my <a href="/mutationquery-and-selectionquery/">guide to <em>MutationQuery</em> and <em>SelectionQuery</em> in Hibernate 6</a>.</p>
+
+
+
+<h3 class="wp-block-heading">Improved handling of ZonedDateTime and OffsetDateTime</h3>
+
+
+
+<p>As explained in a <a href="/hibernate-jpa-date-and-time/">previous article</a>, Hibernate 5 normalizes an attribute of type <em>ZonedDateTime</em> or <em>OffsetDate </em>to a configured timezone or the local timezone of your application before it stores it without timezone information in your database. And when you read that attribute&#8217;s value from the database, Hibernate adds the configured or local timezone to the timestamp. Even though this approach works fine under the right circumstances, it&#8217;s error-prone and inflexible.</p>
+
+
+
+<p>Hibernate 6 improved the handling of <em>ZonedDateTime </em>and <em>OffsetDateTime</em> by introducing the <em>@TimeZoneStorage</em> annotation. It enables you to define if you want to:</p>
+
+
+
+<ul><li>store your timestamp in a column that supports timezone information,</li><li>store the timezone&#8217;s offset in a separate database column,</li><li>normalize the timestamp to UTC, or</li><li>normalize the timestamp to a configured or your local timezone.</li></ul>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.NORMALIZE_UTC)
+    private ZonedDateTime zonedDateTime;
+	
+	...
+	
+}
+</pre></div>
+
+
+<p>Find out more about Hibernate&#8217;s <a href="/hibernate-6-offsetdatetime-and-zoneddatetime/">improved mapping of <em>ZonedDateTime </em>and <em>OffsetDateTime</em></a>.</p>
+
+
+
+<h3 class="wp-block-heading">Refactored result transformer</h3>
+
+
+
+<p>The <em>ResultTransformer</em> interface was deprecated in Hibernate 5. It defined the <em>transformTuple</em> and <em>transformList</em> methods, which you can implement to tell Hibernate how to map a query result to your preferred data structure. The main issue with this approach was that most transformers only had to implement 1 of the 2 methods and kept the other one empty. Due to that, these 2 methods made the interface unnecessarily complex and prevented us from using it as a functional interface.</p>
+
+
+
+<p>In Hibernate 6, the development team split the <em>ResultTransformer</em> interface into the <em>TupleTransformer </em>and <em>ListTransformer </em>interfaces. Each of them defines one of the methods previously defined by the <em>ResultTransformer</em> and can be used as a functional interface.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+BookPublisherValue bpv = (BookPublisherValue) session
+		.createQuery(&quot;SELECT b.title as title, b.publisher.name as publisher FROM Book b WHERE id = 1&quot;, Object&#91;].class)
+		.setTupleTransformer((tuple, aliases) -&gt; {
+				log.info(&quot;Transform tuple&quot;);
+				BookPublisherValue v = new BookPublisherValue();
+				v.setTitle((String) tuple&#91;0]);
+				v.setPublisher((String) tuple&#91;1]);
+				return v;
+		}).getSingleResult();
+</pre></div>
+
+
+<p>And there is good news if you used one of the <em>ResultTransformer</em> implementations provided by Hibernate 5. In Hibernate 6, you can find the same transformer implementations, which now implement the <em>TupleTransformer </em>or <em>ListTransformer </em>interface.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+BookPublisherValue bpv = (BookPublisherValue) session
+                .createQuery(&quot;SELECT b.title as title, b.publisher.name as publisher FROM Book b WHERE id = 1&quot;, Object&#91;].class)
+                .setTupleTransformer(new AliasToBeanResultTransformer&lt;BookPublisherValue&gt;(BookPublisherValue.class)).getSingleResult();
+</pre></div>
+
+
+<p>I describe all of this in more detail in my <a href="/hibernate-resulttransformer/">guide to Hibernate&#8217;s <em>ResultTransformer</em></a>.</p>
+
+
+
+<h3 class="wp-block-heading">Customized instantiation of embeddables</h3>
+
+
+
+<p>The <em>EmbeddableInstantiator</em> is another improvement in Hibernate 6, which is marked as incubating. Based on the JPA specification, an embeddable needs to provide a no-arguments constructor. Since Hibernate 6, you can provide an <em>EmbeddableInstantiator</em> instead. </p>
+
+
+
+<p>As you can see below, implementing the <em>EmbeddableInstantiator </em>interface isn&#8217;t complex. The main part is the implementation of the <em>instantiate</em> method. In that method, you need to get the attribute values in the alphabetical order of their names and use them to instantiate and initialize your embeddable.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class AddressInstantiator implements EmbeddableInstantiator {
+
+    Logger log = LogManager.getLogger(this.getClass().getName());
+
+    public boolean isInstance(Object object, SessionFactoryImplementor sessionFactory) {
+        return object instanceof Address;
+    }
+
+    public boolean isSameClass(Object object, SessionFactoryImplementor sessionFactory) {
+        return object.getClass().equals( Address.class );
+    }
+
+    public Object instantiate(Supplier&lt;Object&#91;]&gt; valuesAccess, SessionFactoryImplementor sessionFactory) {
+        final Object&#91;] values = valuesAccess.get();
+        // valuesAccess contains attribute values in alphabetical order
+        final String city = (String) values&#91;0];
+        final String postalCode = (String) values&#91;1];
+        final String street = (String) values&#91;2];
+        log.info(&quot;Instantiate Address embeddable for &quot;+street+&quot; &quot;+postalCode+&quot; &quot;+city);
+        return new Address( street, city, postalCode );
+    }
+
+}
+</pre></div>
+
+
+<p>If you want to learn more about Hibernate 6&#8217;s <em>EmbeddableInstantiator</em>, make sure to read my <a href="/hibernate-embeddableinstantiator/">recent blog post</a> about it.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>All developers using Hibernate 6 should know about the <em>@Incubating</em> annotation and the new incubation report. Hibernate&#8217;s development team uses them to warn their users about APIs that might change in future releases. </p>
+
+
+
+<p>Introducing such an annotation is a great idea because it gives the development team more flexibility when releasing new features and adjusting them until they find a solution that solves most users&#8217; needs. But it also introduces the risk that one of the new features you just started using in your application changes, and you need to adjust your code to it. We will need to see how often that happens and how severe these changes will be.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

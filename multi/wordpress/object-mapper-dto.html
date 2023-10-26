@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Think twice before using an object mapping library to get your DTOs</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Think twice before using an object mapping library to get your DTOs</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>I often get asked if I can recommend any object mapping library to map entity objects to DTOs. And you can find several discussions and articles about that on google. But instead of asking which library you should use, you should first ask yourself if you should map an entity to a DTO at all. Because in almost all situations, I recommend avoiding this mapping in the first place. And you then don&#8217;t need any form of object mapping library. The reason is that when working with Hibernate, or any other JPA implementation, this form of mapping removes all benefits of a DTO projection. And that is, of course, also the case when using Spring Data JPA.</p>
+
+
+
+<p>If that&#8217;s all you wanted to know, you can stop reading this article. But I hope you&#8217;ll stay and let me explain why object mapping libraries are not a great fit for most of your use cases and what you should do instead.<br>Before we get into the details, let me quickly explain what an object mapping library is.</p>
+
+
+
+<h2 class="wp-block-heading">What is an object mapping library</h2>
+
+
+
+<p>An object mapping library maps an object of one class with all its attribute values to an object of another class. Depending on your library and the similarity of the 2 classes, the object mapping library can handle the mapping based on predefined naming conventions or a small configuration file. </p>
+
+
+
+<p>I&#8217;m not giving any examples of an object mapping library here because I don&#8217;t want to create the impression that I&#8217;m discrediting any specific library. There are many great object mapping libraries. They can be extremely useful for the right task, simplify your job and even avoid bugs and performance problems.</p>
+
+
+
+<p>It&#8217;s not the fault of the object mapping library that mapping an entity object to a DTO is usually not a good idea. The problem is caused by the fact that you first need to get an entity object, which you then map to a DTO. The way JPA handles entities creates a noticeable overhead. And you can avoid all the overhead by directly fetching unmanaged DTO projections.</p>
+
+
+
+<p>OK, let&#8217;s dive a little deeper and discuss how JPA implementations handle entity and DTO objects. To make the following sections a little easier to understand, I expect you to use Hibernate as your JPA implementation. All other JPA implementations work similarly so that the general arguments are the same even if the implementation details slightly differ.</p>
+
+
+
+<h2 class="wp-block-heading">JPA&#8217;s handling of entity objects and the overhead it creates</h2>
+
+
+
+<p>When you fetch an entity object from the database, it becomes a managed object. That means it&#8217;s part of the current persistence context and has a <a href="https://thorben-janssen.com/entity-lifecycle-model/">managed lifecycle</a>. This gives you several benefits:</p>
+
+
+
+<ul>
+<li>If you change any entity object&#8217;s attribute, Hibernate automatically detects the change and decides when to execute the required SQL statement. For performance reasons, it tries to delay the execution of that statement as long as possible.</li>
+
+
+
+<li>Hibernate ensures that within the context of your current session, only 1 entity object represents a specific database record. You will get the same object if you fetch that record multiple times.</li>
+
+
+
+<li>If you call&nbsp;<em>EntityManager</em>‘s&nbsp;<em>find&nbsp;</em>method or traverse a <a href="/ultimate-guide-association-mappings-jpa-hibernate/">to-one association</a>, Hibernate first tries to get the object from the current persistence context / 1st-level cache. If it gets it from there, it doesn&#8217;t need to execute an SQL SELECT statement.</li>
+</ul>
+
+
+
+<p>These are useful features that simplify the implementation of write operations and can provide performance benefits. But you don&#8217;t get them for free. They come with a few downsides:</p>
+
+
+
+<ul>
+<li>When reading an entity object, Hibernate always initializes all basic attributes.</li>
+
+
+
+<li>Hibernate fetches all <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">eagerly fetched associations</a> when it initializes an entity object.</li>
+
+
+
+<li>Before executing any query, Hibernate has to check the persistence context for changed managed entity objects that might be relevant to the query. If it finds any, it needs to execute the required SQL write operations to update the database before executing the query.</li>
+
+
+
+<li>When processing the result of a query that returns entities, Hibernate checks the persistence context for each record to avoid instantiating a new object for an already managed entity.</li>
+</ul>
+
+
+
+<p>All of this takes time and resources. If you&#8217;re implementing a write operation, the previously listed advantages of managed entities outweigh these costs by a huge margin. </p>
+
+
+
+<p>But that&#8217;s not the case if you fetch entity objects from the database and immediately hand them over to an object mapping framework to map them to unmanaged DTOs. In that case, you&#8217;re only getting the disadvantages of an entity projection without reaping the benefits.</p>
+
+
+
+<h2 class="wp-block-heading">JPA&#8217;s handling of DTO objects and the overhead it avoids</h2>
+
+
+
+<p>DTOs are unmanaged objects. That means they don’t have any lifecycle, they don’t become part of the persistence context, and Hibernate forgets about them after instantiating them. Due to that, they don’t have any management overhead, and you avoid all the downsides of managed entity objects. They are also not mapped to a specific database table, and you can design them based on the needs of a specific use case.</p>
+
+
+
+<p>As always, this also has a few downsides. You can’t use DTO objects to perform any write operations when using Hibernate or any other JPA implementation. Hibernate doesn’t provide lazy loading for any associations between different DTO objects. It also doesn’t ensure that you always get the same object if you read the same information multiple times.</p>
+
+
+
+<p>So, by working with unmanaged objects, you not only avoid all the downsides of entity objects, but you’re also losing all of their benefits. That’s why I recommend checking your use case before deciding whether to use entities or DTOs. If you don&#8217;t want to write any data to your database, you&#8217;re usually not benefiting from the advantages of managed entity objects. In that case, you should better use DTO objects and enjoy their performance benefits.</p>
+
+
+
+<p>Using DTO objects is only one way to improve the performance of your persistence layer. If you want to learn more about performance tuning, you should <a href="/join-persistence-hub/">join the Persistence Hub</a>. Besides many other things, that gives you access to my Hibernate Performance Tuning course. It teaches you everything you need to know to improve the performance of your persistence layer.</p>
+
+
+
+<h2 class="wp-block-heading">Avoid the overhead by avoiding object mapping libraries</h2>
+
+
+
+<p>After discussing how Hibernate handles entities and DTO objects, it’s time to talk about object mapping libraries. As I mentioned earlier, I think object mappers can be very useful. But they are only rarely a good fit to convert entity objects to DTOs. And if you read the 2 previous sections, you hopefully already know why.</p>
+
+
+
+<p>When you fetch an entity object from the database and convert it to a DTO object, you still have the managed entity object in your persistence context. But you&#8217;re not using it. You&#8217;re using the DTO object your object mapping framework created. That means instead of getting the benefits of a DTO object, you get all the overhead of a managed entity object. On top of that, you also get all the disadvantages of the DTO object. So, in the end, you&#8217;re just combining the downsides of both approaches.</p>
+
+
+
+<p>You can avoid that by fetching DTO objects directly from the database instead of fetching entities and mapping them to DTO objects. You can do that in different ways. The easiest one is using a constructor expression in your <a href="https://thorben-janssen.com/jpql/">JPQL query</a>. Or you could use a Hibernate-specific <a href="https://thorben-janssen.com/hibernate-resulttransformer/"><em>ResultTransformer</em> (Hibernate 4 &amp; 5) or a <em>TupleTransformer</em> or <em>ListTransformer</em> (Hibernate 6)</a>.</p>
+
+
+
+<p>The following code snippet shows a basic example of a constructor expression. It starts with the keyword <em>new</em> followed by the fully qualified name of the class you want to instantiate and multiple constructor parameters. Hibernate uses this information to call the described constructor for each record when processing the query result.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+TypedQuery&lt;BookWithAuthorNames&gt; q = em
+		.createQuery(&quot;&quot;&quot;
+				SELECT new com.thorben.janssen.BookWithAuthorNames(b.id, 
+																   b.title, 
+																   b.price, 
+																   concat(a.firstName, ' ', a.lastName)) 
+				FROM Book b JOIN b.author a 
+				WHERE b.title LIKE :title
+				&quot;&quot;&quot;,
+				BookWithAuthorNames.class);
+q.setParameter(&quot;title&quot;, &quot;%Hibernate Tips%&quot;);
+List&lt;BookWithAuthorNames&gt; books = q.getResultList();
+</pre></div>
+
+
+<p>As explained earlier, the main benefit of this approach is that Hibernate doesn&#8217;t instantiate any entity objects. It directly instantiates a DTO object for each record in the result set.</p>
+
+
+
+<h2 class="wp-block-heading">When using an object mapping library is OK</h2>
+
+
+
+<p>So far, I have explained in great detail why you shouldn’t map entity objects to DTOs. And that also explains why you shouldn’t use an object mapping library to get your DTOs.</p>
+
+
+
+<p>But there are a few situations where you already worked with an entity object and want to get an unmanaged DTO representation of it. A typical example is a use case that performs a write operation and returns the changed data. You obviously use entities to implement the write operation. And If you follow my recommendation to <a href="https://thorben-janssen.com/dont-expose-entities-in-api/">not expose entities in your API</a>, you need to map those entities to DTOs.</p>
+
+
+
+<p>In those situations, you have 2 options:</p>
+
+
+
+<ol>
+<li>Execute another database query that selects the changed information and uses a DTO projection.</li>
+
+
+
+<li>Map the entity object to a DTO.</li>
+</ol>
+
+
+
+<p>If the returned DTO and the entity object used in your use case are similar, executing an additional query doesn’t make a lot of sense. It only slows down your application without getting any new information. In that case, an object mapping library provides a comfortable way to map your entity object to a DTO. And using it is absolutely fine.</p>
+
+
+
+<p>And that gets us back to the initial question: Which object mapping library should you use?</p>
+
+
+
+<p>When you read until here, you&#8217;re probably not surprised if I tell you I don&#8217;t use object mapping libraries very often. But if I do, I usually choose <a href="https://mapstruct.org/">MapStruct</a>. So far, it has worked very well for me.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Managed entity objects provide several benefits but also create an overhead. You should always check if their benefits outweigh the overhead when using them. That’s generally the case when implementing write operations but not when implementing read-only operations.</p>
+
+
+
+<p>Due to that, you should avoid fetching entities and immediately converting them to DTOs. If you want to fetch DTOs from the database, you should use features like JPQL’s constructor expression or Hibernate’s <em>TupleTransformer</em>. They directly instantiate an unmanaged DTO object for each record in the result set and avoid the instantiation of entity objects.</p>
+
+
+
+<p>The only situation in which using an object mapping framework is an option is when you implement a write operation and want to expose a DTO representation to the caller. You need entity objects to implement the write operation, and you don&#8217;t get any benefits from executing an additional query returning a DTO projection. So, in that case, it&#8217;s easier to use an object mapping framework to map an entity to a DTO object.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

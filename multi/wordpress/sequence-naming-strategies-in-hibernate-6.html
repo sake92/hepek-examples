@@ -1,0 +1,465 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Sequence naming strategies in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Sequence naming strategies in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Hibernate 6 introduced a new configuration parameter and an interface to define the implicit naming strategy for database sequences and tables used to generate primary key values. When you migrate an existing application to <a href="/category/hibernate-6/">Hibernate 6</a>, you quickly recognize that change because the default naming strategy has changed. Due to that, Hibernate might try using a sequence that doesn&#8217;t exist in your database. But that’s not the only situation in which you should be familiar with this new setting. It can also be helpful to map a legacy database with strangely named sequences or if you need to follow some internal naming conventions.</p>
+
+
+
+<p>Since Hibernate 6, you can use the configuration property <em>hibernate.id.db_structure_naming_strategy</em> to define which naming strategy Hibernate shall use if you don’t <a href="/jpa-generate-primary-keys/#GenerationTypeSEQUENCE">explicitly define a sequence name</a> in your mapping.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;standard&quot; /&gt;
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<h2 class="wp-block-heading">Naming strategies supported by Hibernate 6</h2>
+
+
+
+<p>Previous Hibernate versions provided 1 default behavior, and you had to specify the sequence name if you wanted to use a different one. With Hibernate 6, you can choose between 4 implicit naming strategies for database sequences:</p>
+
+
+
+<ul><li><em>standard</em><br>This is the new default in Hibernate 6. <br>It concatenates the configured sequence suffix, which is <em>_SEQ</em> by default, to the name of the table that&#8217;s mapped by the entity class.</li><li><em>legacy</em><br>This naming strategy provides you the same behavior as the Hibernate versions >= 5.3 but &lt;6 used by default. <br>The sequence name depends on your entity mapping definition:<ul><li>Hibernate uses the generator name if you referenced a generator without defining a sequence name. This simplifies the mapping if you only want to define the sequence name and was an <a href="/hibernate-5-3/#Implicit_ID_generator_definitions">optimization introduced in Hibernate 5.3</a>.</li><li>If your mapping doesn&#8217;t reference a generator, Hibernate uses its default sequence name <em>hibernate_sequence</em>.</li></ul></li><li><em>single</em><br>This naming strategy provides you the same behavior as Hibernate used in version &lt;5.3 by default.<br>It always uses the Hibernate&#8217;s default sequence name <em>hibernate_sequence</em>.</li><li>the fully qualified class name of an <em>ImplicitDatabaseObjectNamingStrategy </em>implementation<br>This enables you to provide your own naming strategy. I will show you how to do that at the end of this article.</li></ul>
+
+
+
+<p>Let&#8217;s take a closer look at all 4 naming strategies.</p>
+
+
+
+<h3 class="wp-block-heading"><em>ID_DB_STRUCTURE_NAMING_STRATEGY</em>= <em>standard</em></h3>
+
+
+
+<p>In contrast to previous Hibernate versions, Hibernate 6 uses a separate database sequence for each entity class by default. The name of that sequence consists of the name of the database table to which the entity class gets mapped and the postfix <em>_SEQ</em>.</p>
+
+
+
+<h4 class="wp-block-heading">Implicit table mapping</h4>
+
+
+
+<p>If you don&#8217;t specify the name of the database table, Hibernate uses its <a href="https://thorben-janssen.com/naming-strategies-in-hibernate-5/">implicit naming strategy</a>. The default strategy uses the simple class name of the entity class as the table name. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @Version
+    private int version;
+	
+	...
+}
+</pre></div>
+
+
+<p>So, the <em>ChessPlayer</em> entity class gets mapped to the <em>ChessPlayer </em>table. And if you’re using Hibernate 6’s standard naming strategy for database sequences, Hibernate uses the sequence&nbsp;<em>ChessPlayer_SEQ&nbsp;</em>to generate primary key values.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+em.persist(player);
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:15:04,917 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('ChessPlayer_SEQ')
+16:15:04,947 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessPlayer
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h4 class="wp-block-heading">Custom table mapping</h4>
+
+
+
+<p>You can customize the table mapping by annotating your entity class with a <em>@Table</em> annotation and setting the name of the database table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+@Table(name=&quot;player&quot;)
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+	...
+}
+</pre></div>
+
+
+<p>Let&#8217;s use that mapping with the previous test case. You can <a href="https://thorben-janssen.com/hibernate-logging-guide/">see in the log output</a> that Hibernate now calls the database sequence&nbsp;<em>player_SEQ</em>&nbsp;to generate primary key values. It also persists the&nbsp;<em>ChessPlayer</em>&nbsp;entity object to the&nbsp;<em>player</em>&nbsp;table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:17:04,094 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('player_SEQ')
+16:17:04,120 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        player
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h3 class="wp-block-heading"><em>ID_DB_STRUCTURE_NAMING_STRATEGY</em> = <em>legacy</em></h3>
+
+
+
+<p>The <em>legacy</em> naming strategy<em> </em>gets you the same strategy as Hibernate used in versions >=5.3 and &lt;6. You can activate it by setting the property <em>hibernate.id.db_structure_naming_strategy</em> in your <em>persistence.xml</em> configuration to <em>legacy</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;legacy&quot; /&gt;
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>The behavior of this naming strategy depends on your entity mappings. </p>
+
+
+
+<h4 class="wp-block-heading">Mappings without a generator reference</h4>
+
+
+
+<p>Hibernate uses 1 default sequence for all primary key attributes annotated with&nbsp;<em>@GeneratedValue</em>&nbsp;or&nbsp;<em>@GeneratedValue(strategy = GenerationType.SEQUENCE)</em>. The important thing about these 2 mappings is that they don&#8217;t reference a generator.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @Version
+    private int version;
+	
+	...
+}
+</pre></div>
+
+
+<p>When you persist this <em>ChessPlayer</em> entity using the <em>legacy</em> naming strategy, Hibernate uses the database sequence <em>hibernate_sequence</em> to generate primary key values.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:51:10,742 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('hibernate_sequence')
+16:51:10,771 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessPlayer
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h4 class="wp-block-heading">Mappings with a generator reference but without a sequence name</h4>
+
+
+
+<p>If your primary key mapping references a generator that doesn&#8217;t exist or doesn&#8217;t define a&nbsp;<em>sequenceName</em>, Hibernate uses the generator&#8217;s name as the sequence name. This <a href="/hibernate-5-3/#Implicit_ID_generator_definitions">Hibernate-specific optimization was introduced in version 5.3</a> to simplify the most commonly used mapping definition, which only customizes the name of the database sequence.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator=&quot;player_seq&quot;)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @Version
+    private int version;
+	
+	...
+}
+</pre></div>
+
+
+<p>When you persist an object of this entity class, Hibernate uses the database sequence <em>player_seq </em>to generate primary key values.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:51:50,304 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('player_seq')
+16:51:50,343 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessPlayer
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h3 class="wp-block-heading"><em>ID_DB_STRUCTURE_NAMING_STRATEGY </em>= <em>single</em></h3>
+
+
+
+<p>The naming strategy&nbsp;<em>single&nbsp;</em>is a simpler version of the&nbsp;<em>legacy&nbsp;</em>strategy and gets you the default naming of Hibernate in versions &lt;5.3. You can activate it by setting the property&nbsp;<em>hibernate.id.db_structure_naming_strategy</em>&nbsp;in your&nbsp;<em>persistence.xml</em>&nbsp;configuration to&nbsp;<em>single</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;single&quot; /&gt;
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>This strategy always uses the database sequence <em>hibernate_sequence</em> if you don&#8217;t <a href="/jpa-generate-primary-keys/#GenerationTypeSEQUENCE">specify a sequence name in your mapping definition</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @Version
+    private int version;
+	
+	...
+}
+</pre></div>
+
+
+<p>You can see that in Hibernate&#8217;s log output, if you persist an object of this <em>ChessPlayer </em>class using the naming strategy <em>single</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:57:15,706 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('hibernate_sequence')
+16:57:15,734 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessPlayer
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h3 class="wp-block-heading"><em>ID_DB_STRUCTURE_NAMING_STRATEGY</em> = custom class</h3>
+
+
+
+<p>I showed you Hibernate&#8217;s 3 standard naming strategies for database sequences in the previous sections. You can use the same mechanism to provide your own naming strategy. You only need to provide a custom implementation of the&nbsp;<em>ImplicitDatabaseObjectNamingStrategy&nbsp;</em>interface and configure it in your&nbsp;<em>persistence.xml</em>.</p>
+
+
+
+<p>The implementation of the <em>ImplicitDatabaseObjectNamingStrategy</em> interface doesn&#8217;t have to be complex. The interface only defines 2 methods, which both return a <em>QualifiedName</em> object. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyImplicitDatabaseObjectNamingStrategy implements ImplicitDatabaseObjectNamingStrategy {
+	public static final String STRATEGY_NAME = &quot;custom&quot;;
+
+    @Override
+    public QualifiedName determineSequenceName(Identifier catalogName, Identifier schemaName, Map&lt;?, ?&gt; configValues,
+            ServiceRegistry serviceRegistry) {
+        final JdbcEnvironment jdbcEnvironment = serviceRegistry.getService(JdbcEnvironment.class);
+
+        String seqName = &quot;seq_&quot;.concat(((String) configValues.get(&quot;jpa_entity_name&quot;)));
+
+        return new QualifiedSequenceName(
+                catalogName,
+                schemaName,
+                jdbcEnvironment.getIdentifierHelper().toIdentifier(seqName));
+    }
+
+    @Override
+    public QualifiedName determineTableName(Identifier catalogName, Identifier schemaName, Map&lt;?, ?&gt; configValues,
+            ServiceRegistry serviceRegistry) {
+        final JdbcEnvironment jdbcEnvironment = serviceRegistry.getService(JdbcEnvironment.class);
+
+        return new QualifiedNameParser.NameParts(
+                catalogName,
+                schemaName,
+                jdbcEnvironment.getIdentifierHelper().toIdentifier(DEF_TABLE));
+    }
+
+}
+</pre></div>
+
+
+<p>The <em>determineSequenceName</em> method returns the name of the database sequence Hibernate shall use. The <em>determineTableName</em> method returns the name of the database table that Hibernate shall use to simulate a sequence. </p>
+
+
+
+<p>I don’t get into any details about implementing the&nbsp;<em>determineTableName&nbsp;</em>method in this article. You could customize it in the same way as the name resolution for database sequences. But the simulation of a sequence causes lots of scalability issues, and all modern databases support sequences or autoincremented columns. This mechanism is, therefore, no longer practically relevant. Please stick to the default implementation that returns Hibernate’s default table name and use a sequence or autoincremented column to generate your primary key values.</p>
+
+
+
+<p>The implementation of the&nbsp;<em>determineSequenceName</em>&nbsp;methods depends entirely on your table model and application requirements. The&nbsp;<em>Map&lt;?, ?&gt; configValues</em>&nbsp;method parameter contains several mapping information about the entity class and database table that you can use to generate your sequence name. In this example, I implemented a simple naming strategy that uses&nbsp;<em>seq_</em>&nbsp;as the prefix for all sequence names and concatenates it with the logical name of my entity class.</p>
+
+
+
+<p>The logical name of the entity class is either the simple class name of your entity class or the name you defined in your <em>@Entity</em> annotation.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity(name=&quot;Player&quot;)
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+	private Long id;
+
+    private String firstName;
+    
+    private String lastName;
+
+    private LocalDate birthDate;
+
+    @Version
+    private int version;
+	
+	...
+}
+</pre></div>
+
+
+<p>After implementing the&nbsp;<em>ImplicitDatabaseObjectNamingStrategy</em>&nbsp;interface, you need to reference it in your configuration. You do that by setting the configuration property&nbsp;<em>hibernate.id.db_structure_naming_strategy</em>&nbsp;to your interface implementation&#8217;s fully qualified class name.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;com.thorben.janssen.sample.model.MyImplicitDatabaseObjectNamingStrategy&quot; /&gt;
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<p>When you use the same test case as in the previous examples to persist a <em>ChessPlayer</em> entity object, you can see that Hibernate now uses the database sequence <em>seq_Player </em>to generate primary key values.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:06:51,325 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('seq_Player')
+17:06:51,352 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        Player
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+</pre></div>
+
+
+<h2 class="wp-block-heading">Fixing migration issues in Hibernate 6</h2>
+
+
+
+<p>When you&#8217;re migrating an existing application to Hibernate 6, the default naming strategy changes from <em>single</em>, if you&#8217;ve been using Hibernate &lt;5.3, or <em>legacy</em>, if you&#8217;ve been using Hibernate >=5.3, to <em>standard</em>. And as I described earlier, this changes the name of the sequence Hibernate uses to generate your primary key values.</p>
+
+
+
+<p>If you&#8217;re running into that problem, you can fix it by <a href="/jpa-generate-primary-keys/#GenerationTypeSEQUENCE">explicitly defining the sequence name in your mapping</a>, <a href="/database-migration/">migrating your database schema</a>, or configuring the old naming strategy in your<em> persistence.xml</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;persistence&gt;
+    &lt;persistence-unit name=&quot;my-persistence-unit&quot;&gt;
+        ...
+        &lt;properties&gt;
+            &lt;property name=&quot;hibernate.id.db_structure_naming_strategy&quot; value=&quot;single&quot; /&gt;
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>The&nbsp;<em>ImplicitDatabaseObjectNamingStrategy</em>&nbsp;interface and the configuration property&nbsp;<em>hibernate.id.db_structure_naming_strategy</em>&nbsp;introduce a new implicit naming strategy in <a href="/category/hibernate-6/">Hibernate 6</a>. It defines how Hibernate determines the name of a database sequence or the database table used to simulate a sequence if you don’t specify their name in your entity mapping definition.</p>
+
+
+
+<p>Most developers will need to use this configuration when migrating their application to Hibernate 6 because Hibernate&#8217;s default implicit naming strategy has changed. Instead of using 1 default sequence for all entity classes that don&#8217;t specify a sequence, Hibernate now generates an entity-specific default name. You can tell Hibernate to use the old naming strategy by setting the configuration property <em>hibernate.id.db_structure_naming_strategy</em> to <em>single</em> if you&#8217;re migrating from a Hibernate version &lt;5.3, or to <em>legacy </em>if you&#8217;re migrating from a Hibernate version &gt;=5.3.</p>
+
+
+
+<p>You can also provide your own naming strategy for database sequences. To do that, you need to implement the <em>ImplicitDatabaseObjectNamingStrategy</em> interface and provide the fully-qualified class name as the value of the configuration property <em>hibernate.id.db_structure_naming_strategy</em>.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

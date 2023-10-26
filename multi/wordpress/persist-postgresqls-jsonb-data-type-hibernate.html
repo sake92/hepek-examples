@@ -1,0 +1,540 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to use PostgreSQL’s JSONB data type with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to use PostgreSQL’s JSONB data type with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Most databases offer many proprietary features besides the known SQL standard. One example is <a href="https://www.postgresql.org/docs/9.4/static/datatype-json.html">PostgreSQL&#8217;s <em>JSONB</em> data type</a> which allows you to store JSON documents efficiently in a database column.</p>
+
+
+
+<p>You could, of course, store the JSON document in a text column. That column type is part of the SQL standard. Hibernate and all other JPA implementations support it out of the box. But you would then miss out on PostgreSQL-specific features like JSON validation and a list of interesting&nbsp;<a href="https://www.postgresql.org/docs/9.4/static/functions-json.html">JSON Functions and Operators</a>. But you are probably already aware of that if you read this post.</p>
+
+
+
+<p>If you want to use a JSONB column with Hibernate 6, I have great news for you. Hibernate 6 provides a standard mapping for entity attributes to JSON columns; you only need to activate it. Unfortunately, Hibernate 4 and 5 do not support JSON mappings, and you have to implement a&nbsp;<em>UserType</em>. I will show you both options in this post.</p>
+
+
+
+<!--more-->
+
+
+
+<h2 class="wp-block-heading">Database table and entity</h2>
+
+
+
+<p>Let&#8217;s quickly look at the database table and entity before we get into the details of the&nbsp;<em>UserType</em>.</p>
+
+
+
+<p>As you can see in the following code snippet, the definition of the database table is very simple. It consists of only 2 columns: the primary key column&nbsp;<em>id</em>&nbsp;and the column <em>jsonproperty </em>of type&nbsp;<em>JSONB</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+CREATE TABLE myentity
+(
+  id bigint NOT NULL,
+  jsonproperty jsonb,
+  CONSTRAINT myentity_pkey PRIMARY KEY (id)
+)
+</pre></div>
+
+
+<p>And you can see the entity that maps the table in the following code snippet.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class MyEntity {
+ 
+    @Id
+    @GeneratedValue
+    private Long id;
+ 
+    private MyJson jsonProperty;
+     
+    ...
+}
+</pre></div>
+
+
+<p>As you can see, there is nothing JSON specific on this entity, only an attribute of type <em>MyJson</em>. <em>MyJson</em> is a simple POJO with 2 properties which you can see in the next code snippet.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyJson implements Serializable {
+ 
+    private String stringProp;
+     
+    private Long longProp;
+ 
+    public String getStringProp() {
+        return stringProp;
+    }
+ 
+    public void setStringProp(String stringProp) {
+        this.stringProp = stringProp;
+    }
+ 
+    public Long getLongProp() {
+        return longProp;
+    }
+ 
+    public void setLongProp(Long longProp) {
+        this.longProp = longProp;
+    }
+}
+</pre></div>
+
+
+<p>So what do you have to do if you want to store the <em>MyJson</em> property in a <em>JSONB</em> database column? The answer to that depends on the Hibernate version you&#8217;re using. </p>
+
+
+
+<p>In Hibernate 4 and 5, you need to implement a custom type mapping. Don&#8217;t worry. That&#8217;s easier than it might sound. You only need to implement the&nbsp;<em>UserType&nbsp;</em>interface and register your type mapping. I will show you how to do that later in this article.</p>
+
+
+
+<p>Hibernate 6 makes all of this even easier. It provides a standard JSON mapping that you only need to activate. But if you want, you can still implement a UserType to provide your own mapping. Let&#8217;s take a look at this first.</p>
+
+
+
+<h2 class="wp-block-heading"><em>JSONB </em>mapping in Hibernate 6</h2>
+
+
+
+<p>Thanks to the <em>JSON</em> mapping introduced in Hibernate 6, you only need to annotate your entity attribute with a <em>@JdbcTypeCode</em> annotation and set the type to <em>SqlTypes.JSON</em>. Hibernate then detects a JSON library on your classpath and uses it to serialize and deserialize the attribute&#8217;s value.</p>
+
+
+
+<p>If you don&#8217;t want to use Hibernate&#8217;s standard mapping, you can still implement a custom <em>UserType</em>. This can be useful if you previously used an <em>UserType</em> and its JSON mapping doesn&#8217;t match Hibernate&#8217;s standard mapping.</p>
+
+
+
+<p>I prepared an example for both options.</p>
+
+
+
+<h3 class="wp-block-heading">Using Hibernate 6&#8217;s standard JSON mapping</h3>
+
+
+
+<p>As mentioned earlier, you only need to annotate your entity attribute with <em>@JdbcTypeCode(SqlTypes.JSON)</em> to activate Hibernate&#8217;s standard JSON mapping. Hibernate then uses an available JSON library to serialize and deserialize the attribute&#8217;s value. </p>
+
+
+
+<p>And it uses the standard JSON column type defined by the RDBMS-specific dialect. For PostgreSQL databases, that&#8217;s the column type JSONB.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class MyEntity {
+ 
+    @Id
+    @GeneratedValue
+    private Long id;
+ 
+    @JdbcTypeCode(SqlTypes.JSON)
+    private MyJson jsonProperty;
+     
+    ...
+}
+</pre></div>
+
+
+<p>The&nbsp;<em>@JdbcTypeCode</em>&nbsp;annotation is a new annotation. Hibernate 6 introduces it as a part of its new type mapping. Starting with version 6, you can define the Java and the JDBC mapping separately by annotating your entity attribute with a&nbsp;<em>@JdbcTypeCode</em>&nbsp;or&nbsp;<em>@JavaType</em>&nbsp;annotation. Using these annotations, you can reference one of Hibernate&#8217;s standard mappings or your own implementations of the&nbsp;<em>JavaTypeDescriptor&nbsp;</em>or&nbsp;<em>JdbcTypeDescriptor&nbsp;</em>interfaces. I will explain the implementation of those interfaces in another tutorial. We only need to activate Hibernate&#8217;s standard mapping.</p>
+
+
+
+<p>After you annotate your entity attribute to activate Hibernate’s JSON mapping, you can use the entity and its attribute in your business code and queries. I prepared an example of that <a href="#useMapping">at the end of this article</a>.</p>
+
+
+
+<h3 class="wp-block-heading">Implement a Hibernate UserType</h3>
+
+
+
+<p>If you don&#8217;t want to use Hibernate&#8217;s standard mapping, you need to implement a custom&nbsp;<em>UserType</em>. It defines the mapping between an entity attribute&#8217;s type and the type handled by the JDBC driver.</p>
+
+
+
+<p>This was your only option with Hibernate 5. So, if you&#8217;re migrating an existing application to Hibernate 6, you might already have a <em>UserType</em> implementation. If you want to keep it, you have to adjust your implementation to the new <em>UserType </em>interface and change the type references in your entity mappings.</p>
+
+
+
+<p>In contrast to the old <em>UserType </em>interface, the new one in Hibernate 6 uses generics and accesses the fields of the resultset by their index. That means updating your existing implementation isn&#8217;t too complex.</p>
+
+
+
+<p>If you&#8217;re implementing a new UserType, you should be familiar with the following methods.</p>
+
+
+
+<p>The methods&nbsp;<em>returnedClass&nbsp;</em>and&nbsp;<em>getSqlType&nbsp;</em>tell Hibernate which attribute type you want to map to which SQL type. In this example, I want to map objects of the&nbsp;<em>MyJson&nbsp;</em>class to&nbsp;<em>SqlTypes.JSON</em>. When working with a PostgreSQL database, Hibernate maps&nbsp;<em>SqlTypes.JSON</em>&nbsp;to a&nbsp;<em>JSONB&nbsp;</em>column.</p>
+
+
+
+<p>Hibernate 6 not only slightly changed the signature of these 2 methods. It also improved the type handling. In previous versions, you had to extend the database-specific dialect to map the type returned by the <em>getSqlType</em> method to a JSONB column. Hibernate 6 does that automatically.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyJsonType implements UserType&lt;MyJson&gt; {
+
+	public static final ObjectMapper MAPPER = new ObjectMapper();
+	
+    @Override
+    public int getSqlType() {
+        return SqlTypes.JSON;
+    }
+
+    @Override
+    public Class&lt;MyJson&gt; returnedClass() {
+        return MyJson.class;
+    }
+
+    ...
+}
+</pre></div>
+
+
+<p>Hibernate calls the <em>nullSafeGet </em>method to get the value of an attribute of type <em>MyJson </em>from the resultset. As you can see in the following code snippet, there isn&#8217;t anything special about that method. </p>
+
+
+
+<p>The 2 most commonly used parameters are the <em>ResultSet </em>object and the position of the attribute&#8217;s value. In this case, that&#8217;s all I need to get the JSON document from the resultset and use Jackson&#8217;s <em>ObjectMapper</em> to parse it into a <em>MyJson </em>object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyJsonType implements UserType&lt;MyJson&gt; {
+
+	public static final ObjectMapper MAPPER = new ObjectMapper();
+
+    @Override
+    public MyJson nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner)
+            throws SQLException {
+                final String cellContent = rs.getString(position);
+                if (cellContent == null) {
+                    return null;
+                }
+                try {
+                    return MAPPER.readValue(cellContent.getBytes(&quot;UTF-8&quot;), returnedClass());
+                } catch (final Exception ex) {
+                    throw new RuntimeException(&quot;Failed to convert String to MyJson: &quot; + ex.getMessage(), ex);
+                }
+    }
+
+    @Override
+    public void nullSafeSet(PreparedStatement st, MyJson value, int index, SharedSessionContractImplementor session)
+            throws SQLException {
+                if (value == null) {
+                    st.setNull(index, Types.OTHER);
+                    return;
+                }
+                try {
+                    final StringWriter w = new StringWriter();
+                    MAPPER.writeValue(w, value);
+                    w.flush();
+                    st.setObject(index, w.toString(), Types.OTHER);
+                } catch (final Exception ex) {
+                    throw new RuntimeException(&quot;Failed to convert MyJson to String: &quot; + ex.getMessage(), ex);
+                }
+    }
+
+    ...
+}
+</pre></div>
+
+
+<p>Hibernate calls the <em>nullSafeSet </em>method to set a provided <em>MyJson </em>object as a bind parameter on the provided <em>PreparedStatement</em>. This method gets called when you insert or update an entity object that uses your <em>UserType </em>or when your query uses a bind parameter of the mapped type. That ensures that your <em>UserType </em>gets applied automatically every time you use an attribute that references it.</p>
+
+
+
+<p>And the last method I want to describe in detail is the&nbsp;<em>deepCopy</em>&nbsp;method. Its implementation is simple, but many developers have a hard time figuring out how to implement it if they haven&#8217;t seen it before. That method aims to provide a deep copy of the provided&nbsp;<em>MyJson</em>&nbsp;object. The easiest way is to serialize and deserialize the provided object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyJsonType implements UserType&lt;MyJson&gt; {
+
+    @Override
+    public MyJson deepCopy(MyJson value) {
+        try {
+    		// use serialization to create a deep copy
+        	ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        	ObjectOutputStream oos = new ObjectOutputStream(bos);
+        	oos.writeObject(value);
+        	oos.flush();
+        	oos.close();
+        	bos.close();
+        	
+        	ByteArrayInputStream bais = new ByteArrayInputStream(bos.toByteArray());
+        	MyJson obj = (MyJson)new ObjectInputStream(bais).readObject();
+        	bais.close();
+        	return obj;
+        } catch (ClassNotFoundException | IOException ex) {
+            throw new HibernateException(ex);
+        }
+    }
+
+    ...
+}
+</pre></div>
+
+
+<p>After implementing your&nbsp;<em>UserType</em>, you need to tell Hibernate where you want to use it. Starting with Hibernate 6, you can annotate an entity attribute with a&nbsp;<em>@Type</em>&nbsp;annotation and provide a class reference to your&nbsp;<em>UserType&nbsp;</em>implementation.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class MyEntity {
+
+	@Type(MyJsonType.class)
+	private MyJson jsonProperty;
+
+	...
+}
+</pre></div>
+
+
+<p>After that, you can use the entity and its attribute in your business code. You can even include the content of the JSON document in your query. I prepared a few examples of that <a href="#useMapping">at the end of this article</a>.</p>
+
+
+
+<h2 class="wp-block-heading">JSONB mapping in Hibernate 4 and 5</h2>
+
+
+
+<p>As I mentioned earlier, you need to implement a custom mapping if you want to use PostgreSQL’s <em>JSONB</em> type with Hibernate 4 or 5. The best way to do that is to implement Hibernate’s&nbsp;<em>UserType</em>&nbsp;interface and register the mapping in a custom dialect.</p>
+
+
+
+<h3 class="wp-block-heading">Implement a Hibernate&nbsp;<em>UserType</em></h3>
+
+
+
+<p>First, you must create a Hibernate&nbsp;<em>UserType</em>, which maps the&nbsp;<em>MyJson</em>&nbsp;object into a JSON document and defines the mapping to an SQL type. I call the&nbsp;<em>UserType MyJsonType</em>&nbsp;and show only the most important methods in the following code snippets.</p>
+
+
+
+<p>You have to do a few important things if you want to implement your own&nbsp;<em>UserType</em>. You have to implement the methods&nbsp;<em>sqlTypes</em>&nbsp;and&nbsp;<em>returnedClass</em>, which tell Hibernate the SQL type and the Java class it shall use for this mapping. In this case, I use the generic&nbsp;<em>Type.JAVA_OBJECT</em>&nbsp;as the SQL type and the&nbsp;<em>MyJson</em>&nbsp;class as the Java class.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyJsonType implements UserType {
+ 
+    @Override
+    public int&#91;] sqlTypes() {
+        return new int&#91;]{Types.JAVA_OBJECT};
+    }
+ 
+    @Override
+    public Class&lt;MyJson&gt; returnedClass() {
+        return MyJson.class;
+    }
+     
+    ...
+}
+</pre></div>
+
+
+<p>Then you have to implement the methods&nbsp;<em>nullSafeGet</em>&nbsp;and&nbsp;<em>nullSafeSet</em>, which Hibernate will call when you read or write the attribute<em>.&nbsp;</em></p>
+
+
+
+<p>The&nbsp;<em>nullSafeGet</em>&nbsp;method gets called to map the value from the database into the Java class. So we have to parse the JSON document into a&nbsp;<em>MyJson</em>&nbsp;class. I use the Jackson&nbsp;<em>ObjectMapper</em>&nbsp;here, but you can also use any other JSON parser.&nbsp;</p>
+
+
+
+<p>The&nbsp;<em>nullSafeSet</em>&nbsp;method implements the mapping of the&nbsp;<em>MyJson</em>&nbsp;class into the JSON document. Using the Jackson library, you can do that using the same&nbsp;<em>ObjectMapper</em>&nbsp;as in the&nbsp;<em>nullSafeGet&nbsp;</em>method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Override
+public Object nullSafeGet(final ResultSet rs, final String&#91;] names, final SessionImplementor session,
+                          final Object owner) throws HibernateException, SQLException {
+    final String cellContent = rs.getString(names&#91;0]);
+    if (cellContent == null) {
+        return null;
+    }
+    try {
+        final ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(cellContent.getBytes(&quot;UTF-8&quot;), returnedClass());
+    } catch (final Exception ex) {
+        throw new RuntimeException(&quot;Failed to convert String to MyJson: &quot; + ex.getMessage(), ex);
+    }
+}
+ 
+@Override
+public void nullSafeSet(final PreparedStatement ps, final Object value, final int idx,
+                        final SessionImplementor session) throws HibernateException, SQLException {
+    if (value == null) {
+        ps.setNull(idx, Types.OTHER);
+        return;
+    }
+    try {
+        final ObjectMapper mapper = new ObjectMapper();
+        final StringWriter w = new StringWriter();
+        mapper.writeValue(w, value);
+        w.flush();
+        ps.setObject(idx, w.toString(), Types.OTHER);
+    } catch (final Exception ex) {
+        throw new RuntimeException(&quot;Failed to convert MyJson to String: &quot; + ex.getMessage(), ex);
+    }
+}
+</pre></div>
+
+
+<p>Another important method you need to implement is the&nbsp;<em>deepCopy</em>&nbsp;method which has to create a&nbsp;<a href="https://en.wikipedia.org/wiki/Object_copying#Deep_copy" target="_blank" rel="noreferrer noopener">deep copy</a>&nbsp;of a&nbsp;<em>MyJson</em>&nbsp;object. One of the easiest ways to do that is to serialize and deserialize the&nbsp;<em>MyJson</em>&nbsp;object. This forces the JVM to create a deep copy of the object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Override
+public Object deepCopy(final Object value) throws HibernateException {
+    try {
+        // use serialization to create a deep copy
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(value);
+        oos.flush();
+        oos.close();
+        bos.close();
+         
+        ByteArrayInputStream bais = new ByteArrayInputStream(bos.toByteArray());
+        Object obj = new ObjectInputStream(bais).readObject();
+        bais.close();
+        return obj;
+    } catch (ClassNotFoundException | IOException ex) {
+        throw new HibernateException(ex);
+    }
+}
+</pre></div>
+
+
+<h3 class="wp-block-heading">Register the UserType</h3>
+
+
+
+<p>In the next step, you need to register your custom <em>UserType</em>. You can do this with a @<em>TypeDef</em> annotation in the <em>package-info.java</em> file. As you can see in the following code snippet,&nbsp;I set the <em>name</em> and the <em>typeClass</em>&nbsp;property of the <em>@TypeDef</em> annotation.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@org.hibernate.annotations.TypeDef(name = &quot;MyJsonType&quot;, typeClass = MyJsonType.class)
+ 
+package org.thoughts.on.java.model;
+</pre></div>
+
+
+<p>This links the <em>UserType</em> <em>MyJsonType&nbsp;</em>to the name &#8220;<em>MyJsonType</em>&#8221; which I can then use with a <em>@Type</em> annotation in the entity mapping.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class MyEntity {
+ 
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = &quot;id&quot;, updatable = false, nullable = false)
+    private Long id;
+ 
+    @Column
+    @Type(type = &quot;MyJsonType&quot;)
+    private MyJson jsonProperty;
+     
+    ...
+ 
+}
+</pre></div>
+
+
+<p>And we&#8217;re almost done. Hibernate will now use the&nbsp;<em>UserType</em>&nbsp;<em>MyJsonType</em>&nbsp;to persist the&nbsp;<em>jsonproperty</em>&nbsp;attribute in the database. But there is still one step left.</p>
+
+
+
+<h3 class="wp-block-heading">Hibernate dialect</h3>
+
+
+
+<p>Hibernate&#8217;s PostgreSQL dialect does not support the&nbsp;<em>JSONB</em>&nbsp;datatype. You need to register it by extending an existing dialect and calling the&nbsp;<em>registerColumnType</em>&nbsp;method in its constructor. I use a PostgreSQL database in this example and extend Hibernate&#8217;s&nbsp;<em>PostgreSQL94Dialect</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class MyPostgreSQL94Dialect extends PostgreSQL94Dialect {
+ 
+    public MyPostgreSQL94Dialect() {
+        this.registerColumnType(Types.OTHER, &quot;jsonb&quot;);
+    }
+}
+</pre></div>
+
+
+<p>Now you can finally&nbsp;store the <em>MyJson</em> object in a <em>JSONB</em> column.</p>
+
+
+
+<h2 class="wp-block-heading" id="useMapping">How to use an entity with a <em>JSONB</em> mapping</h2>
+
+
+
+<p>As you saw in this article, the things you need to do to map an entity attribute to a&nbsp;<em>JSONB&nbsp;</em>column depend on the Hibernate version you’re using. That&#8217;s also the case for the available query features but not for your business code that uses the entity or its attribute.</p>
+
+
+
+<h3 class="wp-block-heading">Use a JSON attribute in your business code</h3>
+
+
+
+<p>In your business code, you can use the&nbsp;<em>MyEntity</em>&nbsp;entity and its&nbsp;<em>MyJson</em>&nbsp;attribute in the same way as any other entity. That also enables you to replace your&nbsp;<em>UserType&nbsp;</em>implementation with Hibernate’s standard handling when you migrate your application to Hibernate 6.</p>
+
+
+
+<p>The following code snippet shows a simple example that uses the <em>EntityManager.find</em> method to get an entity from the database and then change the attribute values of the <em>MyJson</em> object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+MyEntity e = em.find(MyEntity.class, 10000L);
+e.getJsonProperty().setStringProp(&quot;changed&quot;);
+e.getJsonProperty().setLongProp(789L);
+</pre></div>
+
+
+<p>Hibernate will detect this change during its next dirty check and execute the required SQL UPDATE statement.</p>
+
+
+
+<h3 class="wp-block-heading">Use a JSON attribute in a query with Hibernate 5, 6.0 and 6.1</h3>
+
+
+
+<p>The JPA standard doesn&#8217;t define any support in JPQL for database-specific JSON columns. If you want to select an entity based on&nbsp;some property values inside the JSON document, you need to use a native query. Within that query, you can use all features supported by your database, e.g., <a href="https://www.postgresql.org/docs/9.4/static/functions-json.html">PostgreSQL&#8217;s JSON functions and operators</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+MyEntity e = (MyEntity) em.createNativeQuery(&quot;SELECT * FROM myentity e WHERE e.jsonproperty-&gt;'longProp' = '456'&quot;, MyEntity.class).getSingleResult();
+</pre></div>
+
+
+<h3 class="wp-block-heading">Use a JSON attribute in a query with Hibernate 6.2</h3>
+
+
+
+<p>Hibernate 6.2 introduces proprietary support for JSON columns to its JPQL implementation. You can now navigate your JSON document like a mapped to-one association and reference parts of the document in your query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+MyEntity e = em.createQuery(&quot;SELECT e FROM MyEntity e WHERE e.jsonProperty.longProp = 456&quot;, MyEntity.class).getSingleResult();
+</pre></div>
+
+
+<p>This approach&#8217;s main advantages are gaining database portability and defining your query based on your entity instead of your table model. You can also constructor expressions to let Hibernate <a href="https://thorben-janssen.com/dto-projections/">map your query result to DTO objects</a>.</p>
+
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>PostgreSQL offers different proprietary datatypes, like the&nbsp;<em>JSONB</em>&nbsp;type I used in this post, to store JSON documents in the database.&nbsp;</p>
+
+
+
+<p>Hibernate 6 provides a standard JSON mapping. You only need to activate it by annotating your entity attribute with a&nbsp;<em>@JdbcTypeCode</em>&nbsp;annotation and setting the type to&nbsp;<em>SqlTypes.JSON</em>. If you prefer providing your own mapping, you can do that by implementing the UserType interface and referencing your implementation in the&nbsp;<em>@Type&nbsp;</em>annotation.</p>
+
+
+
+<p>Hibernate 4 and 5 don&#8217;t support these data types. You have to implement the mapping yourself. As you have seen in this post, you can do this by implementing the&nbsp;<em>UserType&nbsp;</em>interface, registering it with a&nbsp;<em>@TypeDef</em>&nbsp;annotation, and creating a Hibernate dialect that registers the column type.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

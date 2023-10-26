@@ -1,0 +1,264 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The differences between Spring Data JPA’s save, saveAndFlush and saveAll methods</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The differences between Spring Data JPA’s save, saveAndFlush and saveAll methods</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Spring Data JPA’s standard repositories provide a set of methods that handle common operations used by most persistence layers. That saves us a lot of time and allows us to focus on our business logic. But we also need to ask ourselves which of these methods we want to use. You need to know how each method works internally to answer that question. That’s especially the case if multiple methods have very similar names.</p>
+
+
+
+<p>Typical examples of that are the <em>save</em>, <em>saveAndFlush</em>, and <em>saveAll </em>methods. You can use all of them to persist one or more entity objects. But there are small differences between these methods and not all of them are a great fit for most use cases.</p>
+
+
+
+<p>In this article, I will show you how those methods work and explain what that means for your persistence layer. You can use Spring Data JPA with various JPA implementations, and everything I show you in this article is independent of a specific implementation. But to make the article a little easier to read and understand, I’m using Hibernate as my JPA implementation.</p>
+
+
+
+<h2 class="wp-block-heading">How to check the implementation of Spring Data JPA&#8217;s repository methods</h2>
+
+
+
+<p>But before we dive into the details of the 3 different save methods, I want to quickly show you how to find Spring Data JPA&#8217;s implementations of its standard repository interfaces. You can use that to check for yourself or to find out how other repository methods work internally.</p>
+
+
+
+<p>As you probably know, you can create a repository by defining an interface that extends one of Spring Data JPA&#8217;s standard interfaces. In this example, I defined the <em>ChessPlayerJpaRepository </em>to manage my <em>ChessPlayer</em> entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessPlayerJpaRepository extends JpaRepository&lt;ChessPlayer, Long&gt; { }
+</pre></div>
+
+
+<p>My <em>ChessPlayerJpaRepository </em>interface extends Spring Data JPA&#8217;s <em>JpaRepository </em>interface. If you check the type hierarchy for that interface in your IDE, you will find the <em>JpaRepositoryImplementation</em> interface. It&#8217;s part of Spring Data JPA&#8217;s SPI and all implementations of the <em>JpaRepository </em>need to implement it. </p>
+
+
+
+<p>That, of course, also includes the standard implementation provided by Spring Data JPA. If you ask your IDE for the implementations of this interface, you find the <em>SimpleJpaRepository </em>class. It implements all methods provided by the standard <em>JpaRepository </em>interface. If you don&#8217;t have an IDE open while reading this article, you can find the <a href="https://github.com/spring-projects/spring-data-jpa/blob/2.7.3/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java"><em>SimpleJpaRepository </em>class on github</a>.</p>
+
+
+
+<p>And when you take a closer look at some of the implemented methods, you will quickly recognize that Spring Data JPA doesn&#8217;t do anything too complex. It only uses JPA&#8217;s <em>EntityManager</em> to define queries, persist new entities and perform similar operations. But there are some important differences between these methods that you need to know.</p>
+
+
+
+<h2 class="wp-block-heading" id="saveMethod">Spring Data&#8217;s <em>save(S entity)</em> method</h2>
+
+
+
+<p>Spring Data&#8217;s <em>CrudRepository</em> interface defines the <em>save </em>method. It&#8217;s a super-interface of the <em>JpaRepository</em>, that is part of the Spring Data parent project and not specific to JPA. That also explains why the method name isn&#8217;t a great fit for a persistence layer based on JPA. Unfortunately, this often results in developers misusing this method. I will get into more detail after showing you how the <em>save</em> method works internally.</p>
+
+
+
+<p>You find the following code when you check how the&nbsp;<em>SimpleJpaRepository</em>&nbsp;class implements the&nbsp;<em>save&nbsp;</em>methods.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+/*
+ * (non-Javadoc)
+ * @see org.springframework.data.repository.CrudRepository#save(java.lang.Object)
+ */
+@Transactional
+@Override
+public &lt;S extends T&gt; S save(S entity) {
+
+	Assert.notNull(entity, &quot;Entity must not be null.&quot;);
+
+	if (entityInformation.isNew(entity)) {
+		em.persist(entity);
+		return entity;
+	} else {
+		return em.merge(entity);
+	}
+}
+</pre></div>
+
+
+<p>Source: <a href="https://github.com/spring-projects/spring-data-jpa/blob/2.7.3/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L661" rel="nofollow">https://github.com/spring-projects/spring-data-jpa/blob/2.7.3/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L661</a></p>
+
+
+
+<p>As you can see, the method calls the isNew method to check if the provided entity object is a new one. I explained how that method works in my article about <a href="/spring-data-jpa-state-detection/">Spring Data JPA&#8217;s state detection</a>. In the simplest case, the <em>isNew </em>method checks the version or primary key attribute of the provided entity object. If the attribute is null, the entity object is considered a new entity object that hasn&#8217;t been persisted yet.</p>
+
+
+
+<p>Based on the result of this check, Spring Data JPA calls the <em>persist </em>method on the EntityManager to insert new entity objects into the database or the <em>merge </em>method to merge an existing entity into the current persistence context.</p>
+
+
+
+<p>This is the part where it gets important to understand what Spring Data JPA does internally and how all JPA implementations work.</p>
+
+
+
+<h3 class="wp-block-heading">Persisting a new entity object</h3>
+
+
+
+<p>When you call the <em>persist </em>method on JPA&#8217;s <em>EntityManager </em>interface, your entity object changes its lifecycle state from <em>transient </em>to <em>managed</em>. As I explained in my article about <a href="https://thorben-janssen.com/entity-lifecycle-model/">JPA&#8217;s lifecycle model</a>, this doesn&#8217;t enforce the execution of an SQL INSERT statement. It only adds the object as a managed entity to your current persistence context. </p>
+
+
+
+<p>Hibernate delays the execution of the INSERT statement until it performs the next flush operation on the persistence context. When Hibernate performs a flush depends on your <a href="https://thorben-janssen.com/flushmode-in-jpa-and-hibernate/"><em>FlushMode </em>configuration</a>. By default, Hibernate does this before it executes a query or when you commit the transaction.</p>
+
+
+
+<p>If you&#8217;re new to JPA, the delayed execution of SQL INSERT statements might be confusing. But it&#8217;s an efficient and reliable mechanism that enables Hibernate to apply various internal performance optimizations. The way that Spring Data JPA uses this part of the <em>EntityManager </em>is absolutely fine and doesn&#8217;t cause any problems.</p>
+
+
+
+<h3 class="wp-block-heading">Merging an existing entity object</h3>
+
+
+
+<p>When you call the save method with an entity object that already exists in the database, Spring Data JPA calls the&nbsp;<em>merge</em>&nbsp;method on the&nbsp;<em>EntityManager</em>. The internal handling of this method depends on the current lifecycle state of the entity object. </p>
+
+
+
+<p>Hibernate ignores the call of the&nbsp;<em>EntityManager</em>‘s&nbsp;<em>merge&nbsp;</em>method for all entity objects in <a href="/entity-lifecycle-model/#Managed">lifecycle state managed</a>. These are all entity objects you fetched from the database or persisted during your current Session. Hibernate already manages these entity objects. During the next flush operation, Hibernate will automatically check if any of their attributes have changed. If that’s the case, Hibernate will execute the required SQL UPDATE statements.</p>
+
+
+
+<p>For those entity objects, your call of the save method only wastes a few CPU cycles to call the method on the repository and let Hibernate check the lifecycle state of the provided entity object. Unfortunately, you can find this common mistake in many persistence layers using Spring Data JPA.</p>
+
+
+
+<p>You only need to call the&nbsp;<em>save&nbsp;</em>method if the lifecycle state of the provided entity object is detached. That’s often the case if you received the entity object from a client or decided to detach the entity from the current persistence context programmatically. In this case, the entity object gets merged into the persistence context.</p>
+
+
+
+<p>As I explained in a <a href="https://thorben-janssen.com/persist-save-merge-saveorupdate-whats-difference-one-use/">previous article</a>, Hibernate&#8217;s implementation of the merge operation consists of 3 steps:</p>
+
+
+
+<ol><li>Hibernate first fetches the current state of the provided entity object from the database and maps it to a new entity object. This new object has the lifecycle state managed and will be included in future flush and dirty check operations.</li><li>After that, Hibernate copies all attribute values from the provided entity object to the one it fetched from the database. It then returns the new object instance to the caller, and you should use this object in your business code.</li><li>During the next flush operation, Hibernate will perform a dirty check on the new entity object. And if any attribute value has changed, it will generate and execute the required SQL UPDATE statement.</li></ol>
+
+
+
+<h3 class="wp-block-heading" id="usingSave">When should you use the <em>save(S entity)</em> method?</h3>
+
+
+
+<p>As I explained in the previous sections, the <em>save </em>method persists a new entity object in the database or merges a detached entity object into the persistence context. These are the only situations in which you should call the <em>save </em>method on your repository.</p>
+
+
+
+<p>Unfortunately, during my audit and coaching sessions, I often see calls of the&nbsp;<em>save</em>&nbsp;method after an entity object was changed.&nbsp;This method call shows that the developer wasn&#8217;t familiar with <a href="https://thorben-janssen.com/entity-lifecycle-model/">JPA&#8217;s lifecycle model</a>. When you call the <em>save</em> method with a managed entity object, Spring Data JPA tries to merge an already managed entity object into the persistence context. This doesn&#8217;t trigger any SQL UPDATE statements. Hibernate delays them until it executes the next flush operation. Calling the save method only wastes some precious resources to check the entity&#8217;s lifecycle state.</p>
+
+
+
+<h2 class="wp-block-heading">Spring Data&#8217;s saveAll(Iterable&lt;S&gt; entity) method</h2>
+
+
+
+<p>Similar to the <em>save </em>method, Spring Data&#8217;s <em>CrudRepository </em>also defines the <em>saveAll </em>method. And when you check its implementation in the <em>SimpleJpaRepository </em>class, you quickly recognize that it&#8217;s only calling the <em>save </em>method for each element of the provided <em>Iterable</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+/*
+ * (non-Javadoc)
+ * @see org.springframework.data.jpa.repository.JpaRepository#save(java.lang.Iterable)
+ */
+@Transactional
+@Override
+public &lt;S extends T&gt; List&lt;S&gt; saveAll(Iterable&lt;S&gt; entities) {
+
+	Assert.notNull(entities, &quot;Entities must not be null!&quot;);
+
+	List&lt;S&gt; result = new ArrayList&lt;&gt;();
+
+	for (S entity : entities) {
+		result.add(save(entity));
+	}
+
+	return result;
+}
+</pre></div>
+
+
+<p>Source: <a href="https://github.com/spring-projects/spring-data-jpa/blob/d2b244b4ea10c70e86f1cc8c109293531123c4b0/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L693" rel="nofollow">https://github.com/spring-projects/spring-data-jpa/blob/d2b244b4ea10c70e86f1cc8c109293531123c4b0/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L693</a></p>
+
+
+
+<p>Due to that, there&#8217;s nothing to add to the things I already explained in the <a href="#saveMethod">previous section</a>. The only thing I want to point out here is that it doesn&#8217;t make any difference if you call the&nbsp;<em>saveAll&nbsp;</em>method with an&nbsp;<em>Iterable</em>&nbsp;of entity objects or if you call the&nbsp;<em>save</em>&nbsp;method for each entity object. JPA&#8217;s&nbsp;<em>EntityManager</em>&nbsp;doesn&#8217;t provide a&nbsp;<em>persist&nbsp;</em>or&nbsp;<em>merge</em>&nbsp;method that handles multiple entity objects. Due to this, Spring Data JPA has to call these methods multiple times and can&#8217;t provide any performance optimizations.</p>
+
+
+
+<h3 class="wp-block-heading">When should you use the saveAll(Iterable&lt;S&gt; entity) method?</h3>
+
+
+
+<p>The <em>saveAll </em>method calls the previously discussed <em>save </em>method for each element in the <em>Iterable</em>. So, <a href="#usingSave">as explained earlier</a>, you should only call it with new entity objects you want to persist or detached entity objects that you want to merge into the current persistence context.</p>
+
+
+
+<p>Calling the <em>saveAll </em>method with an <em>Iterable</em> of already managed entities creates an even bigger overhead than the previously discussed <em>save </em>method. You&#8217;re now calling the <em>merge </em>method for multiple managed entity objects. That requires Hibernate to check the current lifecycle state of all the provided entity objects. And if these objects are already managed, they stay in that lifecycle state, and the merge method doesn&#8217;t do anything.</p>
+
+
+
+<h2 class="wp-block-heading">Spring Data&#8217;s saveAndFlush(Iterable&lt;S&gt; entity) method</h2>
+
+
+
+<p>From a performance point of view, the <em>saveAndFlush</em> method is the most critical of the 3 discussed save methods. Spring Data JPA&#8217;s <em>JpaRepository</em> interface defines it, and it&#8217;s the only one specific to Spring Data JPA. As you can see in the following code snippet, it combines the call of the previously discussed <em>save </em>method with a call of the <em>flush</em> method, which calls the <em>flush</em> method on the <em>EntityManager</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+/*
+ * (non-Javadoc)
+ * @see org.springframework.data.jpa.repository.JpaRepository#saveAndFlush(java.lang.Object)
+ */
+@Transactional
+@Override
+public &lt;S extends T&gt; S saveAndFlush(S entity) {
+
+	S result = save(entity);
+	flush();
+
+	return result;
+}
+</pre></div>
+
+
+<p>Source: <a href="https://github.com/spring-projects/spring-data-jpa/blob/d2b244b4ea10c70e86f1cc8c109293531123c4b0/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L712" rel="nofollow">https://github.com/spring-projects/spring-data-jpa/blob/d2b244b4ea10c70e86f1cc8c109293531123c4b0/src/main/java/org/springframework/data/jpa/repository/support/SimpleJpaRepository.java#L712</a></p>
+
+
+
+<p>This small difference is also why the <em>saveAndFlush </em>method isn’t a great choice in most cases. A call of the <em>flush </em>method forces Hibernate to perform a dirty check on all managed entity objects. That are all entity objects you’ve fetched from the database or persisted within the context of your current Hibernate <em>Session</em>.</p>
+
+
+
+<p>During the dirty check, Hibernate checks if you changed any attribute of a managed entity since it got fetched from the database or persisted. If that’s the case, Hibernate considers the object dirty, and Hibernate will generate the required SQL statement to persist the change in the database.</p>
+
+
+
+<p>Depending on the number of managed entity objects, a dirty check and executing the SQL statements can take some time. That&#8217;s why the Hibernate team has put a lot of effort into optimizing the flush operation itself, tries to perform <a href="https://thorben-janssen.com/hibernate-query-spaces/">partial flush operations</a> if possible, and only triggers a flush operation if it&#8217;s absolutely necessary. That&#8217;s usually the case before executing a query or committing the transaction. But not immediately after <a href="https://thorben-janssen.com/entity-lifecycle-model/">adding a new entity object to the persistence context</a>.</p>
+
+
+
+<p>By calling the <em>saveAndFlush </em>method, you&#8217;re forcing Hibernate to flush the entire persistence context and prevent it from using all those optimizations. In addition, you also prevent other optimizations, like grouping identical JDBC statements into a JDBC batch. To make it even worse, all of this happens independently of the outcome of the <em>save </em>method. Suppose you call the <em>saveAndFlush</em> method with an already managed entity object. In that case, you&#8217;re still forcing a flush of the persistence context even though the merge method, which was called by the save method, returned immediately after checking the lifecycle state.</p>
+
+
+
+<h3 class="wp-block-heading">When should you use the saveAndFlush(Iterable&lt;S&gt; entity) method?</h3>
+
+
+
+<p>The <em>saveAndFlush</em> method calls the <em>save</em> method and forces a flush of the entire persistence context afterward. That prevents several of Hibernate&#8217;s performance optimizations and slows down your application. Due to that, you should avoid using the <em>saveAndFlush </em>method and call the <em>save </em>method instead.</p>
+
+
+
+<p>One of the very few exceptions, when you might want to call the <em>saveAndFlush</em> method, is a persistence layer that uses <a href="https://thorben-janssen.com/flushmode-in-jpa-and-hibernate/">FlushMode.MANUAL</a>. You then need to explicitly tell Hibernate when you want to flush the current persistence context. One way to do that is to call the <em>saveAndFlush</em> method when persisting a new entity object. But when you do that, please keep in mind that you don&#8217;t need to flush your persistence context after every new entity. You should call the <em>save</em> or the <em>saveAll</em> method for most of your entity objects and only use the <em>saveAndFlush</em> method if you also need to trigger a flush operation.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>When using the <em>JpaRepository</em>, you can choose between 3 different save methods. </p>
+
+
+
+<p>Spring Data&#8217;s <em>CrudRepository</em> defines the <em>save </em>and <em>saveAll </em>methods. The <em>saveAll</em> method calls the <em>save </em>method internally for each of the provided entity objects. Both methods enable you to persist new entity objects or merge detached ones. Please keep in mind that Hibernate automatically persists all changes on managed entity objects. You don&#8217;t need to call any method to trigger an update of a managed entity.</p>
+
+
+
+<p>Spring Data JPA’s <em>JpaRepository </em>defines the <em>saveAndFlush </em>method. It internally calls the <em>save </em>method and forces a flush of the persistence context afterward. As I explained in this article, the Hibernate team has put a lot of effort into optimizing the flush operation and the timing when this operation gets triggered. By forcing a flush operation after persisting a new entity object, you’re preventing Hibernate from applying these optimizations, and that slows down your application.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Native Queries – How to call native SQL queries with JPA &amp; Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Native Queries – How to call native SQL queries with JPA &amp; Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p><span style="font-size: inherit;">The Java Persistence Query Language (JPQL) is the most common way to query data from a database with JPA. It enables you to reuse your mapping definitions and is easier to use than SQL. But it supports only a small subset of the SQL standard, and it also provides no support for database-specific features.</span> </p>
+
+
+
+<p>So what shall you do if you need to use a database-specific query feature or your DBA gives you a highly optimized query that you can&#8217;t transform into JPQL? Just ignore it and do all the work in the Java code?</p>
+
+
+
+<p>Of course not!&nbsp;JPA&nbsp;has its own query language, but it&#8217;s designed as a leaky abstraction and supports native SQL queries. You can&nbsp;create these queries in a similar way as <a href="https://thorben-janssen.com/jpql/">JPQL queries</a>, and&nbsp;they can even return managed entities if you want.</p>
+
+
+
+<p>In this article, I will show you how to use native SQL queries, different options to map the query result to <a href="https://thorben-janssen.com/dto-projections/">DTOs</a> and entity objects, and avoid a common performance pitfall.</p>
+
+
+
+<h2 class="wp-block-heading" id="defining-and-executing-a-native-query">Defining and executing a native query</h2>
+
+
+
+<p>Like JPQL queries, you can define your native SQL query ad-hoc or use an annotation to define a named native query.</p>
+
+
+
+<h3 class="wp-block-heading" id="create-ad-hoc-native-queries">Create&nbsp;ad-hoc native queries</h3>
+
+
+
+<p>Creating&nbsp;an ad-hoc native query is quite simple.&nbsp;The <em><a href="http://docs.oracle.com/javaee/7/api/javax/persistence/EntityManager.html" target="_blank" rel="noopener noreferrer">EntityManager</a></em> interface provides the <em><a href="http://docs.oracle.com/javaee/7/api/javax/persistence/EntityManager.html#createNativeQuery-java.lang.String-" target="_blank" rel="noopener noreferrer">createNativeQuery</a></em> method for it. It returns an implementation of the <em>Query</em> interface, which is&nbsp;the same that you get when you call the&nbsp;<em><a href="http://docs.oracle.com/javaee/7/api/javax/persistence/EntityManager.html#createQuery-java.lang.String-" target="_blank" rel="noopener noreferrer">createQuery</a></em> method to create a JPQL query.</p>
+
+
+
+<p>The following code snippet shows a simple example of using a native query to select the first and last names from the author table. I know there is no need to do this with a native SQL query. I could use a standard JPQL query for this, but I want to focus on the JPA part and not bother you with some crazy SQL stuff 😉</p>
+
+
+
+<p>The persistence provider does not parse the SQL statement so that you can use any SQL statement your database supports. For example, in one of my recent projects, I used it to query <a href="https://thorben-janssen.com/persist-postgresqls-jsonb-data-type-hibernate/">PostgreSQL-specific <em>jsonb</em> columns</a> with Hibernate and mapped the query results to POJOs and&nbsp;entities.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNativeQuery(&quot;SELECT a.firstname, a.lastname FROM Author a&quot;);
+List&lt;Object&#91;]&gt; authors = q.getResultList();
+
+for (Object&#91;] a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a&#91;0]
+            + &quot; &quot;
+            + a&#91;1]);
+}
+</pre></div>
+
+
+<p>As you can see, you can use the created&nbsp;<em>Query&nbsp;</em>in the same way as any JPQL query. I didn’t provide any mapping information for the result. Because of that, the&nbsp;<em>EntityManager</em>&nbsp;returns a&nbsp;<em>List</em>&nbsp;of&nbsp;<em>Object[]</em>&nbsp;which you need to handle afterward. Instead of mapping the result yourself, you can also provide additional mapping information and let the <em>EntityManager</em> do the mapping for you. I get into more details about that in the <a href="#resultHandling">result handling section</a> at the end of this post.</p>
+
+
+
+<h3 class="wp-block-heading" id="create-named-native-queries">Create named native queries</h3>
+
+
+
+<p>You will not be surprised if I tell you that the definition and usage&nbsp;of a named native query are again very similar to a named JPQL query.</p>
+
+
+
+<p>In the previous&nbsp;code snippets, I created a dynamic native query to select the names of&nbsp;all authors. I use the same statement in the following code snippet&nbsp;to define a <em>@NamedNativeQuery</em>. Since Hibernate 5 and JPA 2.2, this annotation is <a href="https://thorben-janssen.com/jpa-2-2-repeatable-annotations/">repeatable</a>, and you can add multiple of it to your entity class. If you&#8217;re using an older JPA or Hibernate version, you need to wrap it in a <em>@NamedNativeQueries</em> annotation.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@NamedNativeQuery(name = &quot;selectAuthorNames&quot;, 
+                  query = &quot;SELECT a.firstname, a.lastname FROM Author a&quot;)
+@Entity
+public class Author { ... }
+</pre></div>
+
+
+<p>As you can see, the definition looks very similar to the one of a named JPQL query. As I will show you in the following section, you can even include the result mapping. But more about that later.</p>
+
+
+
+<p>You can use the <em>@NamedNativeQuery</em> in exactly the same way as a named JPQL query. You only need to provide the name of the named native query as a parameter to the <em>createNamedQuery</em> method of the <em>EntityManager</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNamedQuery(&quot;selectAuthorNames&quot;);
+List&lt;Object&#91;]&gt; authors = q.getResultList();
+
+for (Object&#91;] a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a&#91;0]
+            + &quot; &quot;
+            + a&#91;1]);
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading" id="parameter-binding">Parameter binding</h2>
+
+
+
+<p>Similar to JPQL queries, you can and should use parameter bindings&nbsp;for your query parameters instead of&nbsp;putting the values directly into the query String. This provides several advantages:</p>
+
+
+
+<ul><li>you do not need to worry about SQL injection,</li><li>the persistence provider&nbsp;maps your query parameters to the correct types and</li><li>the persistence provider can do internal optimizations to improve the performance.</li></ul>
+
+
+
+<p>JPQL and native SQL queries&nbsp;use the same <a href="http://docs.oracle.com/javaee/7/api/javax/persistence/Query.html" target="_blank" rel="noopener noreferrer"><em>Query</em></a> interface, which provides a <em><a href="http://docs.oracle.com/javaee/7/api/javax/persistence/Query.html#setParameter-int-java.lang.Object-" target="_blank" rel="noopener noreferrer">setParameter</a></em> method for positional and named parameter bindings. But the support of named parameter bindings for native queries is a Hibernate-specific feature. Positional parameters are referenced as &#8220;<em>?&#8221;</em> in your native query and their numbering starts at 1.</p>
+
+
+
+<p>The following code snippet shows an example of an ad-hoc native SQL query with a positional bind parameter. You can use the bind parameter in the same way in a <em>@NamedNativeQuery</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNativeQuery(&quot;SELECT a.firstname, a.lastname FROM Author a WHERE a.id = ?&quot;);
+q.setParameter(1, 1);
+Object&#91;] author = (Object&#91;]) q.getSingleResult();
+
+System.out.println(&quot;Author &quot;
+        + author&#91;0]
+        + &quot; &quot;
+        + author&#91;1]);
+</pre></div>
+
+
+<p>Hibernate also supports&nbsp;named parameter bindings for native queries, but as I already said, this&nbsp;is not defined by the specification&nbsp;and&nbsp;might not be portable to other JPA implementations.</p>
+
+
+
+<p>By using named parameter bindings, you define a&nbsp;name for&nbsp;each parameter and provide it to the <em><a href="http://docs.oracle.com/javaee/7/api/javax/persistence/Query.html#setParameter-java.lang.String-java.lang.Object-" target="_blank" rel="noopener noreferrer">setParameter</a></em> method to bind a value to it. The name is case-sensitive, and you need to add the “<em>:</em>” symbol as a prefix.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNativeQuery(&quot;SELECT a.firstname, a.lastname FROM Author a WHERE a.id = :id&quot;);
+q.setParameter(&quot;id&quot;, 1);
+Object&#91;] author = (Object&#91;]) q.getSingleResult();
+
+System.out.println(&quot;Author &quot;
+        + author&#91;0]
+        + &quot; &quot;
+        + author&#91;1]);
+</pre></div>
+
+
+<h2 class="wp-block-heading" id="resultHandling">Result handling</h2>
+
+
+
+<p>As you have seen in the previous code snippets, your native query returns an <em>Object[]</em> or a <em>List</em> of <em>Object[].</em> If you want to retrieve your query result as a different data structure, you need to provide additional mapping information to your persistence provider. There are 3 commonly used options:</p>
+
+
+
+<ul><li>You can map each record of your query result to a managed entity using the entity&#8217;s mapping definition.</li><li>You can use JPA&#8217;s <em>@SqlResultSetMapping</em> annotation to map each result record to a combination of DTOs, managed entities, or scalar values.</li><li>And you can use Hibernate&#8217;s ResultTransformer to map each record or the entire result set to DTOs, managed entities, or scalar values.</li></ul>
+
+
+
+<h3 class="wp-block-heading" id="apply-the-entity-mapping">Apply the entity mapping</h3>
+
+
+
+<p>Reusing the mapping definition of your entity class is the simplest way to map each record of the query result to a managed entity object. When doing that, you need to select all columns mapped by the entity class using the alias used in your entity&#8217;s mapping definition.</p>
+
+
+
+<p>Next, you need to tell your persistence provider to which entity class it shall map the query result. For an ad-hoc native SQL query, you do that by providing a class reference as a parameter to the <em>createNativeQuery</em> method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNativeQuery(&quot;SELECT a.id, a.version, a.firstname, a.lastname FROM Author a&quot;, Author.class);
+List&lt;Author&gt; authors = (List&lt;Author&gt;) q.getResultList();
+
+for (Author a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a.getFirstName()
+            + &quot; &quot;
+            + a.getLastName());
+}
+</pre></div>
+
+
+<p>You can do the same using a <em>@NamedNativeQuery</em> by referencing the entity class as the <em>@NamedNativeQuery</em>&#8216;s <em>resultClass</em> attribute. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@NamedNativeQuery(name = &quot;selectAuthorEntities&quot;, 
+                  query = &quot;SELECT a.id, a.version, a.firstname, a.lastname FROM Author a&quot;, 
+                  resultClass = Author.class)
+@Entity
+public class Author { ... }
+</pre></div>
+
+
+<p>Hibernate then automatically applies that mapping when you execute that query.</p>
+
+
+
+<h3 class="wp-block-heading" id="use-jpa-s-sqlresultsetmapping">Use JPA&#8217;s <em>@SqlResultSetMapping</em></h3>
+
+
+
+<p>JPA&#8217;s <em>@SqlResultSetMapping</em> is much more flexible than the previous one. You can not only use it to map your query result to managed entity objects but also to DTOs, scalar values, and any combination of these. The only limitation is that Hibernate applies the defined mapping to each record of the result set. Due to that, you can&#8217;t easily group multiple records of your result set.</p>
+
+
+
+<p>These mappings are quite powerful, but their definition can get complex. That&#8217;s why I only provide a quick introduction in this article. If you want to dive deeper into <em>@SqlResultMapping</em>s, please read the following articles:</p>
+
+
+
+<ul><li><a href="/result-set-mapping-basics/">Result Set Mapping: The Basics</a></li><li><a href="/result-set-mapping-complex-mappings/">Result Set Mapping: Complex Mappings</a></li><li><a href="/result-set-mapping-constructor-result-mappings/">Result Set Mapping: Constructor Result Mappings</a></li><li><a href="/result-set-mapping-hibernate-specific-mappings/">Result Set Mapping: Hibernate specific features</a></li></ul>
+
+
+
+<p>Here you can see a basic example of a DTO mapping. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@SqlResultSetMapping(
+        name = &quot;BookAuthorMapping&quot;,
+        classes = @ConstructorResult(
+                targetClass = BookAuthor.class,
+                columns = {
+                    @ColumnResult(name = &quot;id&quot;, type = Long.class),
+                    @ColumnResult(name = &quot;firstname&quot;),
+                    @ColumnResult(name = &quot;lastname&quot;),
+                    @ColumnResult(name = &quot;numBooks&quot;, type = Long.class)}))
+</pre></div>
+
+
+<p>Every <em>@SqlResultSetMapping</em> has to have a unique name within the persistence unit. You will use it in your code to reference this mapping definition.</p>
+
+
+
+<p>The <em>@ConstructorResult</em> annotation tells Hibernate to call the constructor of the <em>BookAuthor</em> class and provide the resultset&#8217;s <em>id</em>, <em>firstName</em>, <em>lastName</em>, and <em>numBooks </em>fields as parameters. This enables you to <a href="https://thorben-janssen.com/entities-dtos-use-projection/">instantiate unmanaged DTO objects, which are a great fit for all read-only operations</a>.</p>
+
+
+
+<p>After defining the mapping, you can provide its name as the 2nd parameter to the <em>createNativeQuery</em> method. Hibernate will then look up the mapping definition within the current persistence unit and apply it to every record of the result set.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNativeQuery(&quot;SELECT a.id, a.firstname, a.lastname, count(b.id) as numBooks FROM Author a JOIN BookAuthor ba on a.id = ba.authorid JOIN Book b ON b.id = ba.bookid GROUP BY a.id&quot;, 
+                               &quot;BookAuthorMapping&quot;);
+List&lt;BookAuthor&gt; authors = (List&lt;BookAuthor&gt;) q.getResultList();
+
+for (BookAuthor a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a.getFirstName()
+            + &quot; &quot;
+            + a.getLastName()
+            + &quot; wrote &quot;
+            + a.getNumBooks()
+            + &quot; books.&quot;);
+}
+</pre></div>
+
+
+<p>And similar to the previous examples, you can apply the same mapping to a <em>@NamedNativeQuery</em> by providing the name of the mapping as the <em>resultSetMapping</em> attribute.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@NamedNativeQuery(name = &quot;selectAuthorValue&quot;, 
+                  query = &quot;SELECT a.id, a.firstname, a.lastname, count(b.id) as numBooks FROM Author a JOIN BookAuthor ba on a.id = ba.authorid JOIN Book b ON b.id = ba.bookid GROUP BY a.id&quot;, 
+                  resultSetMapping = &quot;BookAuthorMapping&quot;)
+@Entity
+public class Author { ... }
+</pre></div>
+
+
+<p>After you did that, you can execute your <em>@NamedNativeQuery</em> and Hibernate applies the <em>@SqlResultSetMapping</em> automatically.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNamedQuery(&quot;selectAuthorValue&quot;);
+List&lt;BookAuthor&gt; authors = (List&lt;BookAuthor&gt;) q.getResultList();
+
+for (BookAuthor a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a.getFirstName()
+            + &quot; &quot;
+            + a.getLastName()
+            + &quot; wrote &quot;
+            + a.getNumBooks()
+            + &quot; books.&quot;);
+}
+</pre></div>
+
+
+<h3 class="wp-block-heading" id="use-hibernate-specific-resulttransformer">Use Hibernate-specific ResultTransformer</h3>
+
+
+
+<p><em>ResultTransformer</em>s are a Hibernate-specific feature with the same goal as JPA&#8217;s <em>@SqlResultSetMapping</em>. They allow you to define a custom mapping of the resultset of your native query. But in contrast to the <em>@SqlResultSetMapping</em>, you implement that mapping as Java code, and you can map each record or the entire result set.</p>
+
+
+<figure class="wp-block-embed-youtube wp-block-embed is-type-video is-provider-youtube"><div class="lyte-wrapper" style="width:420px;max-width:100%;margin:5px;"><div class="lyMe hidef" id="WYL_DmlwmeuYxvg"><div id="lyte_DmlwmeuYxvg" data-src="https://thorben-janssen.com/wp-content/plugins/wp-youtube-lyte/lyteCache.php?origThumbUrl=%2F%2Fi.ytimg.com%2Fvi%2FDmlwmeuYxvg%2Fmaxresdefault.jpg" class="pL"><div class="tC"><div class="tT"></div></div><div class="play"></div><div class="ctrl"><div class="Lctrl"></div><div class="Rctrl"></div></div></div><noscript><a href="https://youtu.be/DmlwmeuYxvg" rel="nofollow"><img src="https://thorben-janssen.com/wp-content/plugins/wp-youtube-lyte/lyteCache.php?origThumbUrl=https%3A%2F%2Fi.ytimg.com%2Fvi%2FDmlwmeuYxvg%2F0.jpg" alt="" width="420" height="216" /><br />Watch this video on YouTube</a></noscript></div></div><div class="lL" style="max-width:100%;width:420px;margin:5px;"><br/><span class="lyte_disclaimer"><a href="http://bit.ly/2cUsid8">Follow me on YouTube</a> to not miss any new videos.</span></div><figcaption></figcaption></figure>
+
+
+<p>Hibernate provides a set of standard transformers, and the implementation of the custom transformer got much easier in Hibernate 6. I explained all of that in great detail and the difference between the Hibernate versions in my <a href="/hibernate-resulttransformer/">guide to ResultTransformer</a>.</p>
+
+
+
+<p>The following code snippet shows the implementation of a <em>TupleTransformer</em> for Hibernate 6. It applies the same mapping as the previously used <em>@SqlResultSetMapping</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;BookAuthor&gt; authors = (List&lt;BookAuthor&gt;) session
+		.createQuery(&quot;SELECT a.id, a.firstname, a.lastname, count(b.id) as numBooks FROM Author a JOIN BookAuthor ba on a.id = ba.authorid JOIN Book b ON b.id = ba.bookid GROUP BY a.id&quot;)
+		.setTupleTransformer((tuple, aliases) -&gt; {
+				log.info(&quot;Transform tuple&quot;);
+				BookAuthor a = new BookAuthor();
+				a.setId((Long) tuple&#91;0]);
+				a.setFirstName((String) tuple&#91;1]);
+				a.setLastName((String) tuple&#91;2]);
+				a.setNumBooks((Integer) tuple&#91;3]);
+				return a;
+		}).getResultList();
+
+for (BookAuthor a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a.getFirstName()
+            + &quot; &quot;
+            + a.getLastName()
+            + &quot; wrote &quot;
+            + a.getNumBooks()
+            + &quot; books.&quot;);
+}
+</pre></div>
+
+
+<p>As you can see in the code snippet, I called the <em>setTupleTransformer</em> method to add the transformer to the query. That makes the transformer independent of the query, and you can apply it to a <em>@NamedNativeQuery</em> in the same way.</p>
+
+
+
+<h2 class="wp-block-heading" id="define-the-query-space-to-avoid-performance-problems">Define the query space to avoid performance problems</h2>
+
+
+
+<p>At the beginning of the article, I mentioned that Hibernate doesn’t parse your native SQL statement. That provides the benefit that you&#8217;re not limited to the features Hibernate supports but that you can use all features supported by your database. </p>
+
+
+<figure class="wp-block-embed-youtube wp-block-embed is-type-video is-provider-youtube"><div class="lyte-wrapper" style="width:420px;max-width:100%;margin:5px;"><div class="lyMe hidef" id="WYL_FG9tnaSPjYY"><div id="lyte_FG9tnaSPjYY" data-src="https://thorben-janssen.com/wp-content/plugins/wp-youtube-lyte/lyteCache.php?origThumbUrl=%2F%2Fi.ytimg.com%2Fvi%2FFG9tnaSPjYY%2Fmaxresdefault.jpg" class="pL"><div class="tC"><div class="tT"></div></div><div class="play"></div><div class="ctrl"><div class="Lctrl"></div><div class="Rctrl"></div></div></div><noscript><a href="https://youtu.be/FG9tnaSPjYY" rel="nofollow"><img src="https://thorben-janssen.com/wp-content/plugins/wp-youtube-lyte/lyteCache.php?origThumbUrl=https%3A%2F%2Fi.ytimg.com%2Fvi%2FFG9tnaSPjYY%2F0.jpg" alt="" width="420" height="216" /><br />Watch this video on YouTube</a></noscript></div></div><div class="lL" style="max-width:100%;width:420px;margin:5px;"><br/><span class="lyte_disclaimer"><a href="http://bit.ly/2cUsid8">Follow me on YouTube</a> to not miss any new videos.</span></div><figcaption></figcaption></figure>
+
+
+<p>But it also makes it impossible to determine the query space. The query space describes which entity classes your query references. Hibernate uses it to optimize the dirty check and flush operation that it has to perform before executing the query. I explain this in more detail in <a href="/hibernate-query-spaces">Hibernate Query Spaces &#8211; Optimizing Flush and Cache Operations</a>.</p>
+
+
+
+<p>The important thing you need to know when using native SQL queries is to specify the query space. You can do that by unwrapping Hibernate&#8217;s <em>SynchronizeableQuery</em> from JPA&#8217;s <em>Query</em> interface and calling the <em>addSynchronizedEntityClass </em>method with a reference to your entity class.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Query q = em.createNamedQuery(&quot;selectAuthorEntities&quot;);
+SynchronizeableQuery hq = q.unwrap(SynchronizeableQuery.class);
+hq.addSynchronizedEntityClass(Author.class);
+List&lt;Author&gt; authors = (List&lt;Author&gt;) q.getResultList();
+
+for (Author a : authors) {
+    System.out.println(&quot;Author &quot;
+            + a.getFirstName()
+            + &quot; &quot;
+            + a.getLastName());
+}
+</pre></div>
+
+
+<p>This tells Hibernate which entity classes your query references. It can then limit the dirty check to objects of these entity classes and flush them to the database. While doing that, Hibernate ignores all changes on entity objects of other entity classes. This avoids unnecessary database operations and allows Hibernate to apply <a href="https://thorben-janssen.com/tips-to-boost-your-hibernate-performance/">further performance optimizations</a>. </p>
+
+
+
+<h2 class="wp-block-heading" id="conclusion">Conclusion</h2>
+
+
+
+<p>JPQL is the most commonly used query language with JPA and Hibernate. It provides an easy way to query data from the database. But it supports only a small subset of the SQL standard, and it also does not support database-specific features. If you want to use any of these features, you need to use a native SQL query.</p>
+
+
+
+<p>You can define a native ad-hoc query by calling the <em>EntityManager</em>&#8216;s <em>createNativeQuery</em> method and providing the SQL statement as a parameter. Or you can use the <em>@NamedNativeQuery</em> annotation to define a named query that you can execute in the same way as JPQL&#8217;s <em>@NamedQuery</em>.</p>
+
+
+
+<p>Native queries return their result as an <em>Object[]</em> or a <em>List&lt;Object[]&gt;</em>. You can convert this in multiple ways. If you select all columns mapped by an entity class, you can provide a class reference as the 2nd parameter to the <em>createNativeQuery </em>method. Hibernate then applies that class&#8217; mapping to each record in the result set and returns managed entity objects. If you want to map the result to DTOs, you need to <a href="/result-set-mapping-basics/">define an <em>@SqlResultSetMapping</em></a> or implement a <a href="https://thorben-janssen.com/hibernate-resulttransformer/">Hibernate-specific <em>ResultTransformer</em></a>.</p>
+
+
+
+<p>And you should always define the <a href="https://thorben-janssen.com/hibernate-query-spaces/">query space</a> of your native queries. It enables Hibernate to optimize the dirty check and flush operation it needs to perform before executing the query.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

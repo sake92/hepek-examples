@@ -1,0 +1,276 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s StatelessSession – What it is and how to use it</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s StatelessSession – What it is and how to use it</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Some of Hibernate&#8217;s core features are automatic dirty checks, flushes, and the 1st level cache. They make the implementation of most standard use cases simple and efficient. But they also add a lot of hidden complexity and are not a great fit for all use cases. Your typical nightly import job or most other use cases that perform lots of write operations don&#8217;t benefit from those features. They often even slow down such use cases. In those situations, Hibernate&#8217;s <em>StatelessSession </em>might be a better fit.</p>
+
+
+
+<h2 class="wp-block-heading">What is a <em>StatelessSession</em>?</h2>
+
+
+
+<p>The&nbsp;<em>StatelessSession</em>&nbsp;is a proprietary Hibernate feature that provides a command-oriented API that’s much closer to JDBC. I will show you a few examples of how to use it to implement typical read and write operations in this article. But before we take a closer look at the&nbsp;<em>StatelessSession</em>&nbsp;interface, we need to talk about the conceptual differences from a standard&nbsp;<em>Session</em>&nbsp;interface.</p>
+
+
+
+<p>Hibernate’s&nbsp;<em>StatelessSession&nbsp;</em>doesn’t provide a 1st level cache, automated dirty checks, or write-behind automation. It also doesn’t provide <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">lazy loading</a> for your <a href="/associations">managed associations</a> and doesn’t use the 2nd level or query cache. Any operation performed via a&nbsp;<em>StatelessSession&nbsp;</em>also doesn’t trigger any lifecycle events or interceptors.</p>
+
+
+
+<p>Instead of all the automatic features that a regular <em>Session </em>or JPA&#8217;s <em>EntityManager </em>provides, the <em>StatelessSession</em> puts you in full control of the executed SQL statements. If you want to fetch some data from the database or initialize an association, you need to write and execute a query for it. And if you create a new or change an existing entity object, you need to call the <em>insert</em>, <em>update </em>or <em>delete </em>method on the <em>StatelessSession</em> interface to persist your change. </p>
+
+
+
+<p>That requires you to put more thought into the technical side of your persistence layer. But if your use case doesn’t require automatic dirty checks, lazy loading, or 1st level caches, using a <em>StatelessSession</em> also drastically reduces Hibernate’s performance overhead. That makes Hibernate’s&nbsp;<em>StatelessSession&nbsp;</em>a great fit for use cases that import or update a huge set of data. That’s especially the case if you’re already using Hibernate for other parts of your application and want to reuse your entity model.</p>
+
+
+
+<p>You could also try the <em>StatelessSession</em> if you need to fetch many entity objects that you will not change and if you don&#8217;t require any lazy fetching of associated entities. But queries that return use case specific <a href="https://thorben-janssen.com/dto-projections/">DTO projections</a> are often a better fit for those use cases.</p>
+
+
+
+<h2 class="wp-block-heading">How to use a <em>StatelessSession</em>?</h2>
+
+
+
+<p>Let&#8217;s use a <em>StatelessSession </em>for reading and writing entity objects. You can get a <em>StatelessSession</em> instance in a similar way as the normal <em>Session</em> instance. If your application runs in an application server or is based on Spring, you can simply inject a <em>StatelessSession</em> instance. And if you&#8217;re using plain Hibernate, you can call the <em>openStatelessSession</em> method on your <em>SessionFactory</em> and use it to start a transaction.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+StatelessSession statelessSession = sf.openStatelessSession();
+statelessSession.getTransaction().begin();
+
+// do something
+
+statelessSession.getTransaction().commit();
+</pre></div>
+
+
+<p>After you get a <em>StatelessSession </em>instance, you can use it to read and write data. </p>
+
+
+
+<h3 class="wp-block-heading">Inserting and updating entities using a <em>StatelessSession</em></h3>
+
+
+
+<p>Most projects use a <em>StatelessSession </em>to insert or update huge data sets. So let&#8217;s start with 2 simple write operations.</p>
+
+
+
+<p>The most important methods you need to know when implementing write operations using a&nbsp;<em>StatelessSession&nbsp;</em>are the methods&nbsp;<em>insert</em>,&nbsp;<em>update</em>&nbsp;and&nbsp;<em>delete</em>. You need to call them if you want to persist a new entity object or update or delete an existing one. When doing that, please be aware that a&nbsp;<em>StatelessSession</em>&nbsp;doesn’t support cascading. So, you need to trigger your write operations for every entity object you want to persist.</p>
+
+
+
+<p>In the following test case, I want to insert a new <em>ChessPlayer</em> entity object and fix a typo in the <em>firstName </em>afterward.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+StatelessSession statelessSession = sf.openStatelessSession();
+statelessSession.getTransaction().begin();
+
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Torben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+
+log.info(&quot;Perform insert operation&quot;);
+statelessSession.insert(player);
+
+log.info(&quot;Update firstName&quot;);
+player.setFirstName(&quot;Thorben&quot;);
+statelessSession.update(player);
+
+statelessSession.getTransaction().commit();
+</pre></div>
+
+
+<p>You probably already recognized the main differences if you’re familiar with Hibernate’s&nbsp;<em>Session&nbsp;</em>interface or JPA’s&nbsp;<em>EntityManager</em>. I called the&nbsp;<em>insert&nbsp;</em>method to persist the new&nbsp;<em>ChessPlayer&nbsp;</em>object and the&nbsp;<em>update&nbsp;</em>method to persist the changed&nbsp;<em>firstName</em>.</p>
+
+
+
+<p>As I mentioned earlier, a&nbsp;<em>StatelessSession&nbsp;</em>doesn’t provide a 1st level cache, dirty checks, and automatic write-behind optimizations. Due to that, Hibernate immediately performs an SQL INSERT statement when you call the&nbsp;<em>insert&nbsp;</em>method with an entity object. And Hibernate doesn’t detect the changed&nbsp;<em>firstName&nbsp;</em>attribute. You need to call the&nbsp;<em>update</em>&nbsp;method if you want to persist that change. Hibernate then immediately executes an SQL UPDATE statement.</p>
+
+
+
+<p>If you use my <a href="https://thorben-janssen.com/hibernate-logging-guide/">recommended logging configuration</a> for development systems, you can see all of that in the log output.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:46:23,963 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Perform insert operation
+17:46:23,968 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        nextval('player_seq')
+17:46:23,983 DEBUG &#91;org.hibernate.SQL] - 
+    insert 
+    into
+        ChessPlayer
+        (birthDate, firstName, lastName, version, id) 
+    values
+        (?, ?, ?, ?, ?)
+17:46:23,988 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Update firstName
+17:46:23,989 DEBUG &#91;org.hibernate.SQL] - 
+    update
+        ChessPlayer 
+    set
+        birthDate=?,
+        firstName=?,
+        lastName=?,
+        version=? 
+    where
+        id=? 
+        and version=?
+</pre></div>
+
+
+<p>As you can see in this example, not having a 1st level cache, automatic dirty checks, and flush operations, requires you to trigger all database interactions. This puts you in full control of the execution of the SQL statements, and it provides better performance when writing huge datasets.</p>
+
+
+
+<h3 class="wp-block-heading">Reading entity objects using a <em>StatelessSession</em></h3>
+
+
+
+<p>When you’re using a&nbsp;<em>StatelessSession</em>&nbsp;to read entity objects from the database, your code looks identical to the one using a standard&nbsp;<em>Session</em>. But there are a few important Hibernate-internal differences you need to know.</p>
+
+
+
+<p>I mentioned earlier that a&nbsp;<em>StatelessSession</em>&nbsp;doesn’t provide lazy loading. Due to that, you need to initialize all the required associations when fetching an entity object from the database. Otherwise, Hibernate throws a <em><a href="https://thorben-janssen.com/lazyinitializationexception/">LazyInitializationException</a> </em>when you access the association for the 1st time. The best way to initialize an association is to use an&nbsp;<a href="https://thorben-janssen.com/jpa-21-entity-graph-part-1-named-entity/" target="_blank" rel="noreferrer noopener">EntityGraph</a>&nbsp;or include a JOIN FETCH clause in your&nbsp;<a href="https://thorben-janssen.com/jpql/" target="_blank" rel="noreferrer noopener">JPQL query</a>.&nbsp;</p>
+
+
+
+<p>In the following examples, I use a JPQL query with 2 JOIN FETCH clauses to load a <em>ChessPlayer </em>entity object. The JOIN FETCH clauses tell Hibernate to initialize the association to the games they played with the white and black pieces.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+StatelessSession statelessSession = sf.openStatelessSession();
+statelessSession.getTransaction().begin();
+
+ChessPlayer player = statelessSession.createQuery(&quot;&quot;&quot;
+											SELECT p 
+											FROM ChessPlayer p 
+												JOIN FETCH p.gamesWhite 
+												JOIN FETCH p.gamesBlack 
+											WHERE p.id=:id&quot;&quot;&quot;, ChessPlayer.class)
+									 .setParameter(&quot;id&quot;, 1L)
+									 .getSingleResult();
+
+log.info(player.getFirstName() + &quot; &quot; + player.getLastName());
+log.info(&quot;White pieces: &quot; + player.getGamesWhite().size());
+log.info(&quot;Black pieces: &quot; + player.getGamesBlack().size());
+
+statelessSession.getTransaction().commit();
+</pre></div>
+
+
+<p>As mentioned earlier, the differences between a read operation implemented using a&nbsp;<em>StatelessSession,&nbsp;</em>and a&nbsp;<em>Session</em>&nbsp;instance is not directly visible in your code. And the same is true for the log output.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:58:09,648 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.birthDate,
+        c1_0.firstName,
+        g2_0.playerBlack_id,
+        g2_0.id,
+        g2_0.chessTournament_id,
+        g2_0.date,
+        g2_0.playerWhite_id,
+        g2_0.round,
+        g2_0.version,
+        g1_0.playerWhite_id,
+        g1_0.id,
+        g1_0.chessTournament_id,
+        g1_0.date,
+        g1_0.playerBlack_id,
+        g1_0.round,
+        g1_0.version,
+        c1_0.lastName,
+        c1_0.version 
+    from
+        ChessPlayer c1_0 
+    join
+        ChessGame g1_0 
+            on c1_0.id=g1_0.playerWhite_id 
+    join
+        ChessGame g2_0 
+            on c1_0.id=g2_0.playerBlack_id 
+    where
+        c1_0.id=?
+17:58:09,682 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT p
+FROM ChessPlayer p
+    JOIN FETCH p.gamesWhite
+    JOIN FETCH p.gamesBlack
+WHERE p.id=:id, time: 56ms, rows: 1
+17:58:09,685 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Magnus Carlsen
+17:58:09,685 INFO  &#91;com.thorben.janssen.TestStatelessSession] - White pieces: 1
+17:58:09,686 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Black pieces: 2
+</pre></div>
+
+
+<p>But there are important internal differences. Hibernate not only doesn’t support lazy loading for&nbsp;<em>StatelessSessions</em>&nbsp;but also doesn’t use any caches, including the 1st level cache. That reduces the overhead performed for each database query. But Hibernate can no longer guarantee that you always get the same object if you’re reading the same entity multiple times within the same session.</p>
+
+
+
+<p>You can see that in the following test case, in which I execute the same query twice. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+StatelessSession statelessSession = sf.openStatelessSession();
+statelessSession.getTransaction().begin();
+
+ChessPlayer player1 = statelessSession.createQuery(&quot;&quot;&quot;
+											SELECT p 
+											FROM ChessPlayer p 
+												JOIN FETCH p.gamesWhite 
+												JOIN FETCH p.gamesBlack 
+											WHERE p.id=:id&quot;&quot;&quot;, ChessPlayer.class)
+									  .setParameter(&quot;id&quot;, 1L)
+									  .getSingleResult();
+ChessPlayer player2 = statelessSession.createQuery(&quot;&quot;&quot;
+											SELECT p 
+											FROM ChessPlayer p 
+												JOIN FETCH p.gamesWhite 
+												JOIN FETCH p.gamesBlack 
+											WHERE p.id=:id&quot;&quot;&quot;, ChessPlayer.class)
+									  .setParameter(&quot;id&quot;, 1L)
+									  .getSingleResult();
+
+assertNotEquals(player1, player2);
+
+statelessSession.getTransaction().commit();
+</pre></div>
+
+
+<p>Using a standard&nbsp;<em>Session&nbsp;</em>instance, Hibernate would execute the 1st query, instantiate an entity object for the returned record and store it in the 1st level cache. After that, it would execute the 2nd query, check the 1st level cache for an entity object that represents the record returned in the result set, and return that object. That ensures that you always get the same entity object if you fetch a database record multiple times within the same session.</p>
+
+
+
+<p>Without the 1st level cache, the <em>StatelessSession</em> doesn&#8217;t know about any previously selected entity objects. It has to instantiate a new object for every record returned by a query. Due to that, you can get multiple objects that represent the same database record. In the previous example, that&#8217;s the case for the <em>player1 </em>and <em>player2</em> objects. </p>
+
+
+
+<p>Please keep that in mind when writing your business code and make sure that you always use the same entity object for your write operations. Otherwise, you might overwrite previously performed changes.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Hibernate&#8217;s <em>StatelessSession </em>interface provides a command-oriented API that gives you more control over the executed SQL statements. It&#8217;s much closer to JDBC and doesn&#8217;t support any caches, automatic flushes, dirty checks, cascading and lazy loading.</p>
+
+
+
+<p>That makes a <em>StatelessSession</em> a great fit for all use cases that don&#8217;t benefit from these features. Typical examples are batch jobs or other use cases that perform many simple write operations.</p>
+
+
+
+<p>But without all those features, implementing your persistence layer requires a little more work. You need to trigger all database operations yourself. E.g., after you change one or more entity attributes, you need to call the&nbsp;<em>update&nbsp;</em>method on your&nbsp;<em>StatelessSession&nbsp;</em>instance to persist the change in the database. Otherwise, Hibernate will not be aware of the change and will not trigger any SQL statements.</p>
+
+
+
+<p>You also need to initialize all required associations when you fetch an entity object from the database. And you need to be aware that a&nbsp;<em>StatelessSession</em>&nbsp;doesn’t return the same entity object if you fetch the same record multiple times. That makes the handling of query results a little more complex.</p>
+
+
+
+<p>Overall, Hibernate’s&nbsp;<em>StatelessSession&nbsp;</em>is a great feature if you want to reduce the overhead of Hibernate’s&nbsp;<em>Session</em>&nbsp;handling and don’t need features like lazy loading, cascading, a 1st level cache, and automatic flushes.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

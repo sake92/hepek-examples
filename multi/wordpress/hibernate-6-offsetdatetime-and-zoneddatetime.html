@@ -1,0 +1,567 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>TimezoneStorageType – Hibernate’s improved timezone mapping</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>TimezoneStorageType – Hibernate’s improved timezone mapping</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Working with timestamps with timezone information has always been a struggle. Since Java 8 introduced the Date and Time API, <em>OffsetDateTime </em>and <em>ZonedDateTime </em>have become the most obvious and commonly used types to model a timestamp with timezone information. And you might expect that choosing one of them should be the only thing you need to do. </p>
+
+
+
+<p>Unfortunately, that isn&#8217;t the case if you want to persist this information in a relational database. Even though the SQL standard defines the column type <em>TIMESTAMP_WITH_TIMEZONE</em>, not all databases support it. </p>
+
+
+
+<p>Due to that, the support in your favorite ORM framework differs a lot:</p>
+
+
+
+<ul>
+<li>JPA specification doesn&#8217;t support <em>OffsetDateTime </em>and <em>ZonedDateTime</em> as attribute types. </li>
+
+
+
+<li>Hibernate 5 supports them by <a href="/hibernate-jpa-date-and-time/#Working_with_ZonedDateTime">normalizing the timestamp and storing it without timezone information</a>. </li>
+
+
+
+<li>Hibernate 6 improves on this and provides a configurable mapping for these types, which I will show you in this article.</li>
+</ul>
+
+
+
+<p>ATTENTION: This feature is still marked as <em>@Incubating</em>. Its default value got changed in Hibernate 6.2, and it might change again in future releases.</p>
+
+
+
+<h2 class="wp-block-heading">GitHub repository and Codespace integration</h2>
+
+
+
+
+
+<div class="wp-block-memberpress-protected-content">
+<p>Members of the Persistence Hub have exclusive access to this article&#8217;s example project on GitHub and GitHub Codespace.</p>
+
+
+
+<p>If you&#8217;re a member, please log in here.</p>
+
+
+
+<p>And if you&#8217;re not, please follow this link to <a href="https://thorben-janssen.com/join-persistence-hub?utm_source=blog&amp;utm_medium=tutorial&amp;utm_campaign=github">learn how the Persistence Hub membership helps you become a better software developer</a>.</p>
+</div>
+
+
+
+<h2 class="wp-block-heading">How to define the timezone handling</h2>
+
+
+
+<p>In Hibernate 6, you can define the timezone handling in 2 ways:</p>
+
+
+
+<p>1. You can specify a default handling by setting the configuration property <em>hibernate.timezone.default_storage</em> property in your <a href="https://thorben-janssen.com/jpa-persistence-xml/">persistence.xml</a>. The <em>TimeZoneStorageType</em> enum defines the supported configuration values, which I discuss in more detail in the following section.<br>Its default value depends on your Hibernate version. Hibernate 6.0 and 6.1 use <em><a href="#normalize">TimeZoneStorageType.NORMALIZE</a>,</em> and starting with version 6.2, Hibernate uses <em><a href="#default">TimeZoneStorageType.DEFAULT</a></em> by default.</p>
+
+
+
+<pre class="wp-block-code xml"><code>&lt;persistence&gt;
+    &lt;persistence-unit name="my-persistence-unit"&gt;
+        &lt;description&gt;Hibernate example configuration - thorben-janssen.com&lt;/description&gt;
+        &lt;exclude-unlisted-classes&gt;false&lt;/exclude-unlisted-classes&gt;
+
+        &lt;properties&gt;
+            &lt;property name="hibernate.timezone.default_storage" value="NORMALIZE"/&gt;
+			
+			...
+        &lt;/properties&gt;
+    &lt;/persistence-unit&gt;
+&lt;/persistence&gt;</code></pre>
+
+
+
+<p>2. You can customize the timezone handling of each entity attribute of type <em>ZonedDateTime</em> or <em>OffsetDateTime</em> by annotating it with <em>@TimeZoneStorage</em> and providing a <em>TimeZoneStorageType </em>enum value.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<h2 class="wp-block-heading">6 different <em>TimezoneStorageTypes</em></h2>
+
+
+
+<p>In Hibernate 6.0 and 6.1, you can choose between 5 different options to store timezone information. </p>
+
+
+
+<ul>
+<li><a href="#native">NATIVE</a></li>
+
+
+
+<li><a href="#normalize">NORMALIZE</a></li>
+
+
+
+<li><a href="http://normalizeutc">NORMALIZE_UTC</a></li>
+
+
+
+<li><a href="#column">COLUMN</a></li>
+
+
+
+<li><a href="#auto">AUTO</a></li>
+</ul>
+
+
+
+<p>And Hibernate 6.2 added <a href="#default"><em>DEFAULT</em> </a>as a 6 options. </p>
+
+
+
+<p>They tell Hibernate to store the timestamp in a column of type <em>TIMESTAMP_WITH_TIMEZONE</em>, persist the timestamp and the timezone in 2 separate columns, or normalize the timestamp to different timezones. I will show you an example of all mappings and how Hibernate handles them in the following sections.</p>
+
+
+
+<p>All examples will be based on this simple <em>ChessGame </em>entity class. The attributes <em>ZonedDateTime zonedDateTime</em> and <em>OffsetDateTime offsetDateTime</em> shall store the day and time at which the game was played.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    private ZonedDateTime zonedDateTime;
+
+    private OffsetDateTime offsetDateTime;
+
+    private String playerWhite;
+
+    private String playerBlack;
+
+    @Version
+    private int version;
+	
+	...
+}</code></pre>
+
+
+
+<p>And I will be using this test case to persist a new&nbsp;<em>ChessGame&nbsp;</em>entity object. It sets the <em>zonedDateTime </em>and <em>offsetDateTime</em> attributes to <em>2023-07-08 15:00 +04:00</em>. After I persisted the entity, I commit the transaction, start a new transaction, and fetch the same entity from the database.</p>
+
+
+
+<pre class="wp-block-code java"><code>EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ZonedDateTime zonedDateTime = ZonedDateTime.of(2023, 7, 8, 15, 0, 0, 0, ZoneId.of("UTC+4"));     
+OffsetDateTime offsetDateTime = OffsetDateTime.of(2023, 7, 8, 15, 0, 0, 0, ZoneOffset.ofHours(4));
+
+ChessGame game = new ChessGame();
+game.setPlayerWhite("Thorben Janssen");
+game.setPlayerBlack("A better player");
+game.setZonedDateTime(zonedDateTime);
+game.setOffsetDateTime(offsetDateTime);
+em.persist(game);
+
+em.getTransaction().commit();
+em.close();
+
+
+em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessGame game2 = em.find(ChessGame.class, game.getId());
+assertThat(game2.getZonedDateTime()).isEqualTo(zonedDateTime);
+assertThat(game2.getOffsetDateTime()).isEqualTo(offsetDateTime);
+
+em.getTransaction().commit();
+em.close();</code></pre>
+
+
+
+<p>Let&#8217;s take a closer look at all 6 <em>TimeZoneStorageType </em>options.</p>
+
+
+
+<h3 class="wp-block-heading">NATIVE</h3>
+
+
+
+<p>When configuring <em>TimeZoneStorageType.NATIVE</em>, Hibernate stores the timestamp in a column of type <em>TIMESTAMP_WITH_TIMEZONE</em>. This column type has to be supported by your database dialect.</p>
+
+
+
+<p>Starting with Hibernate 6.2, the <em>TimeZoneStorageType.NATIVE</em> has become the default option for all database dialects that support the column type <em>TIMESTAMP_WITH_TIMEZONE</em>.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.NATIVE)
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<p>In this case, the handling of all read operations is simple, and there is no difference to the handling of any other basic attribute type. The database stores the timestamp with timezone information. Hibernate just needs to set a&nbsp;<em>ZonedDateTime</em>&nbsp;or&nbsp;<em>OffsetDateTime&nbsp;</em>object as a bind parameter or extract it from the result set.</p>
+
+
+
+<pre class="wp-block-code sql"><code>13:10:55,725 DEBUG &#91;org.hibernate.SQL] - insert into ChessGame (offsetDateTime, playerBlack, playerWhite, version, zonedDateTime, id) values (?, ?, ?, ?, ?, ?)
+13:10:55,727 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;TIMESTAMP] - &#91;2023-07-08T15:00+04:00]
+13:10:55,735 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;A better player]
+13:10:55,735 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;Thorben Janssen]
+13:10:55,736 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;INTEGER] - &#91;0]
+13:10:55,736 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;TIMESTAMP] - &#91;2023-07-08T15:00+04:00&#91;UTC+04:00]]
+13:10:55,736 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;6] as &#91;BIGINT] - &#91;1]
+...
+13:10:55,770 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.offsetDateTime,c1_0.playerBlack,c1_0.playerWhite,c1_0.version,c1_0.zonedDateTime from ChessGame c1_0 where c1_0.id=?
+...
+13:10:55,785 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;1] - &#91;2023-07-08T13:00+02:00]
+13:10:55,786 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;2] - &#91;A better player]
+13:10:55,786 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;3] - &#91;Thorben Janssen]
+13:10:55,786 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;4] - &#91;0]
+13:10:55,786 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;5] - &#91;2022-04-06T13:00+02:00&#91;Europe/Berlin]]
+13:10:55,787 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;4] - &#91;0]</code></pre>
+
+
+
+<h3 class="wp-block-heading">NORMALIZE</h3>
+
+
+
+<p>The <em>TimeZoneStorageType.NORMALIZE</em> is the <a href="/hibernate-jpa-date-and-time/#Working_with_ZonedDateTime">same handling as provided by Hibernate 5</a> and the default value of the configuration property <em>hibernate.timezone.default_storage</em> in Hibernate 6.0 and 6.1.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.NORMALIZE)
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<p>It tells Hibernate to let the JDBC driver normalize the timestamp to its local timezone or the timezone defined in the <em>hibernate.jdbc.time_zone</em> setting. It then stores the timestamp without timezone information in the database.</p>
+
+
+
+<p>You can&#8217;t see this when you log the bind parameter values of your INSERT statement. Hibernate here still uses the attribute values of your entity object.</p>
+
+
+
+<pre class="wp-block-code sql"><code>11:44:00,815 DEBUG &#91;org.hibernate.SQL] - insert into ChessGame (offsetDateTime, playerBlack, playerWhite, version, zonedDateTime, id) values (?, ?, ?, ?, ?, ?)
+11:44:00,819 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;TIMESTAMP] - &#91;2023-07-08T15:00+04:00]
+11:44:00,838 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;A better player]
+11:44:00,839 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;Thorben Janssen]
+11:44:00,839 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;INTEGER] - &#91;0]
+11:44:00,839 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;TIMESTAMP] - &#91;2023-07-08T15:00+04:00&#91;UTC+04:00]]
+11:44:00,840 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;6] as &#91;BIGINT] - &#91;1]</code></pre>
+
+
+
+<p>But trace logging of the <em>ResourceRegistryStandardImpl </em>class provides more information about the executed prepared statement. There, you can see that Hibernate normalized the timestamp from <em>2023-07-08 15:00+04:00</em> to my local timezone (UTC+2) and removed the timezone offset <em>2023-07-08 13:00:00</em>.</p>
+
+
+
+<pre class="wp-block-code sql"><code>11:44:46,247 TRACE &#91;org.hibernate.resource.jdbc.internal.ResourceRegistryStandardImpl] - Closing prepared statement &#91;prep3: insert into ChessGame (offsetDateTime, playerBlack, playerWhite, version, zonedDateTime, id) values (?, ?, ?, ?, ?, ?) {1: TIMESTAMP '2023-07-08 13:00:00', 2: 'A better player', 3: 'Thorben Janssen', 4: 0, 5: TIMESTAMP '2023-07-08 13:00:00', 6: 1}]</code></pre>
+
+
+
+<p>When Hibernate reads the timestamp from the database, the JDBC driver gets the timestamp without timezone information and adds its timezone or the timezone defined by the <em>hibernate.jdbc.time_zone</em> setting.</p>
+
+
+
+<pre class="wp-block-code sql"><code>11:55:17,225 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.offsetDateTime,c1_0.playerBlack,c1_0.playerWhite,c1_0.version,c1_0.zonedDateTime from ChessGame c1_0 where c1_0.id=?
+11:55:17,244 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;1] - &#91;2023-07-08T13:00+02:00]
+11:55:17,245 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;2] - &#91;A better player]
+11:55:17,245 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;3] - &#91;Thorben Janssen]
+11:55:17,245 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;4] - &#91;0]
+11:55:17,245 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;5] - &#91;2022-04-06T13:00+02:00&#91;Europe/Berlin]]
+11:55:17,247 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;4] - &#91;0]</code></pre>
+
+
+
+<p>As you can see in the log output, Hibernate selected the <em>ChessGame</em> entity object from the database and retrieved the correct timestamp. However, due to the performed normalization, it is no longer in the timezone UTC+4, which I used when I persisted the entity. To avoid any timezone conversions, you need to use <em><a href="#native">TimeZoneStorageType.NATIVE</a></em> or <em><a href="#column">TimeZoneStorageType.COLUMN</a></em>.</p>
+
+
+
+<h4 class="wp-block-heading">Mapping issues</h4>
+
+
+
+<p>Normalizing your timestamps and storing them without timezone information might seem like a simple and obvious solution if your database doesn&#8217;t support the column type <em>TIMESTAMP_WITH_TIMEZONE</em>. But it introduces 2 risks:</p>
+
+
+
+<ol>
+<li>Changing your local timezone or running servers in different timezones affects the denormalization and results in wrong data.</li>
+
+
+
+<li>Timezones with daylight saving time can’t be safely normalized because they have 1 hour that exists in summer- and wintertime. By removing the timezone information, you can no longer distinguish between summer- and wintertime. Therefore, you can’t normalize any timestamp of that period correctly. To avoid this, you should always use a timezone without DST, e.g., UTC.</li>
+</ol>
+
+
+
+<h3 class="wp-block-heading">NORMALIZE_UTC</h3>
+
+
+
+<hr class="wp-block-separator has-css-opacity"/>
+
+
+
+<p>WARNING: As described in <a href="https://hibernate.atlassian.net/browse/HHH-15174">HHH-15174</a>, Hibernate 6.0.0.Final didn&#8217;t normalize your timestamp to UTC and instead applies the same normalization as <em>TimeZoneStorageType.NORMALIZE</em>. This was fixed in Hibernate 6.0.1.Final. The following section describes the correct behavior.</p>
+
+
+
+<hr class="wp-block-separator has-css-opacity"/>
+
+
+
+<p>The <em>TimeZoneStorageType.NORMALIZE_UTC</em> is very similar to the previously discussed <em>TimeZoneStorageType.NORMALIZE</em>. The only difference is that your timestamp gets always normalized to UTC. </p>
+
+
+
+<p>Since Hibernate 6.2, this is the default handling for database dialects that don&#8217;t support the column type timestamp with timezone.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.NORMALIZE_UTC)
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.NORMALIZE_UTC)
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<p>Hibernate&#8217;s handling of the timestamps and the performed normalization during read and write operations is identical to <em>TimeZoneStorageType.NORMALIZE</em>, which I explained in great detail in the <a href="#TimeZoneStorageTypeNORMALIZE">previous section</a>.</p>
+
+
+
+<h3 class="wp-block-heading">COLUMN</h3>
+
+
+
+<p>When configuring&nbsp;<em>TimeZoneStorageType.COLUMN</em>, Hibernate stores the timestamp without timezone information and the timezone&#8217;s offset to UTC in separate database columns.&nbsp;</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.COLUMN)
+	@TimeZoneColumn(name = "zonedDateTime_zoneOffset")
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.COLUMN)
+	@TimeZoneColumn(name = "offsetDateTime_zoneOffset")
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<p>Hibernate uses its <a href="https://thorben-janssen.com/naming-strategies-in-hibernate-5/">naming strategy</a> to map the entity attribute of type <em>ZonedDateTime </em>or <em>OffsetDateTime </em>to a database column. This column stores the timestamp. By default, Hibernate adds the postfix <em>_tz </em>to the name of that column to get the name of the column that contains the timezone offset. You can customize this by annotating your entity attribute with <em>@TimeZoneColumn</em>, as I did in the previous code snippet.</p>
+
+
+
+<p>You can clearly see this handling when you persist a new <em>ChessGame</em> entity object and use my recommended <a href="https://thorben-janssen.com/hibernate-logging-guide/">logging configuration</a> for development environments.</p>
+
+
+
+<pre class="wp-block-code sql"><code>12:31:45,654 DEBUG &#91;org.hibernate.SQL] - insert into ChessGame (offsetDateTime, offsetDateTime_zoneOffset, playerBlack, playerWhite, version, zonedDateTime, zonedDateTime_zoneOffset, id) values (?, ?, ?, ?, ?, ?, ?, ?)
+12:31:45,656 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;TIMESTAMP_UTC] - &#91;2023-07-08T11:00:00Z]
+12:31:45,659 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;+04:00]
+12:31:45,660 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;A better player]
+12:31:45,660 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;VARCHAR] - &#91;Thorben Janssen]
+12:31:45,660 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;INTEGER] - &#91;0]
+12:31:45,660 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;6] as &#91;TIMESTAMP_UTC] - &#91;2023-07-08T11:00:00Z]
+12:31:45,661 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;7] as &#91;INTEGER] - &#91;+04:00]
+12:31:45,661 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;8] as &#91;BIGINT] - &#91;1]</code></pre>
+
+
+
+<p>Based on the timestamp and the timezone offset, Hibernate instantiates a new <em>OffsetDateTime</em> or <em>ZonedDateTime </em>object when it fetches the entity object from the database.</p>
+
+
+
+<pre class="wp-block-code sql"><code>12:41:26,082 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.offsetDateTime,c1_0.offsetDateTime_zoneOffset,c1_0.playerBlack,c1_0.playerWhite,c1_0.version,c1_0.zonedDateTime,c1_0.zonedDateTime_zoneOffset from ChessGame c1_0 where c1_0.id=?
+...
+12:41:26,094 DEBUG &#91;org.hibernate.orm.results.loading.org.hibernate.orm.results.loading.embeddable] - Initializing composite instance &#91;com.thorben.janssen.sample.model.ChessGame.offsetDateTime]
+12:41:26,107 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;1] - &#91;2023-07-08T11:00:00Z]
+12:41:26,108 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;2] - &#91;+04:00]
+12:41:26,109 DEBUG &#91;org.hibernate.orm.results.loading.org.hibernate.orm.results.loading.embeddable] - Created composite instance &#91;com.thorben.janssen.sample.model.ChessGame.offsetDateTime] : 2023-07-08T15:00+04:00
+...
+12:41:26,109 DEBUG &#91;org.hibernate.orm.results.loading.org.hibernate.orm.results.loading.embeddable] - Initializing composite instance &#91;com.thorben.janssen.sample.model.ChessGame.zonedDateTime]
+12:41:26,110 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;6] - &#91;2023-07-08T11:00:00Z]
+12:41:26,110 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;7] - &#91;+04:00]
+12:41:26,110 DEBUG &#91;org.hibernate.orm.results.loading.org.hibernate.orm.results.loading.embeddable] - Created composite instance &#91;com.thorben.janssen.sample.model.ChessGame.zonedDateTime] : 2023-07-08T15:00+04:00
+...
+12:41:26,112 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;3] - &#91;A better player]
+12:41:26,112 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;4] - &#91;Thorben Janssen]
+12:41:26,113 DEBUG &#91;org.hibernate.orm.results] - Extracted JDBC value &#91;5] - &#91;0]</code></pre>
+
+
+
+<h4 class="wp-block-heading">Mapping issues</h4>
+
+
+
+<p>It&#8217;s not recommended to store a timezone offset of a future timestamp in your database because timezone rules can change. In that case, you would need to find and update all affected timestamps.</p>
+
+
+
+<p>You can avoid this problem by using <em><a href="#native">TimeZoneStorageType.NATIVE</a></em> or <em><a href="#normalizeutc">TimeZoneStorageType.NORMALIZE_UTC</a></em>.</p>
+
+
+
+<h3 class="wp-block-heading">AUTO</h3>
+
+
+
+<p>The handling of <em>TimeZoneStorageType.AUTO</em> depends on Hibernate&#8217;s database-specific dialect: </p>
+
+
+
+<ul>
+<li>If the database supports the column type <em>TIMESTAMP_WITH_TIMEZONE</em>, Hibernate uses <em><a href="#native">TimeZoneStorageType.NATIVE</a></em>. </li>
+
+
+
+<li>In all other cases, Hibernate uses <em><a href="#column">TimeZoneStorageType.COLUMN</a></em>. Please remember the previously explained warning against storing timezone offsets of future timestamps.</li>
+</ul>
+
+
+
+<p>Both mappings preserve the instant represented by the <em>ZonedDateTime</em> or <em>OffsetDateTime</em> and the offset or timezone.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.AUTO)
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.AUTO)
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<h2 class="wp-block-heading">DEFAULT</h2>
+
+
+
+<p>Since version 6.2, Hibernate also supports the <em>TimeZoneStorageType.DEFAULT</em> and uses it as the default value of the <em>hibernate.timezone.default_storage</em> property.</p>
+
+
+
+<p>Its mapping depends on Hibernate&#8217;s database-specific dialect: </p>
+
+
+
+<ul>
+<li>If the database supports the column type <em>TIMESTAMP_WITH_TIMEZONE</em>, Hibernate uses <em><a href="#native">TimeZoneStorageType.NATIVE</a></em>. </li>
+
+
+
+<li>In all other cases, Hibernate uses <em><a href="#column">TimeZoneStorageType.NORMALIZE_UTC </a></em>.</li>
+</ul>
+
+
+
+<p>Due to that, this mapping preserves the instant represented by the <em>OffsetDateTime </em>or <em>ZonedDateTime</em>, but might not preserve the timezone or offset.</p>
+
+
+
+<pre class="wp-block-code java"><code>@Entity
+public class ChessGame {
+    
+    @TimeZoneStorage(TimeZoneStorageType.DEFAULT)
+    private ZonedDateTime zonedDateTime;
+
+    @TimeZoneStorage(TimeZoneStorageType.DEFAULT)
+    private OffsetDateTime offsetDateTime;
+	
+	...
+}</code></pre>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Even though the SQL standard defines the column type <em>TIMESTAMP_WITH_TIMEZONE</em>, not all databases support it. That makes the handling of timestamps with timezone information surprisingly complex.</p>
+
+
+
+<p>As I explained in a <a href="/hibernate-jpa-date-and-time/#Working_with_ZonedDateTime">previous article</a>, Hibernate 5 supports&nbsp;<em>ZonedDateTime</em>&nbsp;and&nbsp;<em>OffsetDateTime</em>&nbsp;as basic types. It normalizes the timestamp and stores it without timezone information to avoid database compatibility issues.</p>
+
+
+
+<p>Hibernate 6 improved this handling by introducing more mapping options. You can now choose between:</p>
+
+
+
+<ul>
+<li><em><a href="#native">TimeZoneStorageType.NATIVE</a></em> to store your timestamp in a column of type <em>TIMESTAMP_WITH_TIMEZONE</em>, </li>
+
+
+
+<li><em><a href="#normalize">TimeZoneStorageType.NORMALIZE</a></em> (default in Hibernate 6.0 and 6.1) to normalize the timestamp to the timezone of your JDBC driver and persist it without timezone information, </li>
+
+
+
+<li><em><a href="#normalizeutc">TimeZoneStorageType.NORMALIZE_UTC</a></em> to normalize the timestamp to UTC and persist it without timezone information, </li>
+
+
+
+<li><em><a href="#column">TimeZoneStorageType.COLUMN</a></em> to store the timestamp without timezone information and the offset of the provided timezone in 2 separate columns and </li>
+
+
+
+<li><em><a href="#auto">TimeZoneStorageType.AUTO</a></em> to let Hibernate choose between <em>TimeZoneStorageType.NATIVE</em> and <em>TimeZoneStorageType.COLUMN</em> based on the capabilities of your database.</li>
+
+
+
+<li><em><a href="#default">TimeZoneStorageType.DEFAULT</a></em> (default in Hibernate &gt;= 6.2) to let Hibernate choose between <em>TimeZoneStorageType.NATIVE</em> and <em>TimeZoneStorageType.NORMALIZE_UTC</em> based on the capabilities of your database.</li>
+</ul>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

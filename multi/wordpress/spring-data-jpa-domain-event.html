@@ -1,0 +1,345 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – Publishing Domain Events When Changing an Entity</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JPA – Publishing Domain Events When Changing an Entity</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Since Spring Data JPA 1.11 (the Ingalls release), you can automatically publish domain events when an entity object gets saved. You only need to add a method to your entity class that returns a&nbsp;<em>Collection&nbsp;</em>of the event objects you want to publish and annotate the method with&nbsp;<em>@DomainEvents</em>.&nbsp;Spring Data JPA calls that method and publishes the events when you execute the&nbsp;<em>save</em>&nbsp;or&nbsp;<em>saveAll</em>&nbsp;method of the entity’s repository.&nbsp;Similar to other Spring application events, you can observe them using an <em>@EventListener</em> or <em>@TransactionalEventListener</em>.</p>
+
+
+
+<p>The main goal of this implementation is to support domain events defined in Domain-Driven Design. These are usually published by aggregate roots and used to inform other parts of your application that an event happened in your business domain. In contrast to other commonly used events, like entity lifecycle events, a domain event should not contain any technical details. </p>
+
+
+
+<p>You can, of course, publish these events programmatically in your business code using Spring&#8217;s <em>ApplicationEventPublisher</em>. That&#8217;s usually the right approach if the event is triggered by a specific business operation and not the change of an attribute&#8217;s value. But if different business operations cause the same change on an entity object and trigger the same event, using a domain event is easier and less error-prone.</p>
+
+
+
+<h2 class="wp-block-heading">Publish Domain Events From Your Entity Class</h2>
+
+
+
+<p>As mentioned earlier, your entity class has to provide a method annotated with <em>@DomainEvents</em> that returns all events you want to publish. Each event is represented by one object. I recommend using a specific class for each type of event you want to trigger. That makes it easier to implement an event observe that only reacts to a specific type of event.</p>
+
+
+
+<p>In the example of this article, I want to publish a domain event when a tournament has ended. I created the <em>TournamentEndedEvent</em> class to represent this event. It contains the id of the tournament and its end date.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">public class TournamentEndedEvent {
+
+    private Long tournamentId;
+
+    private LocalDate endDate;
+
+    public TournamentEndedEvent(Long tournamentId, LocalDate endDate) {
+        this.tournamentId = tournamentId;
+    }
+
+    public Long getTournamentId() {
+        return tournamentId;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+}</pre>
+
+
+
+<h3 class="wp-block-heading">Implement the Event Publishing Yourself</h3>
+
+
+
+<p>One option to tell Spring Data JPA which events you want to publish is implementing your own method and annotating it with&nbsp;<em>@DomainEvents</em>.</p>
+
+
+
+<p>In the <em>endTournament </em>method of my <em>ChessTournament</em> class, I set the <em>endDate</em> of the tournament to <em>now</em>. Then I instantiate a new <em>TournamentEndedEvent</em> and add it to the <em>List </em>of events I want to publish when saving the tournament.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class ChessTournament {
+
+    @Transient
+    private final List&lt;Object&gt; domainEvents = new ArrayList&lt;&gt;();
+
+    private LocalDate endDate;
+
+    // more entity attributes
+	
+    public void endTournament() {
+        endDate = LocalDate.now();
+        domainEvents.add(new TournamentEndedEvent(id, endDate));
+    }
+
+    @DomainEvents
+    public List&lt;Object&gt; domainEvents() {
+        return domainEvents;
+    }
+
+    @AfterDomainEventPublication
+    public void clearDomainEvents() {
+        domainEvents.clear();
+    }
+}</pre>
+
+
+
+<p>As you can see in the code snippet, I also implemented 2 additional methods. </p>
+
+
+
+<p>I annotated the <em>domainEvents </em>method with a <em>@DomainEvents</em> annotation and returned the <em>List </em>of events I want to publish. That&#8217;s the method I mentioned earlier. Spring Data JPA calls it when I call the <em>save </em>or <em>saveAll</em> method on my <em>ChessTournamentRepository</em>.</p>
+
+
+
+<p>The <em>@AfterDomainEventPublication</em> annotation on the <em>clearDomainEvents</em> method tells Spring Data JPA to call this method after publishing all events returned by the <em>domainEvents</em> method. Depending on your observer implementation, this can be before or after your observers handled the event. </p>
+
+
+
+<p>In this example, I use that method to clear the <em>List</em> of events. That ensures that I don&#8217;t publish any event twice, even if my business code calls the <em>save</em> method of my <em>ChessTournamentRepository</em> multiple times.</p>
+
+
+
+<h3 class="wp-block-heading">Extend Spring&#8217;s <em>AbstractAggregateRoot</em></h3>
+
+
+
+<p>As you saw in the previous section, you can easily implement the required methods to manage the <em>List</em> of events you want to publish and provide it to Spring Data JPA. But I recommend using an even simpler option.</p>
+
+
+
+<p>Spring Data provides the <em>AbstractAggregateRoot</em> class, which provides all these methods for you. You only need to extend it and call the <em>registerEvent</em> method to add your event object to the <em>List</em>.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@Entity
+public class ChessTournament extends AbstractAggregateRoot&lt;ChessTournament&gt; {
+
+    private LocalDate endDate;
+
+    // more entity attributes
+	
+    public void endTournament() {
+        endDate = LocalDate.now();
+        registerEvent(new TournamentEndedEvent(id, endDate));
+    }
+}</pre>
+
+
+
+<h2 class="wp-block-heading">Observe Domain Events</h2>
+
+
+
+<p>Spring provides a powerful event handling mechanism that&#8217;s explained in great detail in the <a href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#context-functionality-events">Spring documentation</a>. You can observe your domain events in the same way as any other Spring event. In this article, I will give you a quick overview of Spring&#8217;s event handling features and point out a few pitfalls when working in a transactional context.</p>
+
+
+
+<p>To implement an observer, you need to implement a method that expects 1 parameter of the type of your event class and annotate it with <em>@EventListener</em> or <em>@TransactionalEventListener</em>.</p>
+
+
+
+<h3 class="wp-block-heading">Observing Events Synchronously</h3>
+
+
+
+<p>Spring executes all observers annotated with&nbsp;<em>@EventListener</em>&nbsp;synchronously and within the transactional context of the event publisher. As long as your observer uses Spring Data JPA, all its read and write operations use the same context as the business code that triggered the event. This enables it to read uncommitted changes of the current transaction and add its own changes to it.</p>
+
+
+
+<p>In the following observer implementation, I use that to change the&nbsp;<em>ended&nbsp;</em>flag on all&nbsp;<em>ChessGame</em>s of a&nbsp;<em>ChessTournament</em>&nbsp;to&nbsp;<em>true&nbsp;</em>and write a short log message.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@EventListener
+public void handleTournamentEndedEvent(TournamentEndedEvent event) {
+	log.info(&quot;===== Handling TournamentEndedEvent ====&quot;);
+
+	Optional&lt;ChessTournament&gt; chessTournament = chessTournamentRepository.findById(event.getTournamentId());
+	chessTournament.ifPresent(tournament -&gt; {
+		tournament.getGames().forEach(chessGame -&gt; {
+			chessGame.setEnded(true);
+			log.info(&quot;Game with id {} ended: {} &quot;, chessGame.getId(), chessGame.isEnded());
+		});
+	});
+}</pre>
+
+
+
+<p>Let&#8217;s use this event observer and the previously described ChessTournament entity in the following test case. It gets a <em>ChessTournament </em>entity from the database and calls the entity&#8217;s <em>endTournament</em> method. It then calls the <em>save </em>method of the <em>tournamentRepository </em>and writes a log message afterward.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">log.info(&quot;===== Test Domain Events =====&quot;);
+ChessTournament chessTournament = tournamentRepository.getOne(1L);
+
+// End the tournament
+chessTournament.endTournament();
+
+// Save the tournament and trigger the domain event
+ChessTournament savedTournament = tournamentRepository.save(chessTournament);
+log.info(&quot;After tournamentRepository.save(chessTournament);&quot;);</pre>
+
+
+
+<p>You can see in the log output that Spring Data JPA called the event observer when saving the entity. That was a synchronous call that paused the execution of the test case until all observers handled the event. All operations performed by the observer were part of the current transaction. That enabled the observer to initialize the lazily fetched association from the <em>ChessTournament </em>to the <em>ChessGame</em> entity and change each game&#8217;s <em>ended</em> attribute.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">2021-10-23 14:56:33.158  INFO 10352 --- [           main] c.t.janssen.spring.data.TestKeyConcepts  : ===== Test Domain Events =====
+2021-10-23 14:56:33.180 DEBUG 10352 --- [           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_0_, chesstourn0_.end_date as end_date2_2_0_, chesstourn0_.name as name3_2_0_, chesstourn0_.start_date as start_da4_2_0_, chesstourn0_.version as version5_2_0_ from chess_tournament chesstourn0_ where chesstourn0_.id=?
+2021-10-23 14:56:33.216  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : ===== Handling TournamentEndedEvent ====
+2021-10-23 14:56:33.221 DEBUG 10352 --- [           main] org.hibernate.SQL                        : select games0_.chess_tournament_id as chess_to6_0_0_, games0_.id as id1_0_0_, games0_.id as id1_0_1_, games0_.chess_tournament_id as chess_to6_0_1_, games0_.date as date2_0_1_, games0_.ended as ended3_0_1_, games0_.player_black_id as player_b7_0_1_, games0_.player_white_id as player_w8_0_1_, games0_.round as round4_0_1_, games0_.version as version5_0_1_ from chess_game games0_ where games0_.chess_tournament_id=?
+2021-10-23 14:56:33.229  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 3 ended: true 
+2021-10-23 14:56:33.230  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 2 ended: true 
+2021-10-23 14:56:33.230  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 5 ended: true 
+2021-10-23 14:56:33.230  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 1 ended: true 
+2021-10-23 14:56:33.230  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 6 ended: true 
+2021-10-23 14:56:33.230  INFO 10352 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 4 ended: true 
+2021-10-23 14:56:33.230  INFO 10352 --- [           main] c.t.janssen.spring.data.TestKeyConcepts  : After tournamentRepository.save(chessTournament);
+2021-10-23 14:56:33.283 DEBUG 10352 --- [           main] org.hibernate.SQL                        : update chess_tournament set end_date=?, name=?, start_date=?, version=? where id=? and version=?
+2021-10-23 14:56:33.290 DEBUG 10352 --- [           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, ended=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-10-23 14:56:33.294 DEBUG 10352 --- [           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, ended=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-10-23 14:56:33.296 DEBUG 10352 --- [           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, ended=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?</pre>
+
+
+
+<h3 class="wp-block-heading">Observing Events at the End of the Transaction</h3>
+
+
+
+<p>If you want to execute your observers at the end of the current transaction, you need to annotate it with <em>@TransactionalEventListener</em> instead of <em>@EventListener</em>. Spring then calls the observer in the defined <em>TransactionPhase</em>. You can choose between <em>BEFORE_COMMIT</em>, <em>AFTER_COMMIT</em>, <em>AFTER_ROLLBACK</em>, and <em>AFTER_COMPLETION</em>. By default, Spring executes transactional observers in the <em>AFTER_COMMIT</em> phase.</p>
+
+
+
+<p>Besides the different annotations, you can implement your event observer in the same way as the synchronous observer I showed you in the previous example. </p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+public void handleTournamentEndedEvent(TournamentEndedEvent event) {
+	log.info(&quot;===== Handling TournamentEndedEvent ====&quot;);
+
+	Optional&lt;ChessTournament&gt; chessTournament = chessTournamentRepository.findById(event.getTournamentId());
+	chessTournament.ifPresent(tournament -&gt; {
+		tournament.getGames().forEach(chessGame -&gt; {
+			chessGame.setEnded(true);
+			log.info(&quot;Game with id {} ended: {} &quot;, chessGame.getId(), chessGame.isEnded());
+		});
+	});
+}</pre>
+
+
+
+<p>In this case, I decide to execute my observer before Spring commits the transaction. This ensures that the observer doesn&#8217;t block the execution of my test case. When Spring calls the observer, the transactional context is still active, and all performed operations become part of the transaction that my test case started.</p>
+
+
+
+<p>When I execute the same test case as in the previous example, you can see in the log output that Spring calls the observer after my test case performed all its operations but before Spring commits the transaction.</p>
+
+
+
+<pre class="wp-block-preformatted brush: sql; gutter: true">2021-10-23 15:15:43.234  INFO 18704 --- [           main] c.t.janssen.spring.data.TestKeyConcepts  : ===== Test Domain Events =====
+2021-10-23 15:15:43.254 DEBUG 18704 --- [           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_0_, chesstourn0_.end_date as end_date2_2_0_, chesstourn0_.name as name3_2_0_, chesstourn0_.start_date as start_da4_2_0_, chesstourn0_.version as version5_2_0_ from chess_tournament chesstourn0_ where chesstourn0_.id=?
+2021-10-23 15:15:43.291  INFO 18704 --- [           main] c.t.janssen.spring.data.TestKeyConcepts  : After tournamentRepository.save(chessTournament);
+2021-10-23 15:15:43.332  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : ===== Handling TournamentEndedEvent ====
+2021-10-23 15:15:43.337 DEBUG 18704 --- [           main] org.hibernate.SQL                        : select games0_.chess_tournament_id as chess_to6_0_0_, games0_.id as id1_0_0_, games0_.id as id1_0_1_, games0_.chess_tournament_id as chess_to6_0_1_, games0_.date as date2_0_1_, games0_.ended as ended3_0_1_, games0_.player_black_id as player_b7_0_1_, games0_.player_white_id as player_w8_0_1_, games0_.round as round4_0_1_, games0_.version as version5_0_1_ from chess_game games0_ where games0_.chess_tournament_id=?
+2021-10-23 15:15:43.344  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 3 ended: true 
+2021-10-23 15:15:43.345  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 5 ended: true 
+2021-10-23 15:15:43.345  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 6 ended: true 
+2021-10-23 15:15:43.345  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 4 ended: true 
+2021-10-23 15:15:43.345  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 2 ended: true 
+2021-10-23 15:15:43.345  INFO 18704 --- [           main] c.t.j.s.d.h.TournamentEndedEventHandler  : Game with id 1 ended: true 
+2021-10-23 15:15:43.356 DEBUG 18704 --- [           main] org.hibernate.SQL                        : update chess_tournament set end_date=?, name=?, start_date=?, version=? where id=? and version=?
+2021-10-23 15:15:43.362 DEBUG 18704 --- [           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, ended=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-10-23 15:15:43.365 DEBUG 18704 --- [           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, ended=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+</pre>
+
+
+
+<h2 class="wp-block-heading">Pitfalls When Working with Domain Events</h2>
+
+
+
+<p>As simple as working with domain events might seem, several pitfalls can cause Spring not to publish an event, not to call an observer, or not to persist the changes performed by an observer.</p>
+
+
+
+<h3 class="wp-block-heading">No save call = No events</h3>
+
+
+
+<p>Spring Data JPA only publishes the domain events of an entity if you call the <em>save </em>or <em>saveAll</em> method on its repository.</p>
+
+
+
+<p>But if you&#8217;re working with a managed entity, which usually is every entity object you fetched from the database during the current transaction, you don&#8217;t need to call any repository method to persist your changes. You only need to call a setter method on an entity object and change the attribute&#8217;s value. Your persistence provider, e.g., Hibernate, detects the change automatically and persists.</p>
+
+
+
+<h3 class="wp-block-heading">No transaction = No transactional observers</h3>
+
+
+
+<p>Spring only calls the transaction observers I showed you in the 2nd example if you commit or rollback a transaction. If your business code publishes an event without an active transaction, Spring will not call these observers.</p>
+
+
+
+<h3 class="wp-block-heading">AFTER_COMMIT / AFTER_ROLLBACK / AFTER_COMPLETION = New transaction required</h3>
+
+
+
+<p>If you implement a transactional observer and attach it to the transaction phase <em>AFTER_COMMIT</em>, <em>AFTER_ROLLBACK </em>or <em>AFTER_COMPLETION</em>, Spring executes the observer without an active transaction. Due to that, you can only read data from the database, but Spring Data JPA doesn&#8217;t persist any changes.</p>
+
+
+
+<p>You can avoid that problem by annotating your observer method with <em>@Transactional(propagation = Propagation.REQUIRES_NEW)</em>. That tells Spring Data JPA to start a new transaction before calling the observer and committing it afterward.</p>
+
+
+
+<pre class="wp-block-preformatted brush: java; gutter: true">@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void handleTournamentEndedEvent(TournamentEndedEvent event) {
+	log.info(&quot;===== Handling TournamentEndedEvent ====&quot;);
+
+	Optional&lt;ChessTournament&gt; chessTournament = chessTournamentRepository.findById(event.getTournamentId());
+	chessTournament.ifPresent(tournament -&gt; {
+		tournament.getGames().forEach(chessGame -&gt; {
+			chessGame.setEnded(true);
+			log.info(&quot;Game with id {} ended: {} &quot;, chessGame.getId(), chessGame.isEnded());
+		});
+	});
+}</pre>
+
+
+
+<p>When doing that, please keep in mind that the observer&#8217;s transaction is independent of the one used by the business code that triggered the event.</p>
+
+
+
+<h3 class="wp-block-heading">BEFORE_COMMIT = Change</h3>
+
+
+
+<p>If you attach your event observer to the <em>BEFORE_COMMIT</em> transaction phase, as I did in one of the previous examples, Spring executes the observer as part of your current transaction. Due to that, you have no guarantee that all changes have been flushed to the database, and you only see the flushed changes if you access the database using the same transaction.</p>
+
+
+
+<p>To prevent your observers from working on outdated information, you should use Spring Data JPA&#8217;s repositories to access your database. That&#8217;s what I did in the examples of this article. It gives you access to all unflushed changes in the current persistence context and ensures that your queries are part of the same transaction.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Domain events, as defined in Domain-Driven Design, describe an event that happened in the business domain of your application.</p>
+
+
+
+<p>Using Spring Data JPA, you can publish one or more domain events when calling the <em>save</em> or <em>saveAll </em>method of a repository. Spring then checks if the provided entity has a method annotated with a <em>@DomainEvents</em> annotation, calls it, and publishes the returned event objects.</p>
+
+
+
+<p>You can implement an observer for your domain events in the same way as any other event observer in Spring. You only need a method that expects a parameter of the type of your event class and annotate it with <em>@EventListener</em> or <em>@TransactionalEventListener</em>.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

@@ -1,0 +1,492 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Entity Views with Blaze Persistence – The better DTO projections?</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Entity Views with Blaze Persistence – The better DTO projections?</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Blaze Persistence’s Entity Views try to solve some of the most common complaints about DTO projections in JPA and Hibernate. Most developers know that DTOs improve the performance of their read operations. But they often avoid using them because it requires boilerplate code and often creates code that’s not easily maintainable. JPA’s DTO support also doesn’t provide a comfortable way to map lists of associated objects. Blaze Persistence’s Entity Views improve on all this by supporting interface-based DTO definitions and flexible, annotation-based mappings.</p>
+
+
+
+<p>To get the most out of this article, you need at least a basic understanding of Blaze Persistence&#8217;s Criteria API. If you&#8217;re new to Blaze Persistence, you should read my introduction to <a href="https://thorben-janssen.com/create-better-criteria-queries-with-blaze-persistence/">Blaze Persistence&#8217;s Criteria API</a> before you continue with this article.</p>
+
+
+
+<h2 class="wp-block-heading">Maven dependencies</h2>
+
+
+
+<p>Before using Blaze Persistence&#8217;s Entity Views, you need to add the required dependencies. </p>
+
+
+
+<p>Entity Views are an addon to Blaze Persistence Core. So, you first need to add the core dependencies and the integration with your JPA implementation. After that, you add the dependencies to Blaze Persistence Entity View.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;!-- Blaze Persistence Core --&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-core-api-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;compile&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-core-impl-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;runtime&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-integration-hibernate-6.0&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;runtime&lt;/scope&gt;
+&lt;/dependency&gt;
+
+&lt;!-- Blaze Persistence Entity Views --&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-entity-view-api-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;compile&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-entity-view-impl-jakarta&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;runtime&lt;/scope&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+	&lt;groupId&gt;com.blazebit&lt;/groupId&gt;
+	&lt;artifactId&gt;blaze-persistence-entity-view-processor&lt;/artifactId&gt;
+	&lt;version&gt;${version.blaze}&lt;/version&gt;
+	&lt;scope&gt;provided&lt;/scope&gt;
+&lt;/dependency&gt;
+</pre></div>
+
+
+<p>After you add these dependencies to your project, you can define your first entity views.</p>
+
+
+
+<h2 class="wp-block-heading">Defining and using a basic Entity View</h2>
+
+
+
+<p>Similar to a DTO object that you can use with plain JPA, an entity view is a wrapper for a set of attributes. In contrast to an entity projection, you can define use case-specific entity view projections that only includes the required information. This can provide huge performance benefits compared to a managed entity projection.</p>
+
+
+
+<p>The easiest way to define an entity view is to create an interface or abstract class and annotate it with <em>@EntityView</em>. Each entity view is based on an entity class, and you need to set a reference to that entity class as the parameter of the <em>@EntityView</em> annotation. Based on that entity reference and the method&#8217;s name, Blaze Persistence creates a mapping between each getter method of the entity view projection and the corresponding entity attribute.</p>
+
+
+
+<p>You can define multiple entity view projections for each entity class. That enables you to define use case specific entity views that only model the required attributes.</p>
+
+
+
+<p>Let&#8217;s take a look at a basic example that only contains the id and name of a player. The <em>ChessPlayerView </em>interface defines an entity view based on the <em>ChessPlayer </em>entity class. Its getter methods get mapped to entity attributes with matching names. E.g., the <em>getFirstName </em>method of the <em>ChessPlayerView </em>interface gets mapped to the <em>firstName </em>attribute of the <em>ChessPlayer</em> entity class.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@EntityView(ChessPlayer.class)
+public interface ChessPlayerView {
+    
+    @IdMapping
+    public Long getId();
+
+    public String getFirstName();
+
+    public String getLastName();
+}
+</pre></div>
+
+
+<p>An entity view can also include attributes from associated entities or the result of a database function. The following sections will show you how to define such a mapping. But for now, let’s keep it simple and concentrate on the&nbsp;<em>ChessPlayerView</em>&nbsp;entity view.</p>
+
+
+
+<p>The previous code snippet shows an <em>@IdMapping</em> annotation. It&#8217;s an optional annotation that defines which attribute identifies the view object. This enables you to use that entity view to be part of a collection mapping and to map collections themselves. </p>
+
+
+
+<p>After you have defined your entity view projection, you need to register your entity views before you can use them with <a href="https://thorben-janssen.com/create-better-criteria-queries-with-blaze-persistence/">Blaze Persistence&#8217;s Criteria API</a>. You do that by instantiating an <em>EntityViewConfiguration </em>object and adding your entity view definitions. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityViewConfiguration cfg = EntityViews.createDefaultConfiguration();
+cfg.addEntityView(ChessPlayerView.class);
+// add all entity view projections
+EntityViewManager evm = cfg.createEntityViewManager(cbf);
+</pre></div>
+
+
+<p>After that&#8217;s done, you create an <em>EntityViewManager</em> and use it to apply your entity view projection to Blaze Persistence&#8217;s criteria query. If you&#8217;re not already familiar with that API, you should check out <a href="/create-better-criteria-queries-with-blaze-persistence/">Blaze Persistence Criteria API guide</a>.</p>
+
+
+
+<p>The query in the following code snippet returns the chess players &#8220;Fabiano Caruana&#8221; and &#8220;Magnus Carlsen&#8221; as a <em>ChessPlayerView</em> projection. And as you can see in the code, the entity view projection and the query are independent of each other. I first create a <em>CriteriaBuilder </em>for a query that returns <em>ChessPlayer </em>entities and apply the <em>ChessPlayerView</em> entity view to it before executing the query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+CriteriaBuilder&lt;ChessPlayer&gt; cb = cbf.create(em, ChessPlayer.class)
+							         .whereOr()
+									      .whereAnd().where(&quot;firstName&quot;).eq(&quot;Fabiano&quot;)
+										      .where(&quot;lastName&quot;).eq(&quot;Caruana&quot;)
+									      .endAnd()
+									      .whereAnd().where(&quot;firstName&quot;).eq(&quot;Magnus&quot;)
+										      .where(&quot;lastName&quot;).eq(&quot;Carlsen&quot;)
+									      .endAnd()
+							         .endOr();
+CriteriaBuilder&lt;ChessPlayerView&gt; playerViewBuilder = evm.applySetting(EntityViewSetting.create(ChessPlayerView.class), cb);
+List&lt;ChessPlayerView&gt; playerViews = playerViewBuilder.getResultList();
+
+playerViews.forEach(p -&gt; log.info(p.getFirstName() + &quot; &quot; + p.getLastName()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>When you execute your query, Blaze Persistence adjusts the SELECT clause based on your projection. So, in this example, it generates a query that only selects the 3 attributes mapped by the <em>ChessPlayerView</em> class. These are each player&#8217;s id, first name, and last name. This gives you the same performance benefits as <a href="https://thorben-janssen.com/entities-dtos-use-projection/">JPA&#8217;s DTO projection</a> but based on a more comfortable mapping definition. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:34:35,966 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.firstName,
+        c1_0.lastName 
+    from
+        ChessPlayer c1_0 
+    where
+        (
+            c1_0.firstName=? 
+            and c1_0.lastName=?
+        ) 
+        or (
+            c1_0.firstName=? 
+            and c1_0.lastName=?
+        )
+12:34:35,966 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Fabiano]
+12:34:35,967 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Caruana]
+12:34:35,967 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;Magnus]
+12:34:35,967 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;VARCHAR] - &#91;Carlsen]
+12:34:35,971 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen
+12:34:35,971 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana
+</pre></div>
+
+
+<p>The entity view definition used in this example was very basic. It mapped each getter method to an entity attribute with a matching name. That&#8217;s good enough for many use cases, but Blaze Persistence&#8217;s entity view mapping is much more flexible.</p>
+
+
+
+<h2 class="wp-block-heading">Aggregating data in an EntityView</h2>
+
+
+
+<p>You can add a <em>@Mapping</em> annotation to the getter method to provide a JPQL snippet that Blaze Persistence will use for the mapping. This provides you with great flexibility. E.g., you can use it to reference an attribute with a different name or reference an attribute of an associated entity class.</p>
+
+
+
+<p>Let&#8217;s use it in an example. The <em>ChessGame </em>entity class models 2 associations to the <em>ChessPlayer </em>entity. The <em>playerWhite </em>association represents the player who played the white pieces, and the <em>playerBlack </em>association references the player with the black pieces. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessPlayer playerWhite;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessPlayer playerBlack;
+
+    ...
+}
+</pre></div>
+
+
+<p>If you want to show a list of games in your UI, you most likely don&#8217;t need the entire <em>ChessGame </em>and the 2 associated <em>ChessPlayer </em>objects. The <em>id </em>of the game and the names of both players should be all the information you need to show in such a list.</p>
+
+
+
+<p>Using the <em>@Mapping</em> annotation, you can easily define an entity view projection that only contains that information and doesn&#8217;t require your persistence layer to fetch any entity objects.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@EntityView(ChessGame.class)
+public interface SimpleChessGameView {
+    
+    @IdMapping
+    public Long getId();
+
+    @Mapping(&quot;playerWhite.firstName || ' ' || playerWhite.lastName&quot;)
+    public String getPlayerWhite();
+
+    @Mapping(&quot;playerBlack.firstName || ' ' || playerBlack.lastName&quot;)
+    public String getPlayerBlack();
+}
+</pre></div>
+
+
+<p>As you can see in the code snippet, I annotated the <em>getPlayerWhite</em> and <em>getPlayerBlack </em>methods with <em>@Mapping</em> annotations and provided 2 JPQL snippets. Each JPQL snippet traverses the to-one associations to a <em>ChessPlayer </em>entity, references their <em>firstName </em>and <em>lastName </em>attributes, and concatenates them to a <em>String</em>. </p>
+
+
+
+<p>This only shows a small subset of what you can do with a <em>@Mapping</em> annotation. If your getter method returns a collection type, you could even traverse a to-many association to another entity class and reference one of its attributes. As a rule of thumb, if your mapping doesn’t match the default behavior, you should first try solving it with a&nbsp;<em>@Mapping</em>&nbsp;annotation.</p>
+
+
+
+<p>After you have defined that entity projection, you can use it in the same way as in the previous example. You need a&nbsp;<em>CriteriaBuilder&nbsp;</em>that returns&nbsp;<em>ChessGame&nbsp;</em>entities, use it to define your query, and combine it with the&nbsp;<em>SimpleChessGameView&nbsp;</em>entity projection.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+CriteriaBuilder&lt;ChessGame&gt; cb = cbf.create(em, ChessGame.class);
+CriteriaBuilder&lt;SimpleChessGameView&gt; gameViewBuilder = evm.applySetting(EntityViewSetting.create(SimpleChessGameView.class), cb);
+List&lt;SimpleChessGameView&gt; gameViews = gameViewBuilder.getResultList();
+
+gameViews.forEach(g -&gt; log.info(g.getPlayerWhite() + &quot; - &quot; + g.getPlayerBlack()));
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>When you execute that query, you can see in the <a href="https://thorben-janssen.com/hibernate-logging-guide/">log output</a> that Blaze Persistence generated a query that uses the 2 associations to join the <em>ChessGame </em>and <em>ChessPlayer </em>tables. It selects the <em>id </em>of the <em>ChessGame </em>and concatenates the <em>firstName </em>and <em>lastName </em>of both players. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:34:17,440 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        p1_0.firstName||' '||p1_0.lastName,
+        p2_0.firstName||' '||p2_0.lastName 
+    from
+        ChessGame c1_0 
+    left join
+        ChessPlayer p1_0 
+            on p1_0.id=c1_0.playerBlack_id 
+    left join
+        ChessPlayer p2_0 
+            on p2_0.id=c1_0.playerWhite_id
+12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+</pre></div>
+
+
+<ul>
+<li></li>
+</ul>
+
+
+
+<h2 class="wp-block-heading">Mapping complex types</h2>
+
+
+
+<p>One of the most common complaints about JPA&#8217;s DTO mapping is that it only supports flat data structures. You can&#8217;t easily include a singular attribute of the type of another DTO or entity class. And the mapping of collection types is not supported at all.</p>
+
+
+
+<p>Blaze Persistence&#8217;s entity view mapping provides a huge improvement on that. You can use entities and entity views as attribute types, and you can even map to-many associations to a collection of entities or entity views. When doing that, please be aware that including managed entities in your entity view mappings can cause <a href="https://thorben-janssen.com/lazyinitializationexception/"><em>LazyInitializationException</em>s</a>, if any of its attributes are <a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">fetched lazily</a>.</p>
+
+
+
+<p>Let&#8217;s take a closer look at an example of a to-one and a to-many association to another entity view projection.</p>
+
+
+
+<h3 class="wp-block-heading">Mapping to-one associations to an entity view projection</h3>
+
+
+
+<p>In the previous example, we mapped each player&#8217;s first and last name to 1 attribute of the entity view. You could also map each player to the <em>ChessPlayerView </em>projection that I showed you in the first example. You do that by creating a <em>ChessGameView</em> entity view projection with the getter methods <em>ChessPlayerView getPlayerWhite() </em>and <em>ChessPlayerView getPlayerBlack()</em>. The <em>ChessGame </em>entity class defines the attributes <em>playerWhite </em>and <em>playerBlack</em>, which map <a style="" href="/ultimate-guide-association-mappings-jpa-hibernate/#manyToOne">many-to-one associations</a> to the <em>ChessPlayer </em>entity. Blaze Persistence will map the getter methods to those attributes and apply the entity view mapping to each of them.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@EntityView(ChessGame.class)
+public interface ChessGameView {
+    
+    @IdMapping
+    public Long getId();
+
+    public ChessPlayerView getPlayerWhite();
+
+    public ChessPlayerView getPlayerBlack();
+}
+</pre></div>
+
+
+<p>When you then create a query and assign the <em>ChessGameView </em>entity view projection to it, Blaze Persistence will generate a query that only fetches the required information from the database. As you can see in the following log output, that also includes the required JOIN clauses to connect the record in the <em>ChessGame</em> table with the 2 corresponding records in the <em>ChessPlayer </em>table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:33:44,669 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        c1_0.playerBlack_id,
+        p1_0.firstName,
+        p1_0.lastName,
+        c1_0.playerWhite_id,
+        p2_0.firstName,
+        p2_0.lastName 
+    from
+        ChessGame c1_0 
+    left join
+        ChessPlayer p1_0 
+            on p1_0.id=c1_0.playerBlack_id 
+    left join
+        ChessPlayer p2_0 
+            on p2_0.id=c1_0.playerWhite_id
+12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:33:44,675 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+</pre></div>
+
+
+<h3 class="wp-block-heading">Mapping to-many associations to entity view projections</h3>
+
+
+
+<p>You can map <a href="https://thorben-janssen.com/ultimate-guide-association-mappings-jpa-hibernate/">to-many associations</a> in almost the same way. You only need to change the return type of your getter methods to a collection type.</p>
+
+
+
+<p>So, an entity view projection for a player with all games they played might look like this:</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@EntityView(ChessPlayer.class)
+public interface ChessPlayerWithGamesView {
+    
+    @IdMapping
+    Long getId();
+
+    @Mapping(&quot;firstName || ' ' || lastName&quot;)
+    String getName();
+
+    List&lt;SimpleChessGameView&gt; getGamesWhite();
+
+    List&lt;SimpleChessGameView&gt; getGamesBlack();
+}
+</pre></div>
+
+
+<p>As you can see, mapping the <em>gamesWhite</em> and <em>gamesBlack </em>associations to a <em>List </em>of <em>SimpleChessGameView </em>entity view projections doesn&#8217;t require any annotations. Based on the method&#8217;s names, Blaze Persistence finds the corresponding entity attributes and maps each object to a <em>SimpleChessGameView</em> object. And if your projection doesn&#8217;t follow the default mapping conventions, you can add a <em>@Mapping</em> annotation to customize it.</p>
+
+
+
+<p>Let&#8217;s execute the following test case to give this mapping a try.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+CriteriaBuilder&lt;ChessPlayer&gt; cb = cbf.create(em, ChessPlayer.class);
+CriteriaBuilder&lt;ChessPlayerWithGamesView&gt; playerViewBuilder = evm.applySetting(EntityViewSetting.create(ChessPlayerWithGamesView.class), cb);
+List&lt;ChessPlayerWithGamesView&gt; playerViews = playerViewBuilder.getResultList();
+
+playerViews.forEach(p -&gt;  {
+							log.info(p.getName());
+							p.getGamesWhite().forEach(g -&gt; log.info(g.getPlayerWhite() + &quot; - &quot; + g.getPlayerBlack()));
+							p.getGamesBlack().forEach(g -&gt; log.info(g.getPlayerWhite() + &quot; - &quot; + g.getPlayerBlack()));
+						  }
+					);
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>As you can see in the following log output, Blaze Persistence doesn&#8217;t fetch any entities. It instead generates a query that only fetches the information required by the entity view projection. Even though that query might require several LEFT JOIN clauses, fetching only the required information with 1 statement is usually much faster than executing multiple queries to fetch a graph of entities with all their attributes.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+12:42:25,412 DEBUG &#91;org.hibernate.SQL] - 
+    select
+        c1_0.id,
+        g1_0.id,
+        p1_0.firstName||' '||p1_0.lastName,
+        p2_0.firstName||' '||p2_0.lastName,
+        g2_0.id,
+        p3_0.firstName||' '||p3_0.lastName,
+        p4_0.firstName||' '||p4_0.lastName,
+        c1_0.firstName||' '||c1_0.lastName 
+    from
+        ChessPlayer c1_0 
+    left join
+        ChessGame g1_0 
+            on c1_0.id=g1_0.playerBlack_id 
+    left join
+        ChessPlayer p1_0 
+            on p1_0.id=g1_0.playerBlack_id 
+    left join
+        ChessPlayer p2_0 
+            on p2_0.id=g1_0.playerWhite_id 
+    left join
+        ChessGame g2_0 
+            on c1_0.id=g2_0.playerWhite_id 
+    left join
+        ChessPlayer p3_0 
+            on p3_0.id=g2_0.playerBlack_id 
+    left join
+        ChessPlayer p4_0 
+            on p4_0.id=g2_0.playerWhite_id
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+</pre></div>
+
+
+<h2 class="wp-block-heading">Summary</h2>
+
+
+
+<p>When working with JPA implementations like Hibernate, DTO projections provide much better performance for read-only operations than entities. That&#8217;s because they avoid the management overhead of entity objects, and you can design them to only include the information required by your use case.</p>
+
+
+
+<p>Blaze Persistence&#8217;s entity view projection improves that in 2 ways:</p>
+
+
+
+<ol>
+<li>It offers an annotation-based mapping definition for your DTO classes. Yes, that&#8217;s right. As you saw in this article, an entity view is a DTO, not an entity. So, you avoid any management overhead, but you also can&#8217;t use it to implement write operations.</li>
+
+
+
+<li>An entity view projection doesn&#8217;t have to be a flat data structure. It can map to-one and to-many associations to one or more other entity view projections.</li>
+</ol>
+
+
+
+<p>Based on these 2 improvements, Blaze Persistence&#8217;s entity view projections provide the same benefits as JPA&#8217;s DTO projections but are much more flexible and easier to use.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

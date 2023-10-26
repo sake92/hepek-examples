@@ -1,0 +1,272 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Getting Started</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Getting Started</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>As a Java developer, you can choose between various frameworks to store your data in a relational database. If you&#8217;re looking for an object-relational mapping framework that follows DDD and is not very complex but still handles most of the standard CRUD operations for you, you should try <a href="https://spring.io/projects/spring-data-jdbc">Spring Data JDBC</a>.</p>
+
+
+
+<p>In his recent Expert Session in the <a href="/join-persistence-hub/">Persistence Hub</a>, Jens Schauder, the main developer of Spring Data JDBC, described it as an object-relational mapping framework without the complexity of JPA. JPA stands for Jakarta Persistence API, and its implementation Hibernate is the most popular persistence framework in the Java ecosystem. You can find many articles about both of them here on the blog. They provide lazy loading, automatic dirty checks, multiple caching layers, and many other highly sophisticated features that can help you build highly scalable persistence layers. But these features also require a good understanding of JPA and Hibernate and are often the reasons for bugs and performance problems.</p>
+
+
+
+<p>The goal of Spring Data JDBC is to avoid most of this complexity so that it&#8217;s easier to understand. Other frameworks automatically execute SQL statements if they detect a new or changed entity. They might also execute statements to get information from the database. Spring Data JDBC doesn&#8217;t do any of this. </p>
+
+
+
+<p>If you want to read an entity from the database, persist a new entity, or update an existing one, you need to call one of Spring Data JDBC&#8217;s repository methods. It then generates the required SQL statement and executes it. This might  require an additional line of code in your business code, but it puts you in control of all executed statements. </p>
+
+
+
+<p>You no longer need to wonder if or when your persistence layer interacts with the database. Spring Data JDBC only executes SQL statements when you call a repository method. It puts you in full control of your database interactions and, at the same time, allows you to focus on your business logic.</p>
+
+
+
+<h2 class="wp-block-heading">What Spring Data JDBC provides</h2>
+
+
+
+<p>Even though Spring Data JDBC tries to avoid the complexity you might know from other object-relational mapping (ORM) frameworks, it&#8217;s still an ORM framework. It provides a mapping between your Java classes and the tables in a relational database. As you will see later in this article, this mapping is based on several defaults, so you often only need to provide 1 annotation to define your entity class and its mapping to the underlying database table. But you can, of course, provide additional mapping information if your default mapping doesn&#8217;t fit your table model.</p>
+
+
+
+<p>Spring Data JDBC focuses on the concepts of aggregates and entities as they are defined in domain-driven design (DDD). An <a href="https://martinfowler.com/bliki/DDD_Aggregate.html">aggregate</a> is a cluster of entities that are treated as a single unit. All entities of an aggregate depend on the aggregate root. Based on these concepts, you can model unidirectional associations from the aggregate root to other entities within the same aggregate. And you can define references to other aggregates, which you can resolve via a repository.</p>
+
+
+
+<p>Like other Spring Data modules, Spring Data JDBC provides repositories that you can use to load and persist aggregates. They provide standard methods to fetch aggregates by their primary key, persist new ones, and update or remove existing ones. You can also use Spring Data&#8217;s popular derived query feature to let Spring Data JDBC generate a query based on the name of a repository method. </p>
+
+
+
+<h2 class="wp-block-heading">What Spring Data JDBC doesn&#8217;t provide</h2>
+
+
+
+<p>In contrast to JPA, Spring Data JDBC doesn&#8217;t manage your entity objects or uses a persistence context or 1st level cache. Due to that, it can&#8217;t perform any automatic dirty checks and can&#8217;t delay the execution of SQL statements. This might sound like a limitation compared to JPA, but it also makes your persistence layer and its database interactions easier to understand.</p>
+
+
+
+<p>Whenever you want to persist a new, or change or delete an existing entity or aggregate, you need to call the corresponding method on the repository. Spring Data JDBC then immediately executes the required SQL statement and returns the result.</p>
+
+
+
+<p>When you&#8217;re loading aggregates from the database, Spring Data JBC executes an SQL statement, maps the result to the defined projection, and returns it. It doesn&#8217;t get parts of or the entire result from any caches, and it doesn&#8217;t keep any references to the returned objects. That reduces the overhead and avoids a common pitfall in JPA, where you execute a query but get the result from your 1st level cache instead and don&#8217;t see the latest changes performed by a database trigger or native query.</p>
+
+
+
+<p>Lazy loading of associated entities is another feature that other ORM frameworks, e.g., Spring Data JPA, offer. Spring Data JDBC does not support that. It fetches the entire aggregate with all associated entities when you fetch an aggregate from the database. This makes it important that you familiarize yourself with the concept of aggregates and entities as defined in DDD. If you model it right, your aggregate is relatively small and concise, and you should be able to fetch it without causing performance problems.</p>
+
+
+
+<p>As mentioned earlier, Spring Data JDBC uses references to model an association between aggregates. The main difference between a reference to another aggregate and a modeled association to an entity within the same aggregate is that a reference doesn&#8217;t get automatically fetched. A reference represents the foreign key stored in the database. If you want to load the referenced aggregate, you can call one of Spring Data JDBC&#8217;s repository methods with the reference. Spring Data JDBC then executes an SQL statement and gets the referenced aggregate with all its entities from the database.</p>
+
+
+
+<p>OK, enough theory. Let&#8217;s take a look at a simple example that defines a simple aggregate and repository. This example will only give you a quick overview of using Spring Data JDBC. I will discuss each part in more detail in future articles.</p>
+
+
+
+<h2 class="wp-block-heading">Adding Spring Data JDBC to your project</h2>
+
+
+
+<p>If you&#8217;re using Spring Boot, it takes 2 steps to add Spring Data JDBC to your project. You first need to add a dependency to spring-boot-starter-data-jdbc and the JDBC driver of your database to the dependencies of your project.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: xml; title: ; notranslate" title="">
+&lt;dependency&gt;
+  &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+  &lt;artifactId&gt;spring-boot-starter-data-jdbc&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+&lt;dependency&gt;
+  &lt;groupId&gt;org.postgresql&lt;/groupId&gt;
+  &lt;artifactId&gt;postgresql&lt;/artifactId&gt;
+  &lt;scope&gt;runtime&lt;/scope&gt;
+&lt;/dependency&gt;
+</pre></div>
+
+
+<p>In the next step, you need to configure your database connection in your <em>application.properties</em> file.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+spring.datasource.url=jdbc:postgresql://localhost:5432/spring-data-jdbc
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+spring.datasource.driver-class-name=org.postgresql.Driver
+</pre></div>
+
+
+<p>After you do that, you can start using Spring Data JDBC. A typical first step is to model your aggregates and entity classes.</p>
+
+
+
+<h2 class="wp-block-heading">Defining your first aggregate with multiple entities</h2>
+
+
+
+<p>Aggregates are a group of entities. And Entities in Spring Data JDBC are simple POJOs that only require an attribute with an <em>@Id</em> annotation to be identified as an entity class. That makes their definition easy. </p>
+
+
+
+<p>The following 2 code snippets show the definition of a <em>ChessGame</em> aggregate that consists of the <em>ChessGame </em>entity class as the aggregate root and the <em>ChessMove </em>entity class.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessGame {
+
+	@Id
+	private Long id;
+	
+    private String playerWhite;
+
+    private String playerBlack;
+
+    private List&lt;ChessMove&gt; moves = new ArrayList&lt;&gt;();
+
+    // getter and setter methods
+}
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessMove {
+
+    private Integer moveNumber;
+
+    private MoveColor color;
+
+    private String move;
+
+    // getter and setter methods
+}
+</pre></div>
+
+
+<p>As you can see in the code snippet, I only annotated the <em>id</em> attribute of the <em>ChessGame</em> class with an <em>@Id</em> annotation. Spring Data JDBC then expects the primary key value to be managed by the database, e.g., by an auto-incremented column and returned in response to the SQL INSERT statement. I rely on Spring Data JDBC&#8217;s default mapping for all other attributes.</p>
+
+
+
+<p>That also includes the mapping of the one-to-many association from <em>ChessGame </em>to the <em>ChessMove </em>entities. In contrast to JPA, association mappings don&#8217;t require additional mapping annotations in Spring Data JDBC. That&#8217;s because it doesn&#8217;t support any bidirectional associations and many-to-many associations. A mapped association is always from the aggregate root to the dependent child entities, and these can either be one-to-one or one-to-many associations.</p>
+
+
+
+<p>A many-to-many association is always an association between 2 aggregates and gets mapped via references. I will explain this in more detail in a future article.</p>
+
+
+
+<p>Let&#8217;s create a repository for the <em>ChessGame </em>aggregate next.</p>
+
+
+
+<h2 class="wp-block-heading">Creating a repository</h2>
+
+
+
+<p>Like with all other Spring Data modules, you should define a repository for each aggregate and not for each entity class. The definition of such a repository is also consistent with other Spring Data modules. You create an interface that extends one of Spring Data&#8217;s standard repository interfaces and provide the entity class and the type of its primary key as type information. In this example, my <em>ChessGameRepository</em> extends Spring Data&#8217;s <em>CrudRepository</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessGameRepository extends CrudRepository&lt;ChessGame, Long&gt; {
+
+    List&lt;ChessGame&gt; findByPlayerBlack(String playerBlack);
+}
+</pre></div>
+
+
+<p>The CrudRepository defines a set of standard methods to persist new, update or remove existing aggregates, count or fetch all aggregates and fetch one aggregate by its primary key.</p>
+
+
+
+<p>In the previous example, I added the method <em>findByPlayerBlack</em>. It&#8217;s a derived query method. <a href="https://thorben-janssen.com/ultimate-guide-derived-queries-with-spring-data-jpa/">Like Spring Data JPA</a>, Spring Data JDBC generates a query based on the method name. In this case, it generates a query statement that selects all records in the <em>chess_game </em>table with a matching name for <em>playerBlack</em>.</p>
+
+
+
+<h2 class="wp-block-heading">Persisting and querying aggregates</h2>
+
+
+
+<p>After defining your aggregates and repositories, you can use them in your business code. Let&#8217;s persist a <em>ChessGame</em> with some <em>ChessMove</em>s first.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+ChessGame game = new ChessGame();
+game.setPlayerWhite(&quot;Thorben Janssen&quot;);
+game.setPlayerBlack(&quot;A strong player&quot;);
+
+ChessMove move1white = new ChessMove();
+move1white.setMoveNumber(1);
+move1white.setColor(MoveColor.WHITE);
+move1white.setMove(&quot;e4&quot;);
+game.getMoves().add(move1white);
+
+ChessMove move1Black = new ChessMove();
+move1Black.setMoveNumber(1);
+move1Black.setColor(MoveColor.BLACK);
+move1Black.setMove(&quot;e5&quot;);
+game.getMoves().add(move1Black);
+
+gameRepo.save(game);
+</pre></div>
+
+
+<p>As you can see, you don&#8217;t have to do anything specific to Spring Data JDBC. If you used Spring Data JPA or any other Spring Data module, this test case would look the same. That&#8217;s one of the great things about Spring Data.</p>
+
+
+
+<p>When you execute the code, you can see in the log output that Spring Data JDBC first persists a record in the <em>chess_game </em>table before it persists a record in the <em>chess_move </em>table for each <em>ChessMove </em>object. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-05-19 14:24:42.294 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-05-19 14:24:42.295 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_game&quot; (&quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?)]
+2022-05-19 14:24:42.338 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-05-19 14:24:42.338 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-05-19 14:24:42.346 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-05-19 14:24:42.346 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+</pre></div>
+
+
+<p>This shows that Spring Data JDBC handles an aggregate as a unit. When you persist the aggregate root, it automatically persists all associated entities.</p>
+
+
+
+<p>The same happens when you fetch an aggregate from the database. Let&#8217;s call the findByPlayerBlack method of the ChessGameRepository that we defined in the previous section. It returns a ChessGame entity, which is the aggregate root, and all associated entities. You can, of course, also use a different projection. I will show you how to do that in a future article.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessGame&gt; games = gameRepo.findByPlayerBlack(&quot;A strong player&quot;);
+games.forEach(g -&gt; log.info(g.toString()));
+</pre></div>
+
+
+<p>The log output shows that Spring Data JDBC first executed a query that returns all <em>ChessGame </em>entities played by a player with the black pieces whose name matches the provided bind parameter value. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2022-05-25 09:00:26.230 DEBUG 36564 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;player_black&quot; = ?]
+2022-05-25 09:00:26.267 DEBUG 36564 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-25 09:00:26.268 DEBUG 36564 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
+2022-05-25 09:00:26.281  INFO 36564 --- &#91;           main] com.thorben.janssen.TestQueryMethod      : ChessGame &#91;id=1, playerBlack=A strong player, playerWhite=Thorben Janssen, moves=&#91;ChessMove &#91;moveNumber=1, color=WHITE, move=e4], ChessMove &#91;moveNumber=1, color=BLACK, move=e5]]]
+</pre></div>
+
+
+<p>When it retrieves the query result and maps each record to a <em>ChessGame</em> object, Spring Data JDBC executes another query to get the associated <em>ChessMove</em> objects. This causes an n+1 select issue, and you should be careful about fetching aggregates if you only need some of its fields. In that case, it&#8217;s better to choose a different projection.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Spring Data JDBC is an object-relational mapping framework for relational databases that aims to avoid most of the complexity of other ORM frameworks. It does that by avoiding features like lazy loading, managed lifecycles of entity objects and caching. It instead puts the developer in control of all executed SQL statements. That makes it easier to predict when your persistence layer executes which SQL statements, but it also requires you to trigger all write and read operations.</p>
+
+
+
+<p>Working with Spring Data JDBC is very similar to working with other Spring Data modules. You define aggregates that consist of multiple entity objects and repositories. </p>
+
+
+
+<p>The implementation of an entity is very simple. You define a POJO and annotate the primary key attribute with <em>@Id</em>. Associations to other entities within the same aggregate are modeled as an attribute of the type of the associated entity class or a java.util.List of the associated entity class. If you want to reference another aggregate, you need to model it as a reference and not as an association.</p>
+
+
+
+<p>The definition of a repository follows the standard Spring Data pattern. You only need to define an interface that extends one of Spring Data&#8217;s standard repository interfaces, and Spring Data JDBC provides the required implementation. You can also add your own repository methods as derived queries or use the <em>@Query</em> annotation that you might know from other Spring Data modules.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

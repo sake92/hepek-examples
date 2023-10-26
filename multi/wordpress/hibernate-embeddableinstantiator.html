@@ -1,0 +1,195 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate 6 EmbeddableInstantiator – Instantiate embeddables your way</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate 6 EmbeddableInstantiator – Instantiate embeddables your way</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Embeddables are simple Java objects. They provide an easy way to define and group a set of attributes that become part of your entity. Developers often use them to create reusable mapping information and handle them using the same piece of business code.</p>
+
+
+
+<p>Unfortunately, the JPA specification and Hibernate until version 6.0.0, required your embeddable to have a default constructor. This might be OK if you’re fetching an entity from the database. Hibernate then automatically sets all attributes before providing the object to your business code. But a default constructor is not always a great idea. E.g., if some of the attributes are mandatory and you instantiate embeddables in your business code or frontend. In that case, a constructor that sets all mandatory attributes would be a much better fit.</p>
+
+
+
+<p>Since Hibernate 6.0.0, you can easily define how Hibernate instantiates and initializes your embeddable. You can use that, for example, to remove the requirement of a default constructor. I will show you how to do that in this article.</p>
+
+
+
+<h2 class="wp-block-heading">What&#8217;s an Embeddable and how to define it</h2>
+
+
+
+<p>An embeddable is a composition of multiple attributes and their mapping definitions. You can use it as an attribute type in one or more entity classes. When doing that, all attributes of the embeddable become part of the entity object and follow its lifecycle.</p>
+
+
+
+<p>Here you can see the definition of&nbsp;<em>Address</em>&nbsp;embeddable. If you want to rely on Hibernate’s default mapping for all its attributes, you only need to annotate the class with an<em>&nbsp;@Embeddabl</em>e annotation. If you’re not already familiar with this mapping, I recommend checking Hibernate’s documentation or watching the Embeddable lecture of the Advanced Hibernate courses included in the <a href="/join-persistence-hub/">Persistence Hub</a>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+public class Address {
+
+	private String street;
+	private String city;
+	private String postalCode;
+	
+    // getter and setter methods
+}
+</pre></div>
+
+
+<p>After you define the embeddable, you can use it as an attribute type in your entity classes and use it the same way as any other entity attribute. In this example, all attributes of the&nbsp;<em>Address&nbsp;</em>embeddable become part of the&nbsp;<em>Author</em>&nbsp;entity and get mapped to the&nbsp;<em>author&nbsp;</em>table.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+	
+	@Version
+	private int version;
+
+	private String firstName;
+
+	private String lastName;
+	
+	@Embedded
+	private Address address;
+
+    // getter and setter methods
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Implementing an <em>EmbeddableInstantiator</em></h2>
+
+
+
+<p>By default, Hibernate would call the default constructor of the <em>Address </em>embeddable. After that, it uses reflection to set all its attributes when you fetch an <em>Author </em>entity from the database. Since Hibernate 6, you can customize the instantiation of the embeddable by providing an <em>EmbeddableInstantiator</em>.</p>
+
+
+
+<p>Let&#8217;s use this to avoid the default constructor of the <em>Address </em>embeddable and use a constructor that sets all attributes instead. This requires 2 minor changes to the <em>Address</em> class. I need to add the additional constructor, and I need to register my <em>EmbeddableInstantiator</em>. You can do that by annotating the embeddable class or an entity attribute of your embeddable&#8217;s type with <em>@EmbeddableInstantiator</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Embeddable
+@EmbeddableInstantiator(AddressInstantiator.class)
+public class Address {
+
+	private String street;
+	private String city;
+	private String postalCode;
+	
+    public Address(String street, String city, String postalCode) {
+        this.street = street;
+        this.city = city;
+        this.postalCode = postalCode;
+    }
+
+    // getter methods
+}
+</pre></div>
+
+
+<p>In the next step, you have to implement the&nbsp;<em>EmbeddableInstantiator&nbsp;</em>interface. This isn’t complicated. The interface only defines 3 methods. One method checks if an object is an instance of the handled embeddable class. Another one checks if an object is of the same class as the embeddable. And the last method instantiates the embeddable object.</p>
+
+
+
+<p>Here you can see the <em>AddressInstantiator </em>class I referenced in the <em>@EmbeddableInstantiator</em> annotation in the previous code snippet.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class AddressInstantiator implements EmbeddableInstantiator {
+
+    Logger log = LogManager.getLogger(this.getClass().getName());
+
+    public boolean isInstance(Object object, SessionFactoryImplementor sessionFactory) {
+        return object instanceof Address;
+    }
+
+    public boolean isSameClass(Object object, SessionFactoryImplementor sessionFactory) {
+        return object.getClass().equals( Address.class );
+    }
+
+    public Object instantiate(Supplier&lt;Object&#91;]&gt; valuesAccess, SessionFactoryImplementor sessionFactory) {
+        final Object&#91;] values = valuesAccess.get();
+        // valuesAccess contains attribute values in alphabetical order
+        final String city = (String) values&#91;0];
+        final String postalCode = (String) values&#91;1];
+        final String street = (String) values&#91;2];
+        log.info(&quot;Instantiate Address embeddable for &quot;+street+&quot; &quot;+postalCode+&quot; &quot;+city);
+        return new Address( street, city, postalCode );
+    }
+
+}
+</pre></div>
+
+
+<p>As you can see in the code snippet, the&nbsp;<em>instantiate&nbsp;</em>method contains the code to instantiate and initialize the embeddable. The implementation of this method is, of course, application-specific.&nbsp;</p>
+
+
+
+<p>But there is one thing I need to point out. The method parameter&nbsp;<em>Supplier&lt;Object[]&gt; valuesAccess</em>&nbsp;contains the attribute values selected from the database in the alphabetical order of their attribute names. In the code snippet, you can see that I get the 3 values from the&nbsp;<em>Supplier</em>. I assign them to named variables and cast each of them to String. This mapping might cause maintainability issues in the future but it at least makes the code better understandable. If you have a better idea for this, I would love to read about it in the comments.</p>
+
+
+
+<h2 class="wp-block-heading">Using an <em>Embeddable </em>with custom <em>EmbeddableInstantiator</em> </h2>
+
+
+
+<p>After you have defined and registered the <em>EmbeddableInstantiator</em>, you can use your embeddable in the same way as any other embeddable.</p>
+
+
+
+<p>You can use it as an attribute type on one of your entity classes and annotate the attribute with <em>@Embedded</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class Author {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+	
+	@Version
+	private int version;
+
+	private String firstName;
+
+	private String lastName;
+	
+	@Embedded
+	private Address address;
+
+	...
+}
+</pre></div>
+
+
+<p>After that, you can use the attribute like any other attribute in your business code.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+Author a = new Author();
+a.setFirstName(&quot;firstName&quot;);
+a.setLastName(&quot;lastName&quot;);
+
+Address home = new Address(&quot;homeStreet&quot;, &quot;homeCity&quot;, &quot;12345&quot;);
+a.setAddress(home);
+
+em.persist(a);
+</pre></div>
+
+
+<p>When I execute this code, you can see in the log output that Hibernate mapped all attributes of the <em>Address</em> embeddable to the <em>Author </em>table and used the <em>AddressInstantiator </em>to instantiate the <em>Address </em>object.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>As you saw in this article, the&nbsp;<em>EmbeddableInstantiator</em>&nbsp;contract introduced in Hibernate 6 gives you more flexibility when working with embeddables. It gives you full control over the instantiation and initialization of your embeddable objects. You can use this for various things. You could perform additional business logic or transform or calculate attributes values before instantiating the embeddable. Or you can avoid the default constructor and call a constructor that fully initializes your embeddable object instead.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

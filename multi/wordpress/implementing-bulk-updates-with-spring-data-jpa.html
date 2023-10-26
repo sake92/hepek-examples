@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Implementing Bulk Updates with Spring Data JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Implementing Bulk Updates with Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>When using Spring Data JPA, most developers are used to letting Spring handle almost all database operations. That&#8217;s especially the case for all update operations. Thanks to JPA&#8217;s entity mappings and the managed lifecycle of all entity objects, you only need to change an attribute of an entity object. Everything else happens automatically.</p>
+
+
+
+<p>But having a good, automated solution for the most common use cases doesn&#8217;t mean it&#8217;s the ideal solution for all use cases. JPA&#8217;s and Spring Data JPA&#8217;s handling of update operations is a good example of that. The default handling is great if you only need to update a few entities. Your persistence provider automatically detects changes to all managed entity objects. For each changed object, it then executes an SQL UPDATE statement. Unfortunately, this is a very inefficient approach if you need to update a huge number of entities. It often causes the execution of several dozen or even hundreds of SQL UPDATE statements.</p>
+
+
+
+<p>This is a general problem when using JPA. Still, especially users of Spring Data JPA are surprised when I tell them about this and show them that even a call of the&nbsp;<em>saveAll&nbsp;</em>method on their <a href="/what-is-spring-data-jpa-and-why-should-you-use-it/#1_No-code_Repositories">repository</a> doesn&#8217;t avoid these statements. You can see that when I execute the following code snippet.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessGame&gt; chessGames = chessGameRepository.findAllByChessTournamentId(1L);
+chessGames.forEach(chessGame -&gt; chessGame.setRound(5));
+chessGameRepository.saveAll(chessGames);
+</pre></div>
+
+
+<p>After activating my <a href="https://thorben-janssen.com/hibernate-logging-guide/">recommended development configuration for Hibernate</a>, you can see in the log output that Spring Data JPA and Hibernate executed an SQL UPDATE statement for each entity object.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2021-11-06 18:40:38.992 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : select chessgame0_.id as id1_0_, chessgame0_.chess_tournament_id as chess_to5_0_, chessgame0_.date as date2_0_, chessgame0_.player_black_id as player_b6_0_, chessgame0_.player_white_id as player_w7_0_, chessgame0_.round as round3_0_, chessgame0_.version as version4_0_ from chess_game chessgame0_ left outer join chess_tournament chesstourn1_ on chessgame0_.chess_tournament_id=chesstourn1_.id where chesstourn1_.id=?
+2021-11-06 18:40:39.068 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.073 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.076 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.078 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.081 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.084 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.091  INFO 47820 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2170500 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    2541500 nanoseconds spent preparing 7 JDBC statements;
+    17256100 nanoseconds spent executing 7 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+}
+</pre></div>
+
+
+<p>My test database only contains a few record. Due to that the inefficient handling of the update operation doesn&#8217;t cause a huge performance problem. But that often drastically changes if you deploy this code to production and execute it using a bigger database.</p>
+
+
+
+<p>You have 2 options to improve the handling of update operations:</p>
+
+
+
+<ul><li>You can activate JDBC batching to execute the SQL UPDATE statements more efficiently or</li><li>You can provide your own update statement that performs the required changes in 1 step.</li></ul>
+
+
+
+<p>Even though it might not seem like that, both options are a valid solution to improve the performance of your write operations. Reducing the number of executed statements, of course, is the more efficient approach. But that&#8217;s not always possible and sometimes requires a huge refactoring. In these cases, you should use JDBC batching to make the execution of these statements as efficient as possible. </p>
+
+
+
+<p>I&#8217;ll show you how to implement both options in this article. Let&#8217;s start with JDBC batching. It&#8217;s the easiest and least invasive change.</p>
+
+
+
+<h2 class="wp-block-heading">Activating JDBC Batching</h2>
+
+
+
+<p>JDBC batching is a feature provided by the JDBC driver of your database. Your persistence provider, in most cases Hibernate, only makes it easier to use, and Spring Data JPA benefits from that. </p>
+
+
+
+<p>The general idea of JDBC batching is simple. Instead of executing one statement after the other, the JDBC driver groups multiple, identical statements with their bind parameter values into one batch and sends them to the database. This reduces the number of database roundtrips. It also enables the database to process the statements more efficiently. </p>
+
+
+
+<p>You can use JDBC batching for SQL INSERT, UPDATE and DELETE statements. In this article, we will focus on update operations. Most applications using Spring Data JPA benefit the most from activating JDBC batching for them.</p>
+
+
+
+<p>JDBC batching is deactivated by default. You can activate it in your <a href="/configuring-spring-data-jpa-with-spring-boot/"><em>application.properties</em> file</a> by setting the property <em>spring.jpa.properties.hibernate.jdbc.batch_size</em>. This configures the maximum size of your JDBC batches.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+spring.jpa.properties.hibernate.jdbc.batch_size = 20
+spring.jpa.properties.hibernate.order_updates=true
+</pre></div>
+
+
+<p>And you should also set the property&nbsp;<em>spring.jpa.properties.hibernate.order_updates</em>&nbsp;to&nbsp;<em>true</em>. That tells Hibernate to order the statements before executing them. Ordering the statements ensures that Hibernate executes all identical update statements that only differ in the provided bind parameter values after each other. That&#8217;s important because the JDBC driver closes and executes the batch when you perform a different statement, e.g., an update on a different database table. By ordering the statements, you enable the JDBC driver to group them in a JDBC batch and use the configured batch size as efficiently as possible.</p>
+
+
+
+<p>Let&#8217;s use the described configuration to execute the same code as in the previous example. In the logged session metrics, you can then see that Hibernate executes 2 statements and a JDBC batch instead of the previous 7 statements.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2021-11-06 18:54:11.959 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : select chessgame0_.id as id1_0_, chessgame0_.chess_tournament_id as chess_to5_0_, chessgame0_.date as date2_0_, chessgame0_.player_black_id as player_b6_0_, chessgame0_.player_white_id as player_w7_0_, chessgame0_.round as round3_0_, chessgame0_.version as version4_0_ from chess_game chessgame0_ left outer join chess_tournament chesstourn1_ on chessgame0_.chess_tournament_id=chesstourn1_.id where chesstourn1_.id=?
+2021-11-06 18:54:12.033 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.037 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.038 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.039 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.039 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.040 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.054  INFO 27696 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2280100 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    1944400 nanoseconds spent preparing 2 JDBC statements;
+    3043700 nanoseconds spent executing 1 JDBC statements;
+    6991100 nanoseconds spent executing 1 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Provide your own update statement</h2>
+
+
+
+<p>If you can define an update statement that performs all the required changes, it&#8217;s better to define a custom modifying query in your repository instead of activating JDBC batching. Using Spring Data JPA, you can do that by defining a method on your repository interface and annotating it with a <em>@Query</em> and a <em>@Modifying</em> annotation.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessGameRepository extends JpaRepository&lt;ChessGame, Long&gt; {
+
+    @Query(value = &quot;UPDATE ChessGame SET round = :round&quot;)
+    @Modifying
+    int updateTournamentRound(int round);
+}
+
+</pre></div>
+
+
+<p>The <em>@Query</em> annotation enables you to define your own query. I explained that annotation in great detail in my <a href="/spring-data-jpa-query-annotation/">Ultimate Guide to custom queries with Spring Data JPA</a>. As you can see in the code snippet, the defined statement doesn&#8217;t have to be a SELECT statement. You can also use it to define an INSERT, UPDATE or DELETE statement.</p>
+
+
+
+<p>When working with JPA&#8217;s <em>EntityManager</em>, the required code to execute a modifying query slightly differs from the code that executes a SELECT statement. Because of that, you need to tell Spring Data JPA that you provided a modifying statement as the value of the <em>@Query</em> annotation. You can do that by annotating your repository method with a <em>@Modifying</em> annotation. Spring Data JPA then provides the required code to execute your INSERT, UPDATE or DELETE statement.</p>
+
+
+
+<p>After you defined the method that executes the UPDATE statement, you can use it in your business code in the same way as you call any other repository method.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+chessGameRepository.updateTournamentRound(5);
+</pre></div>
+
+
+<p>When you execute this code, you can see in the log output that Hibernate only executed the provided UPDATE statement. In this example, the statement updates all records in my&nbsp;<em>ChessGame&nbsp;</em>table. But you could, of course, add a WHERE clause that limits the update to a specific set of records. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+2021-11-06 19:49:56.021 DEBUG 41720 --- &#91;           main] org.hibernate.SQL                        : update chess_game set round=?
+2021-11-06 19:49:56.040  INFO 41720 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2200000 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    2048300 nanoseconds spent preparing 1 JDBC statements;
+    2668100 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    21200 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>This time, Spring Data JPA and Hibernate only executed 1 JDBC statement instead of the multiple statements and JDBC batches executed in the previous examples.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>JPA&#8217;s and Spring Data JPA&#8217;s detection and handling of changed entity objects make implementing your persistence layer very easy. But it can cause performance issues if one of your use cases needs to update a huge number of database records. In that case, generating and updating an SQL UPDATE statement for each record will slow down your application.</p>
+
+
+
+<p>You can reduce the performance impact of this inefficiency by activating JDBC batching. This groups multiple, identical statements and their bind parameter values into a batch and sends them to the database. That reduces the number of database roundtrips and enables your database to process the statements more efficiently.</p>
+
+
+
+<p>If you can express all update operations in 1 statement, you can avoid the performance problem entirely by implementing a modifying query. You do that by defining a method on your repository and annotating it with a <em>@Query</em> and a <em>@Modifying</em> annotation. The <em>@Query </em>annotation enables you to provide your own update statement. The <em>@Modifying</em> annotation tells Spring Data JPA to execute it as modifying operation.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

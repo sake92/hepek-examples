@@ -1,0 +1,757 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>6 Performance Pitfalls when using Spring Data JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>6 Performance Pitfalls when using Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Thanks to its ease of use, Spring Data JPA is an incredibly popular persistence framework. If developers have something to complain about, they usually criticize object-relational mapping in general or the risk of performance problems. And while you can, of course, criticize the concept of object-relational mapping, you shouldn&#8217;t blame Spring Data JPA for your application&#8217;s performance problems. Because in almost all cases, that&#8217;s not Spring Data JPA&#8217;s fault. These problems are usually caused by your application misusing features or avoiding important performance optimizations.</p>
+
+
+
+<p>In this article, I will show you the 6 most common performance pitfalls when using Spring Data JPA and how to avoid them. Not all of these pitfalls are specific to Spring Data JPA. Some of them are caused by the underlying JPA implementation, e.g., Hibernate or EclipseLink. For the scope of this article, I expect that you&#8217;re using Spring Data JPA with Hibernate.</p>
+
+
+
+<h2 class="wp-block-heading">Pitfall 1: Don&#8217;t monitor database operations during development</h2>
+
+
+
+<p>When you decide to use Spring Data JPA to implement your persistence layer, you run into the 1st performance pitfall before you write your first line of code. And you will suffer from it until you finally fix it. But don’t worry. You can fix it easily and in any phase of your project.</p>
+
+
+
+<p>I’m talking about monitoring all database operations during development. Without paying close attention to all the SQL statements Spring Data JPA is executing, it’s almost impossible to recognize potential performance issues during development. And that’s because the performance impact of any inefficiency depends on the amount and structure of your data. When using a small test database, these inefficiencies are often hardly recognizable. But that drastically changes when you deploy your application to production.</p>
+
+
+
+<p>If you want to dive deeper into this topic, I recommend reading my article about my <a href="/spring-data-jpa-logging/">recommended logging configuration for Spring Data JPA</a>. Or watch my Expert Session on Spring Data JPA performance tuning available in the <a href="/join-persistence-hub/">Persistence Hub</a>. Both get into much more detail than I can do in this part of this post. Here I can only give you a quick summary of what you should do to monitor your database operations.</p>
+
+
+
+<p>Spring Data JPA only acts as a small layer on top of a JPA implementation, e.g., Hibernate. Hibernate is responsible for all SQL statements. Due to that, it&#8217;s also the system we need to configure to learn about all executed database operations. </p>
+
+
+
+<p>There are 2 things you should do to get a good overview of all the database operations Hibernate performs:</p>
+
+
+
+<ol><li>set the property <em>spring.jpa.properties.hibernate.generate_statistics</em> in your <em>application.properties</em> file to <em>true </em>and</li><li>activate debug logging for <em>org.hibernate.stat</em> and <em>org.hibernate.SQL</em>.</li></ol>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+# Recommended logging configuration
+spring.jpa.properties.hibernate.generate_statistics=true
+
+logging.level.root=INFO
+logging.level.org.hibernate.stat=DEBUG
+logging.level.org.hibernate.SQL=DEBUG
+</pre></div>
+
+
+<p>Let&#8217;s use this configuration and execute the code in the following code snippet. <em>ChessPlayer </em>is a simple entity class, and <em>playerRepo </em>is a typical <em>JpaRepository </em>provided by Spring Data JPA.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+ChessPlayer player = new ChessPlayer();
+player.setFirstName(&quot;Thorben&quot;);
+player.setLastName(&quot;Janssen&quot;);
+playerRepo.save(player);
+</pre></div>
+
+
+<p>In your log file, you can then see a paragraph of Session Metrics that summarize all the operations Hibernate performed and the 2 executed SQL statements.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:45:18 DEBUG 3720 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+10:45:18 DEBUG 3720 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+10:45:18  INFO 3720 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2885900 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    502400 nanoseconds spent preparing 2 JDBC statements;
+    7977700 nanoseconds spent executing 2 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    21197400 nanoseconds spent executing 1 flushes (flushing a total of 1 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>Based on this information, you can quickly check if your persistence layer executed any unexpected operations and decide if you need to take a closer look at it.</p>
+
+
+
+<h2 class="wp-block-heading">Pitfall 2: Calling the <em>saveAndFlush()</em> method to persist updates</h2>
+
+
+
+<p>Another typical performance pitfall is to call the <em>saveAndFlush </em>method provided by Spring Data JPA&#8217;s <em>JpaRepository</em> to persist an update of a changed entity object. It prevents your JPA implementation from using internal optimizations and forces unnecessary flushes of the entire persistence context. And to make it even worse, you don&#8217;t need to call the <em>saveAndFlush </em>method to persist an update.</p>
+
+
+
+<p>As I explained in my guide to <a href="/entity-lifecycle-model/">JPA&#8217;s lifecycle model</a>, all entity objects have a lifecycle state. If you fetched an entity object from the database or persisted a new one, it has the lifecycle state managed. That means your JPA implementation knows this object and automatically persists all changes you perform on it.</p>
+
+
+
+<p>To get the best performance, you should let your JPA implementation decide when it persists these changes. By default, it flushes the persistence context before executing a query and committing the transaction. During the flush operation, it checks if any managed entity object has been changed, generates the required SQL UPDATE statements, and executes it.</p>
+
+
+
+<p>Let&#8217;s take a quick look at an example. The following code gets all <em>ChessPlayer</em> objects from the database and changes their <em>firstName </em>attribute. As you can see, I don&#8217;t call any method on my <em>playerRepo </em>to persist these changes. But as you can see in the log output, Hibernate executes an SQL UPDATE statement for every ChessPlayer object to persist the changed <em>firstName</em>. Hibernate does that automatically for all managed entities that have changed since you fetched them from the database.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessPlayer&gt; players = playerRepo.findAll();
+players.forEach(player -&gt; {
+	log.info(&quot;########################&quot;);
+	log.info(&quot;Updating &quot; + player.getFirstName() + &quot; &quot; + player.getLastName());
+	player.setFirstName(&quot;Changed&quot;);
+});
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_
+10:46:20 DEBUG 13868 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 40ms, rows: 4
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Magnus Carlsen
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Jorden van Foreest
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Anish Giri
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Fabiano Caruana
+10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 4 updates, 0 deletions to 4 objects
+10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:46:20  INFO 13868 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2796500 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    447400 nanoseconds spent preparing 5 JDBC statements;
+    13539100 nanoseconds spent executing 5 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    48408600 nanoseconds spent executing 1 flushes (flushing a total of 4 entities and 12 collections);
+    28500 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>The log output also shows that Hibernate executed 5 JDBC statements and only 1 flush operation for 4 entities and 12 collections.</p>
+
+
+
+<p>That changes if I call the <em>saveAndFlush </em>method after changing the <em>firstName</em> attribute of an entity object. As I explained in a <a href="/spring-data-jpa-save-saveandflush-and-saveall/">recent article</a>, the <em>saveAndFlush</em> method calls the <em>flush </em>method on JPA&#8217;s <em>EntityManager</em>, which forces a flush operation for the entire persistence context.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessPlayer&gt; players = playerRepo.findAll();
+players.forEach(player -&gt; {
+	log.info(&quot;########################&quot;);
+	log.info(&quot;Updating &quot; + player.getFirstName() + &quot; &quot; + player.getLastName());
+	player.setFirstName(&quot;Changed&quot;);
+	playerRepo.saveAndFlush(player);
+});
+</pre></div>
+
+
+<p>The log output clearly shows that the calls of the <em>saveAndFlush </em>method drastically increased the amount of work Hibernate had to perform. Instead of 1 flush operation for 4 entities and 12 collections, it now executed 5 flush operations for 20 entities and 60 collections. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 50ms, rows: 4
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Magnus Carlsen
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Jorden van Foreest
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Anish Giri
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Fabiano Caruana
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 0 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2944500 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    632200 nanoseconds spent preparing 5 JDBC statements;
+    16237100 nanoseconds spent executing 5 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    74224500 nanoseconds spent executing 5 flushes (flushing a total of 20 entities and 60 collections);
+    30800 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>But even though Hibernate performed 5 times as many flushes as in the previous example, it still only executed 5 JDBC statements, and the result is exactly the same. That shows that the 4 additional flushes caused by the&nbsp;<em>saveAndFlush</em>&nbsp;method only slowed down the application but didn’t provide any benefit.</p>
+
+
+
+<p>So, please don&#8217;t call any <em>save </em>method, especially not the <em>saveAndFlush </em>method, to persist a change on a managed entity object. </p>
+
+
+
+<h2 class="wp-block-heading">Pitfall 3: Use the wrong strategy to generate&nbsp;unique primary key values</h2>
+
+
+
+<p>Most persistence layers let the database generate unique primary key values when persisting new entity objects. That&#8217;s a very efficient approach in general. But you should be familiar with 2 common performance pitfalls. </p>
+
+
+
+<h3 class="wp-block-heading">Using database sequences</h3>
+
+
+
+<p>If your database supports sequences, you should use <em>GenerationType.SEQUENCE</em>. Using a database sequence enables Hibernate to separate the generation of primary key values from the execution of the SQL INSERT statement and to apply further performance optimizations. </p>
+
+
+
+<p>And when you do that, please also make sure to define a sequence generator. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = &quot;player_gen&quot;)
+    @SequenceGenerator(name = &quot;player_gen&quot;, sequenceName = &quot;player_sequence&quot;, allocationSize = 50)
+	private Long id;
+	
+	...
+}
+</pre></div>
+
+
+<p>In Hibernate 5, this activates a performance optimization based on the configured&nbsp;<em>allocationSize</em>. By default, it’s set to 50. It tells Hibernate that the sequence gets incremented by 50. That means it can increment the retrieved value 49 times before it has to request a new one.</p>
+
+
+
+<p>So, if you’re persisting 10 new&nbsp;<em>ChessPlayer&nbsp;</em>entities, Hibernate doesn’t have to request a new value from the database sequence for every entity.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+for (int i=0; i&lt;10; i++) {
+	ChessPlayer player = new ChessPlayer();
+	player.setFirstName(&quot;Player&quot;+i);
+	player.setLastName(&quot;Player&quot;+i);
+	playerRepo.save(player);
+}
+</pre></div>
+
+
+<p>It only requests 2 values to initialize its id generator before incrementing the retrieved values to get unique primary keys.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33  INFO 34680 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2636300 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    792600 nanoseconds spent preparing 12 JDBC statements;
+    26535100 nanoseconds spent executing 12 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    48818000 nanoseconds spent executing 1 flushes (flushing a total of 10 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<h3 class="wp-block-heading">Using autoincremented columns</h3>
+
+
+
+<p>If your database doesn’t support sequences, you usually want to use an autoincremented column instead. In that case, you should annotate your primary key attribute with <em>@GeneratedValue(strategy=GenerationType.IDENTITY)</em>. That tells Hibernate to use the autoincremented column to generate the primary key value.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	...
+}
+</pre></div>
+
+
+<p>But if you&#8217;re annotating your primary key attribute with <em>@GeneratedValue(<em>strategy=</em>GeneratonType.AUTO)</em> and use a database that doesn&#8217;t support sequences, Hibernate will use the inefficient <em>TABLE</em> strategy instead. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessPlayer {
+
+	@Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+	
+	...
+}
+</pre></div>
+
+
+<p>The&nbsp;<em>TABLE</em>&nbsp;strategy uses a database table and pessimistic locks to generate unique primary key values. This can cause severe scalability issues.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18  INFO 3152 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    6000000 nanoseconds spent acquiring 11 JDBC connections;
+    175900 nanoseconds spent releasing 10 JDBC connections;
+    13378500 nanoseconds spent preparing 30 JDBC statements;
+    101236600 nanoseconds spent executing 30 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    49539500 nanoseconds spent executing 1 flushes (flushing a total of 10 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>So, better avoid <em>GenerationType.AUTO</em> and define your preferred generation strategy explicitly. And if your application needs to support different RDBMS, you can follow the suggestions I explained in a <a href="/database-portability-with-hibernate/">previous article</a>.</p>
+
+
+
+<h2 class="wp-block-heading">Pitfall 4: Use eager fetching</h2>
+
+
+
+<p>Another typical performance pitfall is the fetching of associated entities. The JPA specification defines 2 <em><a href="https://thorben-janssen.com/entity-mappings-introduction-jpa-fetchtypes/">FetchTypes </a></em>that define when your persistence provider shall fetch associated entities:</p>
+
+
+
+<ul><li>All associations using <em>FetchType.EAGER</em> have to get immediately initialized when an entity gets fetched from the database. That is the default for all to-one associations.</li><li>The initialization of all associations using <em>FetchType.LAZY</em> gets delayed until your code accesses the association for the first time. That is the default for all to-many associations.</li></ul>
+
+
+
+<p>Fetching an association takes time and often requires the execution of additional SQL statements. So, you should avoid fetching any associations you don’t use. You can achieve that by using the default <em>FetchType </em>for all to-many associations and setting the fetch attribute of all to-one associations to <em>FetchType.LAZY</em>. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessPlayer playerWhite;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    private ChessPlayer playerBlack;
+	
+	...
+}
+</pre></div>
+
+
+<p>And after you do that, you should follow the recommendations in Pitfall 5 to efficiently fetch your associations when needed.</p>
+
+
+
+<h2 class="wp-block-heading" id="queryFetching">Pitfall 5: Don&#8217;t specify which association you want to fetch</h2>
+
+
+
+<p>If you follow my previous advice and use&nbsp;<em>FetchType.LAZY</em>&nbsp;for all associations, you will most likely run into 2 problems:</p>
+
+
+
+<ol><li>If you try to access a lazily fetched association outside the current persistence context, Hibernate throws a <a href="https://thorben-janssen.com/lazyinitializationexception/">LazyInitializationException</a>.</li><li>When your code accesses a lazily fetched association for the 1st time, your persistence provider needs to execute a query to fetch the associated records from the database. This often causes the execution of many additional queries and is known as the n+1 select issue.</li></ol>
+
+
+
+<p>Luckily, you can easily fix both problems. You only need to define which associations you want to initialize when fetching an entity object from the database. Using Spring Data JPA, the easiest way to do that is to annotate your repository method with <em>@EntityGraph</em> or provide your own query with a JOIN FETCH clause. Let&#8217;s take a closer look at both options.</p>
+
+
+
+<h3 class="wp-block-heading">Using an @EntityGraph annotation</h3>
+
+
+
+<p>An entity graph is a JPA feature that enables you to define which associations your persistence provider shall initialize when fetching an entity from the database. Based on the JPA specification, you can define it using the <a href="https://thorben-janssen.com/jpa-21-entity-graph-part-1-named-entity/"><em>@NamedEntityGraph</em> annotation</a> or the <a href="https://thorben-janssen.com/jpa-21-entity-graph-part-2-define/">EntityGraph API</a>.</p>
+
+
+
+<p>Spring Data JPA adds another option. You can annotate a repository method with&nbsp;<em>@EntityGraph</em>&nbsp;and set a comma-separated list of attribute names as the value of its&nbsp;<em>attributePaths&nbsp;</em>attribute. Spring Data JPA uses that information to define an entity graph that tells your persistence provider to fetch the referenced attributes and adds it to the query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessPlayerRepository extends JpaRepository&lt;ChessPlayer, Long&gt; {
+
+    @EntityGraph(attributePaths = &quot;tournaments&quot;)
+    List&lt;ChessPlayer&gt; findPlayersWithTournamentsBy();
+}
+</pre></div>
+
+
+<p>Let&#8217;s use the <em>findPlayersWithTournamentsBy</em> method in a simple test case and check how it affects the generated SQL statement.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessPlayer&gt; players = playerRepo.findPlayersWithTournamentsBy();
+log.info(&quot;List chess players and their tournaments&quot;);
+players.forEach(player -&gt; {log.info(player.getFirstName() + &quot; &quot; + player.getLastName() 
+								+ &quot; played in &quot; + player.getTournaments().size() + &quot; tournaments&quot;);});
+</pre></div>
+
+
+<p>As you can see in the log output, the SQL query not only selects all columns mapped by the <em>ChessPlayer</em> entity class. It also fetches all columns mapped by the <em>ChessTournament</em> class. Based on this data, Hibernate can instantiate <em>ChessPlayer</em> objects and initialize their <em>tournaments </em>attribute with a <em>Set </em>of <em>ChessTournament </em>entity objects. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+14:02:22 DEBUG 23240 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_0_, chesstourn2_.id as id1_2_1_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_, chesstourn2_.end_date as end_date2_2_1_, chesstourn2_.name as name3_2_1_, chesstourn2_.start_date as start_da4_2_1_, chesstourn2_.version as version5_2_1_, tournament1_.players_id as players_2_4_0__, tournament1_.tournaments_id as tourname1_4_0__ from chess_player chessplaye0_ left outer join chess_tournament_players tournament1_ on chessplaye0_.id=tournament1_.players_id left outer join chess_tournament chesstourn2_ on tournament1_.tournaments_id=chesstourn2_.id
+14:02:22 DEBUG 23240 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 49ms, rows: 4
+14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : List chess players and their tournaments
+14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Magnus Carlsen played in 1 tournaments
+14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Jorden van Foreest played in 1 tournaments
+14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Anish Giri played in 1 tournaments
+14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Fabiano Caruana played in 1 tournaments
+14:02:22  INFO 23240 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2615500 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    257900 nanoseconds spent preparing 1 JDBC statements;
+    4431900 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    23523900 nanoseconds spent executing 1 flushes (flushing a total of 5 entities and 14 collections);
+    27900 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>The&nbsp;<em>ChessPlayer&nbsp;</em>objects and the association to the&nbsp;<em>tournaments</em>&nbsp;are now fully initialized, managed entity objects. You can use them in the same way as any other entity object.</p>
+
+
+
+<h3 class="wp-block-heading">Using a JOIN FETCH clause</h3>
+
+
+
+<p>You can achieve the same by <a href="https://thorben-janssen.com/spring-data-jpa-query-annotation/">annotating your repository method with <em>@Query</em></a> and providing a <a href="https://thorben-janssen.com/jpql/">JPQL</a> query with a JOIN FETCH or LEFT JOIN FETCH clause.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessPlayerRepository extends JpaRepository&lt;ChessPlayer, Long&gt; {
+
+    @Query(&quot;SELECT p FROM ChessPlayer p LEFT JOIN FETCH p.tournaments&quot;)
+    List&lt;ChessPlayer&gt; findPlayersWithJoinedTournamentsBy();
+}
+</pre></div>
+
+
+<p>A JOIN FETCH clause tells your persistence provider to fetch the association. The main difference to the previously discussed <em>@EntityGraph</em> annotation is that the JOIN FETCH clause is part of the query statement. Due to that, you can&#8217;t use it with a <a href="https://thorben-janssen.com/ultimate-guide-derived-queries-with-spring-data-jpa/">derived query</a>.</p>
+
+
+
+<p>Let&#8217;s call the <em>findPlayersWithJoinedTournamentsBy</em> method in the same test case as we used in the previous example.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+List&lt;ChessPlayer&gt; players = playerRepo.findPlayersWithJoinedTournamentsBy();
+log.info(&quot;List chess players and their tournaments&quot;);
+players.forEach(player -&gt; {log.info(player.getFirstName() + &quot; &quot; + player.getLastName() 
+								+ &quot; played in &quot; + player.getTournaments().size() + &quot; tournaments&quot;);});
+</pre></div>
+
+
+<p>As you can see in the log output, Hibernate generated the same SQL query as in the <em>@EntityGraph</em> example. It fetches all columns mapped by the <em>ChessPlayer </em>and <em>ChessTournament</em> entity classes and joins the corresponding database tables.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+14:10:28 DEBUG 37224 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_0_, chesstourn2_.id as id1_2_1_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_, chesstourn2_.end_date as end_date2_2_1_, chesstourn2_.name as name3_2_1_, chesstourn2_.start_date as start_da4_2_1_, chesstourn2_.version as version5_2_1_, tournament1_.players_id as players_2_4_0__, tournament1_.tournaments_id as tourname1_4_0__ from chess_player chessplaye0_ left outer join chess_tournament_players tournament1_ on chessplaye0_.id=tournament1_.players_id left outer join chess_tournament chesstourn2_ on tournament1_.tournaments_id=chesstourn2_.id
+14:10:28 DEBUG 37224 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: SELECT p FROM ChessPlayer p LEFT JOIN FETCH p.tournaments, time: 40ms, rows: 4
+14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : List chess players and their tournaments
+14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Magnus Carlsen played in 1 tournaments
+14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Jorden van Foreest played in 1 tournaments
+14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Anish Giri played in 1 tournaments
+14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Fabiano Caruana played in 1 tournaments
+14:10:28  INFO 37224 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2188400 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    276000 nanoseconds spent preparing 1 JDBC statements;
+    3880300 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    18662200 nanoseconds spent executing 1 flushes (flushing a total of 5 entities and 14 collections);
+    25600 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Pitfall 6: Using complex interface projections</h2>
+
+
+
+<p>If you don’t want to change the data you fetched from the database, you should use a DTO instead of an entity projection. That enables you to only fetch the necessary information and avoids the entity’s managed lifecycle overhead.</p>
+
+
+
+<p>The most popular way to do that using Spring Data JPA is to use an <a href="/spring-data-jpa-query-projections/#DTOs_as_Interfaces">interface projection</a>. You only need to define an interface with a set of getter methods. Spring Data JPA then generates an implementation of that interface, creates a query that only selects the required entity attributes, and maps each row of the query result to an object of the generated interface implementation.</p>
+
+
+
+<p>When using this kind of projection, you should only include basic attributes. Because as soon as you include an attribute that represents an association or use Spring&#8217;s Expression Language, you&#8217;re losing the performance benefits of a DTO projection. Instead of generating a query that only selects the required entity attributes, Spring Data JPA then generates a query that selects the entire entity object. Based on the entity projection, it then provides you an interface representation that only gives you access to the defined getter methods. So, in the end, you get an entity projection&#8217;s entire performance overhead and a DTO projection&#8217;s limitations.</p>
+
+
+
+<p>Let&#8217;s take a look at an example. The&nbsp;<em>TournamentIntf&nbsp;</em>interface defines a getter method for the tournament&#8217;s&nbsp;<em>name&nbsp;</em>and List of&nbsp;<em>PlayerNameIntf&nbsp;</em>interfaces.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface TournamentIntf {
+    
+    String getName();
+    List&lt;PlayerNameIntf&gt; getPlayers();
+}
+</pre></div>
+
+
+<p>And each instance of the <em>PlayerNameIntf </em>interface represents a player&#8217;s first and last name.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface PlayerNameIntf {
+    
+    String getFirstName();
+    String getLastName();
+}
+</pre></div>
+
+
+<p>Based on these interface definitions, you would expect that the following repository method only selects the name of the tournament and the first and last names of all players.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessTournamentRepository extends JpaRepository&lt;ChessTournament, Long&gt;{
+    
+    TournamentIntf findByName(String name);
+}
+</pre></div>
+
+
+<p>But if you execute the following simple test case, you can see in the log output that Spring Data JPA first selected a <em>ChessTournament</em> entity object and then fetched all associated <em>ChessPlayer</em> entities.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+TournamentIntf tournament = tournamentRepo.findByName(&quot;Tata Steel Chess Tournament 2021&quot;);
+
+log.info(tournament.getName());
+for (PlayerNameIntf player : tournament.getPlayers()) {
+	log.info(&quot; - &quot; + player.getLastName() + &quot;, &quot; + player.getFirstName());
+}
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+15:47:06 DEBUG 38200 --- &#91;           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_, chesstourn0_.end_date as end_date2_2_, chesstourn0_.name as name3_2_, chesstourn0_.start_date as start_da4_2_, chesstourn0_.version as version5_2_ from chess_tournament chesstourn0_ where chesstourn0_.name=?
+15:47:06 DEBUG 38200 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessTournament as generatedAlias0 where generatedAlias0.name=:param0, time: 48ms, rows: 1
+15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Tata Steel Chess Tournament 2021
+15:47:06 DEBUG 38200 --- &#91;           main] org.hibernate.SQL                        : select players0_.tournaments_id as tourname1_4_0_, players0_.players_id as players_2_4_0_, chessplaye1_.id as id1_1_1_, chessplaye1_.birth_date as birth_da2_1_1_, chessplaye1_.first_name as first_na3_1_1_, chessplaye1_.last_name as last_nam4_1_1_, chessplaye1_.version as version5_1_1_ from chess_tournament_players players0_ inner join chess_player chessplaye1_ on players0_.players_id=chessplaye1_.id where players0_.tournaments_id=?
+15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Carlsen, Magnus
+15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - van Foreest, Jorden
+15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Giri, Anish
+15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Caruana, Fabiano
+15:47:06  INFO 38200 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    2701900 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    536500 nanoseconds spent preparing 2 JDBC statements;
+    9898900 nanoseconds spent executing 2 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    24970800 nanoseconds spent executing 1 flushes (flushing a total of 5 entities and 14 collections);
+    26400 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>The best way to avoid this is to use a simple DTO definition that doesn’t include any associations. In this example, you could define 2 separate queries. The first one gets the name of the&nbsp;<em>ChessTournament,&nbsp;</em>and the second one fetches the names of all players.</p>
+
+
+
+<p>Or, if you still want to keep the <em>List getPlayers()</em> method in your <em>TournamentIntf </em>interface, you should follow my advice from the previous section. If you define a custom query that selects <em>ChessTournament </em>entities and uses a JOIN FETCH clause to fetch the associated <em>players</em>, you get all the required information with 1 query. And you can still use <em>TournamentIntf </em>as the return type of your repository method. Spring Data JPA will map the selected <em>ChessTournament </em>objects to the generated implementations of the <em>TournamentIntf </em>interface.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public interface ChessTournamentRepository extends JpaRepository&lt;ChessTournament, Long&gt;{
+
+    @Query(&quot;SELECT t FROM ChessTournament t LEFT JOIN FETCH t.players WHERE t.name = :name&quot;)
+    TournamentIntf findByNameWithPlayers(String name);
+}
+
+</pre></div>
+
+
+<p>If you change the previous test case to call this repository method, you can see in the log output that Spring Data JPA now only executed 1 query.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+15:58:04 DEBUG 27036 --- &#91;           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_0_, chessplaye2_.id as id1_1_1_, chesstourn0_.end_date as end_date2_2_0_, chesstourn0_.name as name3_2_0_, chesstourn0_.start_date as start_da4_2_0_, chesstourn0_.version as version5_2_0_, chessplaye2_.birth_date as birth_da2_1_1_, chessplaye2_.first_name as first_na3_1_1_, chessplaye2_.last_name as last_nam4_1_1_, chessplaye2_.version as version5_1_1_, players1_.tournaments_id as tourname1_4_0__, players1_.players_id as players_2_4_0__ from chess_tournament chesstourn0_ left outer join chess_tournament_players players1_ on chesstourn0_.id=players1_.tournaments_id left outer join chess_player chessplaye2_ on players1_.players_id=chessplaye2_.id where chesstourn0_.name=?
+15:58:04 DEBUG 27036 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: SELECT t FROM ChessTournament t LEFT JOIN FETCH t.players WHERE t.name = :name, time: 65ms, rows: 4
+15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Tata Steel Chess Tournament 2021
+15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - van Foreest, Jorden
+15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Carlsen, Magnus
+15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Caruana, Fabiano
+15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Giri, Anish
+15:58:04  INFO 27036 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+    3167300 nanoseconds spent acquiring 1 JDBC connections;
+    0 nanoseconds spent releasing 0 JDBC connections;
+    656400 nanoseconds spent preparing 1 JDBC statements;
+    6869500 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    34136400 nanoseconds spent executing 1 flushes (flushing a total of 5 entities and 14 collections);
+    36300 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+</pre></div>
+
+
+<p>Your application&#8217;s performance still suffers from selecting too many columns and the management overhead of the internally used entity projection. But you at least avoided executing additional queries to fetch the required associations.</p>
+
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Spring Data JPA gained popularity because it makes implementing your persistence layer easy. But you still need to understand how Spring Data JPA, your JPA implementation, and your database work. Ignoring that is one of the most common reasons for performance problems, and it will ensure that you run into the performance pitfalls explained in this article.</p>
+
+
+
+<p>To avoid most of these pitfalls, you should first activate a good logging configuration. Hibernate’s statistics give you an overview of all executed operations, and the logged SQL statement show you how you interact with your database.</p>
+
+
+
+<p>When implementing update operations, you should avoid calling the <em>saveAndFlush </em>method provided by Spring Data JPA&#8217;s <em>JpaRepository</em>. And when you&#8217;re generating primary key values for new entities, you should prefer <em>GenerationType.SEQUENCE</em> and define a <em>@SequenceGenerator</em> to benefit from Hibernate&#8217;s performance optimization. If your database doesn&#8217;t support sequences, you should explicitly define <em>GenerationType.IDENTITY</em> to prevent Hibernate from using the inefficient table strategy. </p>
+
+
+
+<p>To get the best performance when reading entity objects, you should define the&nbsp;<em>FetchType&nbsp;</em>of all associations as LAZY. If your use case needs to traverse an association between your entities, you should tell your persistence provider to initialize the association when fetching the entity object. To do that, you can add a JOIN FETCH clause to your query or annotate your repository method with an&nbsp;<em>@EntityGraph</em>&nbsp;annotation.</p>
+
+
+
+<p>And if you’re using DTO projections for your read-only operations, you should avoid complex, interface-based DTO projections that include associations. They force Spring Data JPA to use an entity projection instead of a DTO projection.</p>
+
+
+
+<p> </p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

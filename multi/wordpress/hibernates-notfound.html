@@ -1,0 +1,249 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s @NotFound Annotation – How to use it and a better alternative</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s @NotFound Annotation – How to use it and a better alternative</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>Some table models don&#8217;t enforce their foreign key references by a foreign key constraint. This is a bad practice that often leads to foreign key references that point to non-existing records. When Hibernate tries to resolve such a broken reference, it throws an <em>EntityNotFoundException</em>. You should, therefore, define a foreign key constraint for every foreign key reference. </p>
+
+
+
+<p>But after someone decided against using foreign key constraints and deployed the application to production, that decision is often hard to reverse. And that puts you in the position where you need to build a persistence layer that can handle <a href="/associations/">associations</a> that reference a non-existing record.</p>
+
+
+
+<p>By default, Hibernate throws an exception if it tries to resolve a broken foreign key reference. The best way to fix this is, of course, to clean up your database and fix your foreign key references. But if that&#8217;s not an option, you need to decide if you: </p>
+
+
+
+<ul><li>want to handle an <em>EntityNotFoundException </em>every time you call the getter method of a potentially broken association or</li><li>use Hibernate&#8217;s <em>@NotFound</em> annotation to tell Hibernate to fetch a potentially broken association and ignore it or throw a <em>FetchNotFoundException </em>when instantiating your entity object.</li></ul>
+
+
+
+<h2 class="wp-block-heading">Hibernate&#8217;s <em>@NotFound</em> annotation</h2>
+
+
+
+<p>Annotating an association with Hibernate&#8217;s proprietary <em>@NotFound</em> annotation has 3 effects:</p>
+
+
+
+<ol><li>Hibernate assumes that the table model doesn&#8217;t define a foreign key constraint for that association and doesn&#8217;t generate one if it <a href="/standardized-schema-generation-data-loading-jpa-2-1/">generates the table model</a>.</li><li>You define if Hibernate shall ignore broken foreign key references or throw an exception. </li><li>Hibernate fetches the association eagerly, even if you <a href="/entity-mappings-introduction-jpa-fetchtypes/">set its FetchType to <em>LAZY</em></a>.</li></ol>
+
+
+
+<p>I will get into more details about <a href="#noLazy">Hibernate’s enforced eager fetching</a> in the next section. First, let’s take a closer look at the <em>@NotFound</em> annotation and the 2 supported <em>NotFoundAction</em>s.</p>
+
+
+
+<h3 class="wp-block-heading"><em>NotFoundAction.EXCEPTION</em></h3>
+
+
+
+<p>You can define the <em>NotFoundAction.EXCEPTION</em> by annotating the attribute that maps your association with <em>@NotFound</em> and setting the <em>action </em>attribute to <em>EXCEPTION</em> or keeping it empty. This tells Hibernate to throw a <em>FetchNotFoundException</em> if it can&#8217;t resolve the foreign key reference. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+   
+    @ManyToOne(fetch = FetchType.LAZY)
+    @NotFound(action = NotFoundAction.EXCEPTION)
+    private ChessPlayer playerBlack;
+	
+	...
+}
+</pre></div>
+
+
+<p>This behavior might seem very similar to the one you get without annotating your association with <em>@NotFound</em>. But there are 2 differences:</p>
+
+
+
+<ul><li>Hibernate throws a <em>FetchNotFoundException</em> instead of an <em>EntityNotFoundException</em>.</li><li>Hibernate ignores the configured <em>FetchType</em> and tries to <a href="#noLazy">fetch the association eagerly</a> to validate the foreign key reference. Due to that, Hibernate throws the <em>FetchNotFoundException</em> when it instantiates the entity object and not when you use the association for the first time. This makes the <em>FetchNotFoundException </em>a little easier to handle.</li></ul>
+
+
+
+<p>You can see all of this in the log output when I use the mapping in a test case that fetches a <em>ChessGame </em>entity with a broken foreign key reference. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessGame game = em.find(ChessGame.class, 10L);
+log.info(game.getPlayerWhite() + &quot; - &quot; + game.getPlayerBlack());
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+
+<p>Hibernate joins and selects the <em>playerBlack</em> association in the query that fetches the <em>ChessGame</em> entity and throws a <em>FetchNotFoundException</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:04:20,702 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,p1_0.id,p1_0.birthDate,p1_0.firstName,p1_0.lastName,p1_0.version,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 left join ChessPlayer p1_0 on p1_0.id=c1_0.playerBlack_id where c1_0.id=?
+17:04:20,712 ERROR &#91;com.thorben.janssen.sample.TestSample] - org.hibernate.FetchNotFoundException: Entity `com.thorben.janssen.sample.model.ChessPlayer` with identifier value `100` does not exist
+</pre></div>
+
+
+<h3 class="wp-block-heading"><em>NotFoundAction.IGNORE</em></h3>
+
+
+
+<p>Setting the <em>NotFoundAction </em>to <em>IGNORE </em>enables you to handle the broken foreign key reference in your business code. Instead of throwing an exception if it can&#8217;t resolve the foreign key reference, Hibernate sets the association attribute to <em>null</em>. Due to that, you can no longer distinguish if an association wasn&#8217;t set or if it&#8217;s referencing a record that no longer exists. You need to decide for your application, if you want to handle these 2 cases differently. If that&#8217;s the case, you can&#8217;t use <em>NotFoundAction.IGNORE</em>.</p>
+
+
+
+<p>Like in the previous example, you need to annotate the attribute that <a href="/ultimate-guide-association-mappings-jpa-hibernate/">maps the association</a> with Hibernate&#8217;s <em>@NotFound</em> annotation. But this time, you also need to set the action to <em>NotFoundAction.IGNORE</em>.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+   
+    @ManyToOne(fetch = FetchType.LAZY)
+    @NotFound(action = NotFoundAction.IGNORE)
+    private ChessPlayer playerBlack;
+	
+	...
+}
+</pre></div>
+
+
+<p>When you then execute the same test case as in the previous section, Hibernate no longer throws an exception and initializes the <em>playerBlack </em>attribute with <em>null</em> instead.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+EntityManager em = emf.createEntityManager();
+em.getTransaction().begin();
+
+ChessGame game = em.find(ChessGame.class, 10L);
+log.info(game.getPlayerWhite() + &quot; - &quot; + game.getPlayerBlack());
+
+em.getTransaction().commit();
+em.close();
+</pre></div>
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:23:24,203 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,p1_0.id,p1_0.birthDate,p1_0.firstName,p1_0.lastName,p1_0.version,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 left join ChessPlayer p1_0 on p1_0.id=c1_0.playerBlack_id where c1_0.id=?
+17:23:24,223 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+17:23:24,237 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0] - null
+</pre></div>
+
+
+<h2 class="noLazy wp-block-heading">No lazy fetching with <em>@NotFound</em></h2>
+
+
+
+<p>I mentioned earlier that annotating an association with <em>@NotFound</em> changes the fetching behavior to F<em>etchType.EAGER</em>. That&#8217;s even the case if you <a href="/best-practices-many-one-one-many-associations-mappings/">explicitly set <em>FetchType.LAZY</em></a> in your association mapping, like I did in the previous examples.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+   
+    @ManyToOne(fetch = FetchType.LAZY)
+    @NotFound(action = NotFoundAction.IGNORE)
+    private ChessPlayer playerBlack;
+	
+	...
+}
+</pre></div>
+
+
+<p>The reason for that is simple. Hibernate needs to use <em>FetchType.EAGER</em> to ensure that it only initializes the association attribute if it references an existing entity object. </p>
+
+
+<figure class="wp-block-embed-youtube wp-block-embed is-type-video is-provider-youtube"><div class="lyte-wrapper" style="width:420px;max-width:100%;margin:5px;"><div class="lyMe hidef" id="WYL_Zs8Dse_Mpyk"><div id="lyte_Zs8Dse_Mpyk" data-src="https://thorben-janssen.com/wp-content/plugins/wp-youtube-lyte/lyteCache.php?origThumbUrl=%2F%2Fi.ytimg.com%2Fvi%2FZs8Dse_Mpyk%2Fmaxresdefault.jpg" class="pL"><div class="tC"><div class="tT"></div></div><div class="play"></div><div class="ctrl"><div class="Lctrl"></div><div class="Rctrl"></div></div></div><noscript><a href="https://youtu.be/Zs8Dse_Mpyk" rel="nofollow"><img src="https://thorben-janssen.com/wp-content/plugins/wp-youtube-lyte/lyteCache.php?origThumbUrl=https%3A%2F%2Fi.ytimg.com%2Fvi%2FZs8Dse_Mpyk%2F0.jpg" alt="" width="420" height="216" /><br />Watch this video on YouTube</a></noscript></div></div><div class="lL" style="max-width:100%;width:420px;margin:5px;"><br/><span class="lyte_disclaimer"><a href="http://bit.ly/2cUsid8">Follow me on YouTube</a> to not miss any new videos.</span></div><figcaption></figcaption></figure>
+
+
+<p>If you don’t annotate your association attribute with <em>@NotFound</em>, Hibernate expects that a foreign key constraint validates the foreign key reference. Due to that, it only needs to check if a foreign key reference is set. If that&#8217;s the case, it knows that it will be able to resolve the reference and initializes the entity attribute with a <a href="https://thorben-janssen.com/hibernate-proxies/">proxy object</a>. When you use that proxy for the first time, Hibernate will execute an SQL statement to resolve the foreign key reference.</p>
+
+
+
+<p>If you annotate the association attribute with <em>@NotFound</em>, Hibernate can no longer trust the foreign key reference. Without a foreign key constraint, the reference might be broken. Hibernate, therefore, can&#8217;t simply use the foreign key value to instantiate a proxy object. It first needs to check if the reference is valid. Otherwise, it would need to set the association attribute to null. </p>
+
+
+
+<p>Performing this additional query can create performance problems. But there is only a minimal performance difference between checking the foreign key reference and trying to fetch the associated entity. Due to that, the Hibernate team decided to use eager fetching for all associations annotated with <em>@NotFound</em>.</p>
+
+
+
+<h2 class="wp-block-heading">An often better alternative</h2>
+
+
+
+<p>The enforced eager fetching of Hibernate&#8217;s <em>@NotFound</em> mapping can cause performance problems. Even though the implementation might be more complex, it&#8217;s often better not to annotate your association with <em>@NotFound</em> and handle the broken foreign key reference in your business code. </p>
+
+
+
+<p>Hibernate then instantiates a proxy object if the foreign key reference is set and tries to resolve it when using the proxy object for the first time.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+17:35:52,212 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 where c1_0.id=?
+17:35:52,241 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+17:35:52,255 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+17:35:52,260 ERROR &#91;com.thorben.janssen.sample.TestSample] - jakarta.persistence.EntityNotFoundException: Unable to find com.thorben.janssen.sample.model.ChessPlayer with id 100
+</pre></div>
+
+
+<p>If the foreign key reference is broken, Hibernate throws an <em>EntityNotFoundException</em>, which you need to handle in your business code. The obvious downside of this approach is that you need to handle this exception in various places in your business code. </p>
+
+
+
+<p>You need to decide if you’re willing to do that to get the performance benefits of <em>FetchType.LAZY</em> or, if you prefer the ease of use provided by Hibernate’s <em>@NotFound</em> mapping.</p>
+
+
+
+<h3 class="wp-block-heading">Deactivate the foreign key constraint</h3>
+
+
+
+<p>If you decide to handle the broken foreign key references in your business code and use Hibernate to generate your table model, you need to tell Hibernate not to generate the foreign key constraint.</p>
+
+
+
+<hr class="wp-block-separator"/>
+
+
+
+<p><strong>ATTENTION: You should only use this if you&#8217;re working on a legacy application that doesn&#8217;t use foreign key constraints. If you still have the choice, you should always use a foreign key constraint to enforce your foreign key references!</strong></p>
+
+
+
+<hr class="wp-block-separator"/>
+
+
+
+<p>You can deactivate the generation of foreign key constraints by annotating your association with a <em>@JoinColumn</em> annotation and setting the <em>foreignKey</em> attribute to <em>@ForeignKey(ConstraintMode.NO_CONSTRAINT)</em>. This annotation only affects Hibernate&#8217;s generation of the table model and has no effect at runtime.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Entity
+public class ChessGame {
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    private ChessPlayer playerBlack;
+	
+	...
+}
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>Your table model should validate all foreign key references by a foreign key constraint. This ensures that new foreign key references can only reference existing records and that you can&#8217;t remove a record that&#8217;s still referenced.</p>
+
+
+
+<p>Unfortunately, some architects and development teams decide to avoid foreign key constraints. Sooner or later, these databases contain broken foreign key references, which you need to handle in your entity mappings or business code.</p>
+
+
+
+<p>If you want to handle them in your entity mappings, you can annotate an association with <em>@NotFound</em>. That tells Hibernate not to expect or generate any foreign key constraint. Hibernate then fetches the association eagerly to check the validity of the foreign key reference. The handling of a broken reference depends on your <em>NotFoundAction</em>. Hibernate can either ignore it and initialize the attribute with <em>null </em>or throw an <em>EntityFetchException</em>.</p>
+
+
+
+<p>If you prefer to handle the broken foreign key references in your business code, you can annotate your association attribute with <em>@JoinColumn</em> and define the <em>ConstraintMode.NO_CONSTRAINT</em>. Hibernate then doesn&#8217;t generate a foreign key constraint when generating the table model. At runtime, it doesn&#8217;t check the foreign key reference until the generated proxy object tries to resolve it.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>

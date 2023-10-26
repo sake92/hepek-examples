@@ -1,0 +1,135 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Use a sequence to generate primary keys</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Use a sequence to generate primary keys</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<p>By default, Spring Data JDBC expects the database to provide a primary key value for every new record. The easiest way to achieve that is to use an autoincremented column. We used that in the <a href="https://thorben-janssen.com/spring-data-jdbc-getting-started/">Introduction to Spring Data JDBC</a> guide. But what do you do if your table model uses a database sequence instead?</p>
+
+
+
+<p>Spring Data JDBC can, of course, handle that as well. But it requires some extra code. Instead of relying on the default handling, you need to get the value from the database sequence and set the primary key attribute before the entity gets written to the database. The best way to do that is to implement a <em>BeforeConvertCallback</em>.</p>
+
+
+
+<h2 class="wp-block-heading">Implementing a <em>BeforeConvertCallback </em>to get a sequence value</h2>
+
+
+
+<p>You might already know the callback mechanism from other Spring Data modules. The Entity Callback API was introduced in Spring Data Commons in version 2.2, and it’s the officially recommended way to modify entity objects before or after certain lifecycle events. When using Spring Data JDBC, you can use that mechanism to automate the retrieval of a sequence value when persisting a new entity object.</p>
+
+
+
+<p>Let&#8217;s use this approach to automatically get a primary key value from a database sequence before persisting the <em>ChessGame </em>aggregate. </p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+public class ChessGame {
+
+	@Id
+	private Long id;
+	
+    private String playerWhite;
+
+    private String playerBlack;
+
+    private List&lt;ChessMove&gt; moves = new ArrayList&lt;&gt;();
+
+    ...
+}
+</pre></div>
+
+
+<p>Without any additional changes, the following test case would persist the <em>ChessGame</em> aggregate and expect that the database provides a primary key value. As mentioned earlier, this is usually achieved by modeling the primary key column as an autoincremented column.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+ChessGame game = new ChessGame();
+game.setPlayerWhite(&quot;Thorben Janssen&quot;);
+game.setPlayerBlack(&quot;A strong player&quot;);
+
+ChessMove move1white = new ChessMove();
+move1white.setMoveNumber(1);
+move1white.setColor(MoveColor.WHITE);
+move1white.setMove(&quot;e4&quot;);
+game.getMoves().add(move1white);
+
+ChessMove move1Black = new ChessMove();
+move1Black.setMoveNumber(1);
+move1Black.setColor(MoveColor.BLACK);
+move1Black.setMove(&quot;e5&quot;);
+game.getMoves().add(move1Black);
+
+gameRepo.save(game);
+</pre></div>
+
+
+<p>If you want to use a different approach to generate a primary value, you can set it using a <em>BeforeConvertCallback</em>. Spring Data JDBC will execute the callback before it converts a <em>ChessGame</em> aggregate into a database change. </p>
+
+
+
+<p>As you can see in the following code snippet, the implementation of such a callback is simple. You implement the <em>BeforeConvertCallback </em>interface and provide the class of your aggregate root as a type parameter.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
+@Component
+public class GetSequenceValueCallback implements BeforeConvertCallback&lt;ChessGame&gt; {
+
+    private Logger log = LogManager.getLogger(GetSequenceValueCallback.class);
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public GetSequenceValueCallback(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public ChessGame onBeforeConvert(ChessGame game) {
+        if (game.getId() == null) {
+            log.info(&quot;Get the next value from a database sequence and use it as the primary key&quot;);
+
+            Long id = jdbcTemplate.query(&quot;SELECT nextval('chessgame_seq')&quot;,
+                    rs -&gt; {
+                        if (rs.next()) {
+                            return rs.getLong(1);
+                        } else {
+                            throw new SQLException(&quot;Unable to retrieve value from sequence chessgame_seq.&quot;);
+                        }
+                    });
+            game.setId(id);
+        }
+
+        return game;
+    }
+}
+</pre></div>
+
+
+<p>When implementing the interface, you should define a constructor that expects a <em>JdbcTemplate</em>. Spring will call it with a template that&#8217;s associated with the current transaction. You can then use that <em>JdbcTemplate</em> in your implementation of the <em>onBeforeConvert </em>method.</p>
+
+
+
+<p>Spring Data JDBC triggers the <em>BeforeConvertCallback</em> for all insert and update operations. When implementing the <em>onBeforeConvert </em>method, you should, therefore, check if the primary key attribute is null. If that&#8217;s the case, we&#8217;re persisting a new aggregate and need to generate a unique primary key value. You can do this by using the <em>JdbcTemplate</em> to execute an SQL statement that gets the next value from a database sequence and setting that value as the primary key.</p>
+
+
+
+<p>That&#8217;s all you need to do. If you rerun the same test case, you can see the message written by the <em>GetSequenceValueCallback </em>and the SQL statement to get the value from the database sequence in the log output.</p>
+
+
+<div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
+16:00:22.891  INFO 6728 --- &#91;           main] c.t.j.model.GetSequenceValueCallback     : Get the next value from a database sequence and use it as the primary key
+16:00:22.892 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL query &#91;SELECT nextval('chessgame_seq')]
+16:00:22.946 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL update
+16:00:22.947 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_game&quot; (&quot;id&quot;, &quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?, ?)]
+16:00:22.969 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+16:00:22.970 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+16:00:22.979 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+16:00:22.980 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+</pre></div>
+
+
+<h2 class="wp-block-heading">Conclusion</h2>
+
+
+
+<p>By default, Spring Data JDBC expects the database to provide a unique primary key value for every aggregate. Most DBAs use an autoincremented column for that.</p>
+
+
+
+<p>As you saw in this article, you can easily provide your own primary key generation by implementing a <em>BeforeConvertCallback</em>. Spring Data JDBC automatically calls it when persisting or updating an aggregate. Due to that, you need to check if you need to generate the primary key value. If that&#8217;s the case, you can use a <em>JdbcTemplate </em>to execute a simple SQL statement that gets the next value from a database sequence.</p>
+</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
