@@ -80,8 +80,8 @@ if [ -f $INSTALL_DIR/sbt ]; then
     fi
 fi
 
-TYPESAFE_REPO=https://dl.bintray.com/sbt/maven-releases/org/scala-sbt/sbt-launch
-JAR_URL=$TYPESAFE_REPO/${VERSION}/sbt-launch.jar
+MAVEN_REPO=https://repo1.maven.org/maven2/org/scala-sbt/sbt-launch
+JAR_URL=$MAVEN_REPO/${VERSION}/sbt-launch-${VERSION}.jar
 JAR=sbt-launch-${VERSION}.jar
 
 echo "Downloading $JAR from $JAR_URL"
