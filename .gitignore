@@ -11,8 +11,10 @@ src_managed/
 project/boot/
 project/plugins/project/
 project/project/
-
 target/
+
+# mill
+out/
 
 .idea/
 .bloop/

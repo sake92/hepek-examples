@@ -1,4 +1,4 @@
-lazy val root = (project in file("."))
+lazy val examples = (project in file("examples"))
   .settings(
     scalaVersion := "3.3.1",
     scalacOptions ++= Seq(

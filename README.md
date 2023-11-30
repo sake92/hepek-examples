@@ -6,8 +6,11 @@ Examples rendered live [at Netlify](https://hepek-files.netlify.com) and [GH Pag
 
 ## How to run?
 
+### Mill
+
+### Sbt
 Just run `sbt`, wait for shell to load and type `hepek`.  
 
-It will compile sources and render corresponding files to the "hepek_output" folder.
+It will compile sources and render corresponding files to the "examples/hepek_output" folder.
 
 
