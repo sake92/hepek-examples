@@ -6,5 +6,5 @@
 #    that is where we will look for package.json/.nvmrc/etc not repo root!
 
 [build]
-  publish = "target/web/public/main/examples"
+  publish = "hepek_output"
   command = "chmod +x ./netlify-build.sh && ./netlify-build.sh"

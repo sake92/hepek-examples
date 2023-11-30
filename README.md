@@ -1,6 +1,6 @@
 # hepek-examples
 
-Examples rendered live [at Netlify](https://hepek-examples.netlify.com) and [GH Pages](https://sake92.github.io/hepek-examples).
+Examples rendered live [at Netlify](https://hepek-files.netlify.com) and [GH Pages](https://sake92.github.io/hepek-examples).
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/239dddf4-40df-460f-8543-75fc5032ada0/deploy-status)](https://app.netlify.com/sites/hepek-examples/deploys)
 
@@ -8,6 +8,6 @@ Examples rendered live [at Netlify](https://hepek-examples.netlify.com) and [GH 
 
 Just run `sbt`, wait for shell to load and type `hepek`.  
 
-It will compile sources and render corresponding files to the "target/web/public/main/" folder.
+It will compile sources and render corresponding files to the "hepek_output" folder.
 
 
