@@ -4,12 +4,12 @@ import java.io.File
 import org.openqa.selenium.chrome.ChromeDriver
 import ba.sake.hepek.prismjs.*
 import ba.sake.hepek.pdf.PdfGenerator
-import files.Imports.Bundle.*
+import files.Bundle.*
 
 object PdfStaticPage extends StaticPage with PrismDependencies {
 
   override def navbar = None
-  
+
   override def prismSettings =
     super.prismSettings
       .withTheme(PrismThemes.Okaidia)
@@ -18,7 +18,7 @@ object PdfStaticPage extends StaticPage with PrismDependencies {
   override def pageContent =
     """
       ## PDF Example
-      Please run `sbt pdfGenerate`, Netlify doesn't have a Chrome installed... :D
+      Please run `sbt genPDF`, Netlify doesn't have a Chrome installed... :D
       
       ```scala
       val x = 4

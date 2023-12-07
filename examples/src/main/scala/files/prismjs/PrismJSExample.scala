@@ -2,7 +2,7 @@ package files.prismjs
 
 import scala.collection.decorators.*
 import ba.sake.hepek.prismjs.*
-import files.Imports.Bundle.*, Tags.*, Grid.*
+import files.Bundle.*, Tags.*, Grid.*
 
 val chl = PrismCodeHighlightComponents.default
 

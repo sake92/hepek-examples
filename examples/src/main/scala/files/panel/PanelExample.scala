@@ -1,6 +1,6 @@
 package files.panel
 
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 object PanelExample extends StaticPage {
 

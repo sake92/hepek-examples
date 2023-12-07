@@ -1,7 +1,7 @@
 package files.math
 
 import ba.sake.hepek.katex.KatexDependencies
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 object KatexExample extends StaticPage with KatexDependencies {
 

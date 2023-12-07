@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import com.afrozaar.wordpress.wpapi.v2.model.Post
 import org.jsoup.Jsoup
 import ba.sake.hepek.path.ScalaMultiRenderable
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 // Render all posts
 object WpPosts extends ScalaMultiRenderable:

@@ -1,12 +1,12 @@
 package files.markdown
 
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 import files.Index
 
 object MarkdownExample extends StaticPage {
 
   override def navbar = None
-  
+
   override def pageSettings =
     super.pageSettings.withTitle("Markdown Example")
 

@@ -1,7 +1,7 @@
 package files
 
 import scala.collection.decorators.*
-import Imports.Bundle.*, Tags.*
+import Bundle.*, Tags.*
 import files.simple.*
 import files.statik.*
 import files.grid.GridExample
@@ -38,7 +38,7 @@ object Index extends StaticPage {
     div(cls := "page-header")(
       h1("Examples"),
       s"""
-        Current bundle used: **${Imports.Bundle.getClass.getSimpleName}**
+        Current bundle used: **${Bundle.getClass.getSimpleName}**
         
         Source code is [here](https://github.com/sake92/hepek-examples)
       """.md

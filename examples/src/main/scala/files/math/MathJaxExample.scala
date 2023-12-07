@@ -1,7 +1,7 @@
 package files.math
 
 import ba.sake.hepek.mathjax.MathjaxDependencies
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 object MathJaxExample extends StaticPage with MathjaxDependencies {
 

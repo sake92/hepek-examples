@@ -11,7 +11,7 @@ object WpData:
   val baseUrl = "https://thoughts-on-java.org"
 
   val perPage = 10
-  
+
   // fetched only once per "hepek" invocation
   val posts: Seq[Post] = locally {
     // just an ordinary java library..

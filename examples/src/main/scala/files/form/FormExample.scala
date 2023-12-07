@@ -2,7 +2,7 @@ package files.form
 
 import ba.sake.hepek.fontawesome5.FADependencies
 import ba.sake.hepek.fontawesome5.FA
-import files.Imports.Bundle.*, Tags.*, Classes.*
+import files.Bundle.*, Tags.*, Classes.*
 
 object FormExample extends StaticPage with FADependencies {
 

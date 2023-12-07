@@ -1,6 +1,6 @@
 package files.statik
 
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 object SimpleStaticPage extends StaticPage {
 

@@ -1,6 +1,6 @@
 package files.grid
 
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 object GridExample extends StaticPage {
 

@@ -3,7 +3,7 @@ package files.multi.wordpress
 import java.nio.file.Paths
 
 import ba.sake.hepek.path.ScalaMultiRenderable
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 case class ResultPage[T](page: Int, perPage: Int, items: Seq[T])
 

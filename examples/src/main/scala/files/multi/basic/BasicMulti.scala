@@ -2,7 +2,7 @@ package files.multi.basic
 
 import java.nio.file.Paths
 import ba.sake.hepek.path.ScalaMultiRenderable
-import files.Imports.Bundle.*, Tags.*
+import files.Bundle.*, Tags.*
 
 object MyMultiPages extends ScalaMultiRenderable:
   override def rends =
