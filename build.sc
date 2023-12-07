@@ -1,7 +1,7 @@
 import $ivy.`ba.sake::mill-hepek::0.0.1`
 
-import mill._
-import mill.scalalib._
+import mill.*
+import mill.scalalib.*
 import ba.sake.millhepek.MillHepekModule
 
 object examples extends MillHepekModule with SbtModule {

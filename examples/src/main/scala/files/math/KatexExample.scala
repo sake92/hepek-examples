@@ -1,10 +1,11 @@
 package files.math
 
-import scalatags.Text.all._
-import files.Imports.Bundle._
 import ba.sake.hepek.katex.KatexDependencies
+import files.Imports.Bundle.*, Tags.*
 
 object KatexExample extends StaticPage with KatexDependencies {
+
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("KaTeX")

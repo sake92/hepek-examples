@@ -1,23 +1,22 @@
 package files
 
-import scala.collection.decorators._
-import scalatags.Text.all._
-import files.simple._
-import files.statik._
+import scala.collection.decorators.*
+import Imports.Bundle.*, Tags.*
+import files.simple.*
+import files.statik.*
 import files.grid.GridExample
 import files.form.FormExample
-import files.math._
+import files.math.*
 import files.markdown.MarkdownExample
 import files.prismjs.PrismJSExample
 import files.panel.PanelExample
 import files.pdf.PdfStaticPage
 import files.multi.wordpress.WpPostsLists
 import files.multi.basic.MyMultiPages
-import Imports.Bundle.*
 
 object Index extends StaticPage {
 
-  val allExamples = List(
+  private val allExamples = List(
     ("single file", List(TextFile, JsonFile, RelPathExample)),
     ("multiple files", List(MyMultiPages.rends.head, WpPostsLists.rends.head)),
     ("static web page", List(SimpleStaticPage, StaticPageWithNavbar)),
@@ -29,6 +28,8 @@ object Index extends StaticPage {
     ("panel", List(PanelExample)),
     ("pdf", List(PdfStaticPage))
   )
+
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("Hepek examples")

@@ -1,9 +1,10 @@
 package files.panel
 
-import scalatags.Text.all._
-import files.Imports.Bundle._
+import files.Imports.Bundle.*, Tags.*
 
 object PanelExample extends StaticPage {
+
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("Panels")

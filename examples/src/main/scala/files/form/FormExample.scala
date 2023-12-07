@@ -1,26 +1,24 @@
 package files.form
 
-import scalatags.Text.all._
-import files.Imports.Bundle._, Grid._, Classes._
 import ba.sake.hepek.fontawesome5.FADependencies
 import ba.sake.hepek.fontawesome5.FA
+import files.Imports.Bundle.*, Tags.*, Classes.*
 
 object FormExample extends StaticPage with FADependencies {
 
-  val customForm = Form.withType(Form.Companion.Type.Horizontal(1, 3))
-  import customForm._
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("Form example")
 
   override def pageContent = frag(
-    form(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
-      row(
-        formFieldset("Textual inputs")(
-          inputText()("name", "Name"),
-          inputText()(_name = "surname", _label = "Surname"), // you can use named args!
-          inputText(disabled)("disabled", "Disabled"),
-          inputText()(
+    Form.form(name := "hepek-examples-netlify", method := "POST", attr("netlify").empty)(
+      Grid.row(
+        Form.formFieldset("Textual inputs")(
+          Form.inputText(autofocus)("name", "Name"),
+          Form.inputText()(_name = "surname", _label = "Surname"), // you can use named args!
+          Form.inputText(disabled)("disabled", "Disabled"),
+          Form.inputText()(
             "customized",
             "Customized",
             _transform = field =>
@@ -29,24 +27,24 @@ object FormExample extends StaticPage with FADependencies {
                 field
               )
           ),
-          inputTextArea(attr("minlength") := "5")("textArea", "Free text"),
-          inputEmail(multiple)("email", "Email"),
-          inputTel()("phone", "Phone"),
-          inputPassword()("pwd", "Password"),
-          inputUrl()("url", "URL")
+          Form.inputTextArea(attr("minlength") := "5")("textArea", "Free text"),
+          Form.inputEmail(multiple)("email", "Email"),
+          Form.inputTel()("phone", "Phone"),
+          Form.inputPassword()("pwd", "Password"),
+          Form.inputUrl()("url", "URL")
         ),
-        formFieldset("Checkbox inputs")(
-          inputCheckbox(checked)("checkbox", "Man?"),
+        Form.formFieldset("Checkbox inputs")(
+          Form.inputCheckbox(checked)("checkbox", "Man?"),
           hr,
-          inputCheckboxesSimple(
+          Form.inputCheckboxesSimple(
             "progLangs",
             Seq(("scala", "Scala"), ("java", "Java")),
             _label = "Favorite languages",
             _isInline = false
           )
         ),
-        formFieldset("Radio inputs")(
-          inputRadioSimple(
+        Form.formFieldset("Radio inputs")(
+          Form.inputRadioSimple(
             "favoriteSuperHero",
             Seq(("batman", "Batman"), ("superman", "Superman")),
             _label = "Super hero",
@@ -54,44 +52,35 @@ object FormExample extends StaticPage with FADependencies {
             _isInline = false
           )
         ),
-        formFieldset("Select inputs")(
-          inputSelect()(
+        Form.formFieldset("Select inputs")(
+          Form.inputSelect()(
             "cars",
             Seq(("volvo", "Volvo", Nil), ("bmw", "BMW", Seq(selected))),
             _label = "Cars"
           )
         ),
-        formFieldset("Date/time inputs")(
-          inputTime()("time", "Time"),
-          inputWeek()("weel", "Week"),
-          inputMonth()("month", "Month"),
-          inputDate(min := "1900-01-01", max := "2000-01-01")(
-            "date",
-            "Date of birth"
-          ),
-          inputDateTimeLocal(
-            min := "2000-01-01T00:00",
-            max := "2020-01-01T00:00"
-          )(
-            "datetime",
-            "Date and time"
-          )
+        Form.formFieldset("Date/time inputs")(
+          Form.inputTime()("time", "Time"),
+          Form.inputWeek()("weel", "Week"),
+          Form.inputMonth()("month", "Month"),
+          Form.inputDate(min := "1900-01-01", max := "2000-01-01")("date", "Date of birth"),
+          Form.inputDateTimeLocal(min := "2000-01-01T00:00", max := "2020-01-01T00:00")("datetime", "Date and time")
         ),
-        formFieldset("Numeric inputs")(
-          inputNumber(min := "1", step := "5")("num", "Number"),
-          inputRange(min := "10", step := "2", max := "50", value := "44")("range", "Range")
+        Form.formFieldset("Numeric inputs")(
+          Form.inputNumber(min := "1", step := "5")("num", "Number"),
+          Form.inputRange(min := "10", step := "2", max := "50", value := "44")("range", "Range")
         ),
-        formFieldset("Misc inputs")(
-          inputFile(accept := "image/*")("file", "File"),
-          inputColor()("color", "Color")
+        Form.formFieldset("Misc inputs")(
+          Form.inputFile(accept := "image/*")("file", "File"),
+          Form.inputColor()("color", "Color")
         ),
-        formFieldset("Button inputs")(
-          inputSubmit(btnSizeLg)("Submit (large button)"),
-          inputButton(btnWarning, btnSizeSm)(
+        Form.formFieldset("Button inputs")(
+          Form.inputSubmit(btnSizeLg)("Submit (large button)"),
+          Form.inputButton(btnWarning, btnSizeSm)(
             frag(FA.times(), " Remove  (small button)")
           ),
-          inputReset(btnDanger, btnWidthFull)("Reset (danger button)"),
-          inputHidden()("abcHidden")
+          Form.inputReset(btnDanger, btnWidthFull)("Reset (danger button)"),
+          Form.inputHidden()("abcHidden")
         )
       )
     )

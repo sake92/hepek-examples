@@ -1,20 +1,19 @@
 package files.multi.wordpress
 
 import java.nio.file.Paths
-import com.afrozaar.wordpress.wpapi.{v2 => wp}
+import com.afrozaar.wordpress.wpapi.v2.model.Post
 import org.jsoup.Jsoup
-import scalatags.Text.all._
 import ba.sake.hepek.path.ScalaMultiRenderable
-import files.Imports.Bundle._, Grid._, Classes._
+import files.Imports.Bundle.*, Tags.*
 
 // Render all posts
-object WpPosts extends ScalaMultiRenderable {
-
-  override def rends: Seq[WpPost] = WpData.posts.map(WpPost.apply)
-}
+object WpPosts extends ScalaMultiRenderable:
+  override def rends: Seq[WpPost] =
+    WpData.posts.map(p => WpPost(p))
 
 // Template for single post
-case class WpPost(wpPost: wp.model.Post) extends StaticPage {
+class WpPost(wpPost: Post) extends StaticPage {
+  override def navbar = None
 
   // unescape HTML chars with Jsoup
   private val wpPostTitle = Jsoup.parse(wpPost.getTitle().getRendered()).text()
@@ -24,10 +23,10 @@ case class WpPost(wpPost: wp.model.Post) extends StaticPage {
   override def pageSettings = super.pageSettings.withTitle(wpPostTitle.toString)
 
   override def pageContent = div(
-    div(cls := "page-header", txtAlignCenter)(
+    div(cls := "page-header", Classes.txtAlignCenter)(
       h1(wpPostTitle)
     ),
-    row(
+    Grid.row(
       raw(
         wpPost.getContent().getRendered()
       )

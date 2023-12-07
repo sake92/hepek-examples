@@ -1,9 +1,11 @@
 package files.statik
 
-import scalatags.Text.all._
-import files.Imports.Bundle._
+import files.Imports.Bundle.*, Tags.*
 
 object SimpleStaticPage extends StaticPage {
+
+  // we dont want default navbar here
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("Simple static page")

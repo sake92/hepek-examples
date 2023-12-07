@@ -1,11 +1,12 @@
 package files.markdown
 
-import scalatags.Text.all._
-import files.Imports.Bundle._
+import files.Imports.Bundle.*, Tags.*
 import files.Index
 
 object MarkdownExample extends StaticPage {
 
+  override def navbar = None
+  
   override def pageSettings =
     super.pageSettings.withTitle("Markdown Example")
 

@@ -1,13 +1,15 @@
 package files.pdf
 
 import java.io.File
-import ba.sake.hepek.prismjs.* 
-import ba.sake.hepek.pdf.PdfGenerator
-import files.Imports.Bundle._
 import org.openqa.selenium.chrome.ChromeDriver
+import ba.sake.hepek.prismjs.*
+import ba.sake.hepek.pdf.PdfGenerator
+import files.Imports.Bundle.*
 
 object PdfStaticPage extends StaticPage with PrismDependencies {
 
+  override def navbar = None
+  
   override def prismSettings =
     super.prismSettings
       .withTheme(PrismThemes.Okaidia)

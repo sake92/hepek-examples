@@ -1,7 +1,6 @@
 package files.statik
 
-import scalatags.Text.all._
-import files.Imports.Bundle._
+import files.Imports.Bundle.*, Tags.*
 import files.Index
 
 object StaticPageWithNavbar extends StaticPage {
@@ -26,7 +25,7 @@ object StaticPageWithNavbar extends StaticPage {
         brandName = siteSettings.name.map(" " + _),
         brandIconUrl = siteSettings.faviconInverted,
         right = Seq(
-          a(href := SimpleStaticPage.ref)(SimpleStaticPage.pageSettings.label),
+          Navbar.link(SimpleStaticPage.ref, SimpleStaticPage.pageSettings.label),
           Navbar.dropdown(
             "Nested",
             Seq(
@@ -43,7 +42,7 @@ object StaticPageWithNavbar extends StaticPage {
     super.stylesInline :+
       """
         body {
-          padding-top: 33px; /* move from navbar */
+          padding-top: 60px; /* move from navbar */
         }
         .navbar-brand > span > img {
           height: 30px; /* make logo smaller */

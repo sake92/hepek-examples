@@ -1,10 +1,11 @@
 package files.math
 
-import scalatags.Text.all._
-import files.Imports.Bundle._
 import ba.sake.hepek.mathjax.MathjaxDependencies
+import files.Imports.Bundle.*, Tags.*
 
 object MathJaxExample extends StaticPage with MathjaxDependencies {
+
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("MathJax")

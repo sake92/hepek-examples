@@ -1,34 +1,30 @@
 package files.multi.wordpress
 
-import com.afrozaar.wordpress.wpapi.{v2 => wp}
+import scala.jdk.CollectionConverters.*
+import com.afrozaar.wordpress.wpapi.v2.config.ClientConfig
+import com.afrozaar.wordpress.wpapi.v2.config.ClientFactory
+import com.afrozaar.wordpress.wpapi.v2.request.SearchRequest
+import com.afrozaar.wordpress.wpapi.v2.model.Post
 
-// this has nothing to do with Hepek,
-// just an ordinary java library! :)
-object WpClient {
-  import wp.config.ClientFactory
-  import wp.config.ClientConfig
+object WpData:
 
   val baseUrl = "https://thoughts-on-java.org"
-  private val username: String = null
-  private val password: String = null
-  private val usePermalinkEndpoint = false
-  private val debug = false
 
-  val client = ClientFactory.fromConfig(
-    ClientConfig.of(baseUrl, username, password, usePermalinkEndpoint, debug)
-  )
-}
-
-object WpData {
-  import scala.jdk.CollectionConverters.*
-
-  val posts = { // fetched only once
-    val response = WpClient.client.search(
-      wp.request.SearchRequest.Builder
-        .aSearchRequest(classOf[wp.model.Post])
+  val perPage = 10
+  
+  // fetched only once per "hepek" invocation
+  val posts: Seq[Post] = locally {
+    // just an ordinary java library..
+    val client = ClientFactory.fromConfig(
+      ClientConfig.of(baseUrl, null, null, false, false)
+    )
+    val response = client.search(
+      SearchRequest.Builder
+        .aSearchRequest(classOf[Post])
         .withPagination(50, 1)
         .build()
     )
     response.getList.asScala.toSeq
   }
-}
+
+  val pageCount = posts.length / perPage

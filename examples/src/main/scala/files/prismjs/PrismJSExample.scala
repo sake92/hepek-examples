@@ -1,25 +1,21 @@
 package files.prismjs
 
-import scala.collection.decorators._
-import scalatags.Text.all._
-import ba.sake.hepek.prismjs._
-import files.Imports.Bundle._, Grid._
+import scala.collection.decorators.*
+import ba.sake.hepek.prismjs.*
+import files.Imports.Bundle.*, Tags.*, Grid.*
 
-// this would probably be in separate file
-object chl extends PrismCodeHighlightComponents
-
-object chlCustom extends PrismCodeHighlightComponents {
-  override def showLineNumbers = false
-}
+val chl = PrismCodeHighlightComponents.default
 
 object PrismJSExample extends StaticPage with PrismDependencies {
+
+  override def navbar = None
 
   override def pageSettings =
     super.pageSettings.withTitle("PrismJS")
 
   /*override def prismSettings =
     super.prismSettings
-      .withTheme(Themes.Twilight)
+      .withTheme(PrismThemes.Twilight)
       .withCopyToClipboard(false)
       .withShowInvisibles(true)
       .withShowLanguage(false)*/
@@ -99,13 +95,15 @@ object PrismJSExample extends StaticPage with PrismDependencies {
         hello("Ruby")
       """),
       h3("No line numbers"),
-      chlCustom.scala("""
-        object HelloWorld {
-          def main(args: Array[String]): Unit = {
-            println("Hello, world!")
+      chl
+        .withShowLineNumbers(false)
+        .scala("""
+          object HelloWorld {
+            def main(args: Array[String]): Unit = {
+              println("Hello, world!")
+            }
           }
-        }
-      """)
+        """)
     )
   )
 
