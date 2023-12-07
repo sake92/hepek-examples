@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>6 Performance Pitfalls when using Spring Data JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>6 Performance Pitfalls when using Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>6 Performance Pitfalls when using Spring Data JPA</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>6 Performance Pitfalls when using Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Thanks to its ease of use, Spring Data JPA is an incredibly popular persistence framework. If developers have something to complain about, they usually criticize object-relational mapping in general or the risk of performance problems. And while you can, of course, criticize the concept of object-relational mapping, you shouldn&#8217;t blame Spring Data JPA for your application&#8217;s performance problems. Because in almost all cases, that&#8217;s not Spring Data JPA&#8217;s fault. These problems are usually caused by your application misusing features or avoiding important performance optimizations.</p>
 
 
@@ -59,9 +74,9 @@ playerRepo.save(player);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-10:45:18 DEBUG 3720 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-10:45:18 DEBUG 3720 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-10:45:18  INFO 3720 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+10:45:18 DEBUG 3720 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+10:45:18 DEBUG 3720 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+10:45:18  INFO 3720 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2885900 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     502400 nanoseconds spent preparing 2 JDBC statements;
@@ -109,31 +124,31 @@ players.forEach(player -&gt; {
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_
-10:46:20 DEBUG 13868 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 40ms, rows: 4
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Magnus Carlsen
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Jorden van Foreest
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Anish Giri
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:46:20  INFO 13868 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Fabiano Caruana
-10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
-10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
-10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
-10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
-10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
-10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
-10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 4 updates, 0 deletions to 4 objects
-10:46:20 DEBUG 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
-10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
-10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:46:20 DEBUG 13868 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:46:20 TRACE 13868 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
-10:46:20  INFO 13868 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+10:46:20 DEBUG 13868 --- &#x5B;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_
+10:46:20 DEBUG 13868 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 40ms, rows: 4
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Magnus Carlsen
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Jorden van Foreest
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Anish Giri
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:46:20  INFO 13868 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Fabiano Caruana
+10:46:20 TRACE 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:46:20 DEBUG 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:46:20 DEBUG 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:46:20 TRACE 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:46:20 TRACE 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:46:20 TRACE 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:46:20 DEBUG 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 4 updates, 0 deletions to 4 objects
+10:46:20 DEBUG 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:46:20 TRACE 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:46:20 DEBUG 13868 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 DEBUG 13868 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 DEBUG 13868 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 DEBUG 13868 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:46:20 TRACE 13868 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:46:20  INFO 13868 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2796500 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     447400 nanoseconds spent preparing 5 JDBC statements;
@@ -170,71 +185,71 @@ players.forEach(player -&gt; {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 50ms, rows: 4
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Magnus Carlsen
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
-10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Jorden van Foreest
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
-10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Anish Giri
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
-10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : ########################
-10:49:34  INFO 38820 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Updating Fabiano Caruana
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
-10:49:34 DEBUG 38820 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 0 updates, 0 deletions to 4 objects
-10:49:34 DEBUG 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
-10:49:34 TRACE 38820 --- &#91;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
-10:49:34  INFO 38820 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+10:49:34 DEBUG 38820 --- &#x5B;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 50ms, rows: 4
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Magnus Carlsen
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Jorden van Foreest
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Anish Giri
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : ########################
+10:49:34  INFO 38820 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Updating Fabiano Caruana
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 1 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 DEBUG 38820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=?, version=? where id=? and version=?
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing session
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing flush-time cascades
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Dirty checking collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushing entities and processing referenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Processing unreferenced collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Scheduling collection removes/(re)creates/updates
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 insertions, 0 updates, 0 deletions to 4 objects
+10:49:34 DEBUG 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Flushed: 0 (re)creations, 0 updates, 0 removals to 12 collections
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Executing flush
+10:49:34 TRACE 38820 --- &#x5B;           main] o.h.e.i.AbstractFlushingEventListener    : Post flush
+10:49:34  INFO 38820 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2944500 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     632200 nanoseconds spent preparing 5 JDBC statements;
@@ -311,19 +326,19 @@ for (int i=0; i&lt;10; i++) {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33 DEBUG 34680 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:22:33  INFO 34680 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33 DEBUG 34680 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:22:33  INFO 34680 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2636300 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     792600 nanoseconds spent preparing 12 JDBC statements;
@@ -378,37 +393,37 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
-11:30:17 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18 DEBUG 3152 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
-11:30:18  INFO 3152 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : select next_val as id_val from hibernate_sequence for update
+11:30:17 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : update hibernate_sequence set next_val= ? where next_val=?
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18 DEBUG 3152 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, version, id) values (?, ?, ?, ?, ?)
+11:30:18  INFO 3152 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     6000000 nanoseconds spent acquiring 11 JDBC connections;
     175900 nanoseconds spent releasing 10 JDBC connections;
     13378500 nanoseconds spent preparing 30 JDBC statements;
@@ -512,14 +527,14 @@ players.forEach(player -&gt; {log.info(player.getFirstName() + &quot; &quot; + p
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-14:02:22 DEBUG 23240 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_0_, chesstourn2_.id as id1_2_1_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_, chesstourn2_.end_date as end_date2_2_1_, chesstourn2_.name as name3_2_1_, chesstourn2_.start_date as start_da4_2_1_, chesstourn2_.version as version5_2_1_, tournament1_.players_id as players_2_4_0__, tournament1_.tournaments_id as tourname1_4_0__ from chess_player chessplaye0_ left outer join chess_tournament_players tournament1_ on chessplaye0_.id=tournament1_.players_id left outer join chess_tournament chesstourn2_ on tournament1_.tournaments_id=chesstourn2_.id
-14:02:22 DEBUG 23240 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 49ms, rows: 4
-14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : List chess players and their tournaments
-14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Magnus Carlsen played in 1 tournaments
-14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Jorden van Foreest played in 1 tournaments
-14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Anish Giri played in 1 tournaments
-14:02:22  INFO 23240 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Fabiano Caruana played in 1 tournaments
-14:02:22  INFO 23240 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+14:02:22 DEBUG 23240 --- &#x5B;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_0_, chesstourn2_.id as id1_2_1_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_, chesstourn2_.end_date as end_date2_2_1_, chesstourn2_.name as name3_2_1_, chesstourn2_.start_date as start_da4_2_1_, chesstourn2_.version as version5_2_1_, tournament1_.players_id as players_2_4_0__, tournament1_.tournaments_id as tourname1_4_0__ from chess_player chessplaye0_ left outer join chess_tournament_players tournament1_ on chessplaye0_.id=tournament1_.players_id left outer join chess_tournament chesstourn2_ on tournament1_.tournaments_id=chesstourn2_.id
+14:02:22 DEBUG 23240 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 49ms, rows: 4
+14:02:22  INFO 23240 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : List chess players and their tournaments
+14:02:22  INFO 23240 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Magnus Carlsen played in 1 tournaments
+14:02:22  INFO 23240 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Jorden van Foreest played in 1 tournaments
+14:02:22  INFO 23240 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Anish Giri played in 1 tournaments
+14:02:22  INFO 23240 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Fabiano Caruana played in 1 tournaments
+14:02:22  INFO 23240 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2615500 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     257900 nanoseconds spent preparing 1 JDBC statements;
@@ -573,14 +588,14 @@ players.forEach(player -&gt; {log.info(player.getFirstName() + &quot; &quot; + p
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-14:10:28 DEBUG 37224 --- &#91;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_0_, chesstourn2_.id as id1_2_1_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_, chesstourn2_.end_date as end_date2_2_1_, chesstourn2_.name as name3_2_1_, chesstourn2_.start_date as start_da4_2_1_, chesstourn2_.version as version5_2_1_, tournament1_.players_id as players_2_4_0__, tournament1_.tournaments_id as tourname1_4_0__ from chess_player chessplaye0_ left outer join chess_tournament_players tournament1_ on chessplaye0_.id=tournament1_.players_id left outer join chess_tournament chesstourn2_ on tournament1_.tournaments_id=chesstourn2_.id
-14:10:28 DEBUG 37224 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: SELECT p FROM ChessPlayer p LEFT JOIN FETCH p.tournaments, time: 40ms, rows: 4
-14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : List chess players and their tournaments
-14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Magnus Carlsen played in 1 tournaments
-14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Jorden van Foreest played in 1 tournaments
-14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Anish Giri played in 1 tournaments
-14:10:28  INFO 37224 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Fabiano Caruana played in 1 tournaments
-14:10:28  INFO 37224 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+14:10:28 DEBUG 37224 --- &#x5B;           main] org.hibernate.SQL                        : select chessplaye0_.id as id1_1_0_, chesstourn2_.id as id1_2_1_, chessplaye0_.birth_date as birth_da2_1_0_, chessplaye0_.first_name as first_na3_1_0_, chessplaye0_.last_name as last_nam4_1_0_, chessplaye0_.version as version5_1_0_, chesstourn2_.end_date as end_date2_2_1_, chesstourn2_.name as name3_2_1_, chesstourn2_.start_date as start_da4_2_1_, chesstourn2_.version as version5_2_1_, tournament1_.players_id as players_2_4_0__, tournament1_.tournaments_id as tourname1_4_0__ from chess_player chessplaye0_ left outer join chess_tournament_players tournament1_ on chessplaye0_.id=tournament1_.players_id left outer join chess_tournament chesstourn2_ on tournament1_.tournaments_id=chesstourn2_.id
+14:10:28 DEBUG 37224 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: SELECT p FROM ChessPlayer p LEFT JOIN FETCH p.tournaments, time: 40ms, rows: 4
+14:10:28  INFO 37224 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : List chess players and their tournaments
+14:10:28  INFO 37224 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Magnus Carlsen played in 1 tournaments
+14:10:28  INFO 37224 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Jorden van Foreest played in 1 tournaments
+14:10:28  INFO 37224 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Anish Giri played in 1 tournaments
+14:10:28  INFO 37224 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Fabiano Caruana played in 1 tournaments
+14:10:28  INFO 37224 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2188400 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     276000 nanoseconds spent preparing 1 JDBC statements;
@@ -659,15 +674,15 @@ for (PlayerNameIntf player : tournament.getPlayers()) {
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
-15:47:06 DEBUG 38200 --- &#91;           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_, chesstourn0_.end_date as end_date2_2_, chesstourn0_.name as name3_2_, chesstourn0_.start_date as start_da4_2_, chesstourn0_.version as version5_2_ from chess_tournament chesstourn0_ where chesstourn0_.name=?
-15:47:06 DEBUG 38200 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessTournament as generatedAlias0 where generatedAlias0.name=:param0, time: 48ms, rows: 1
-15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Tata Steel Chess Tournament 2021
-15:47:06 DEBUG 38200 --- &#91;           main] org.hibernate.SQL                        : select players0_.tournaments_id as tourname1_4_0_, players0_.players_id as players_2_4_0_, chessplaye1_.id as id1_1_1_, chessplaye1_.birth_date as birth_da2_1_1_, chessplaye1_.first_name as first_na3_1_1_, chessplaye1_.last_name as last_nam4_1_1_, chessplaye1_.version as version5_1_1_ from chess_tournament_players players0_ inner join chess_player chessplaye1_ on players0_.players_id=chessplaye1_.id where players0_.tournaments_id=?
-15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Carlsen, Magnus
-15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - van Foreest, Jorden
-15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Giri, Anish
-15:47:06  INFO 38200 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Caruana, Fabiano
-15:47:06  INFO 38200 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+15:47:06 DEBUG 38200 --- &#x5B;           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_, chesstourn0_.end_date as end_date2_2_, chesstourn0_.name as name3_2_, chesstourn0_.start_date as start_da4_2_, chesstourn0_.version as version5_2_ from chess_tournament chesstourn0_ where chesstourn0_.name=?
+15:47:06 DEBUG 38200 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessTournament as generatedAlias0 where generatedAlias0.name=:param0, time: 48ms, rows: 1
+15:47:06  INFO 38200 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Tata Steel Chess Tournament 2021
+15:47:06 DEBUG 38200 --- &#x5B;           main] org.hibernate.SQL                        : select players0_.tournaments_id as tourname1_4_0_, players0_.players_id as players_2_4_0_, chessplaye1_.id as id1_1_1_, chessplaye1_.birth_date as birth_da2_1_1_, chessplaye1_.first_name as first_na3_1_1_, chessplaye1_.last_name as last_nam4_1_1_, chessplaye1_.version as version5_1_1_ from chess_tournament_players players0_ inner join chess_player chessplaye1_ on players0_.players_id=chessplaye1_.id where players0_.tournaments_id=?
+15:47:06  INFO 38200 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - Carlsen, Magnus
+15:47:06  INFO 38200 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - van Foreest, Jorden
+15:47:06  INFO 38200 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - Giri, Anish
+15:47:06  INFO 38200 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - Caruana, Fabiano
+15:47:06  INFO 38200 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2701900 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     536500 nanoseconds spent preparing 2 JDBC statements;
@@ -703,14 +718,14 @@ public interface ChessTournamentRepository extends JpaRepository&lt;ChessTournam
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-15:58:04 DEBUG 27036 --- &#91;           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_0_, chessplaye2_.id as id1_1_1_, chesstourn0_.end_date as end_date2_2_0_, chesstourn0_.name as name3_2_0_, chesstourn0_.start_date as start_da4_2_0_, chesstourn0_.version as version5_2_0_, chessplaye2_.birth_date as birth_da2_1_1_, chessplaye2_.first_name as first_na3_1_1_, chessplaye2_.last_name as last_nam4_1_1_, chessplaye2_.version as version5_1_1_, players1_.tournaments_id as tourname1_4_0__, players1_.players_id as players_2_4_0__ from chess_tournament chesstourn0_ left outer join chess_tournament_players players1_ on chesstourn0_.id=players1_.tournaments_id left outer join chess_player chessplaye2_ on players1_.players_id=chessplaye2_.id where chesstourn0_.name=?
-15:58:04 DEBUG 27036 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: SELECT t FROM ChessTournament t LEFT JOIN FETCH t.players WHERE t.name = :name, time: 65ms, rows: 4
-15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  : Tata Steel Chess Tournament 2021
-15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - van Foreest, Jorden
-15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Carlsen, Magnus
-15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Caruana, Fabiano
-15:58:04  INFO 27036 --- &#91;           main] c.t.janssen.spring.data.TestProjections  :  - Giri, Anish
-15:58:04  INFO 27036 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+15:58:04 DEBUG 27036 --- &#x5B;           main] org.hibernate.SQL                        : select chesstourn0_.id as id1_2_0_, chessplaye2_.id as id1_1_1_, chesstourn0_.end_date as end_date2_2_0_, chesstourn0_.name as name3_2_0_, chesstourn0_.start_date as start_da4_2_0_, chesstourn0_.version as version5_2_0_, chessplaye2_.birth_date as birth_da2_1_1_, chessplaye2_.first_name as first_na3_1_1_, chessplaye2_.last_name as last_nam4_1_1_, chessplaye2_.version as version5_1_1_, players1_.tournaments_id as tourname1_4_0__, players1_.players_id as players_2_4_0__ from chess_tournament chesstourn0_ left outer join chess_tournament_players players1_ on chesstourn0_.id=players1_.tournaments_id left outer join chess_player chessplaye2_ on players1_.players_id=chessplaye2_.id where chesstourn0_.name=?
+15:58:04 DEBUG 27036 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: SELECT t FROM ChessTournament t LEFT JOIN FETCH t.players WHERE t.name = :name, time: 65ms, rows: 4
+15:58:04  INFO 27036 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  : Tata Steel Chess Tournament 2021
+15:58:04  INFO 27036 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - van Foreest, Jorden
+15:58:04  INFO 27036 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - Carlsen, Magnus
+15:58:04  INFO 27036 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - Caruana, Fabiano
+15:58:04  INFO 27036 --- &#x5B;           main] c.t.janssen.spring.data.TestProjections  :  - Giri, Anish
+15:58:04  INFO 27036 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     3167300 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     656400 nanoseconds spent preparing 1 JDBC statements;
@@ -754,4 +769,4 @@ public interface ChessTournamentRepository extends JpaRepository&lt;ChessTournam
 
 
 <p> </p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

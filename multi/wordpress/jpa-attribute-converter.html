@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to implement an AttributeConverter to support custom types</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to implement an AttributeConverter to support custom types</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to implement an AttributeConverter to support custom types</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>How to implement an AttributeConverter to support custom types</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>All JPA implementations, including Hibernate, provide default mappings for a huge set of standard Java classes. You could model the attributes of all your entity classes using those mappings, and you would be able to map all columns of your table model. But this is often not the best fit for your business logic. A mapping to a domain-specific type or any other Java type that adds semantics to your entity attribute is often more helpful. You could, for example, map a column of type varchar to your domain-specific type&nbsp;<em>Name</em>, which extends the standard class&nbsp;<em>String&nbsp;</em>and adds domain-specific validation. Or you could map a 8-digit hexadecimal color code to an object of type&nbsp;<em>java.awt.Color</em>.</p>
 
 
@@ -155,22 +170,22 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-19:11:37,114 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=255,g=255,b=255] to #ffffff
-19:11:37,170 DEBUG &#91;org.hibernate.SQL] - select r1_0.id,r1_0.color,r1_0.x,r1_0.y from Rectangle r1_0 where r1_0.color=?
-19:11:37,171 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;#ffffff]
-19:11:37,179 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert #ffffff to java.awt.Color&#91;r=255,g=255,b=255]
-19:11:37,181 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=255,g=255,b=255] to #ffffff
-19:11:37,181 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert #ffffff to java.awt.Color&#91;r=255,g=255,b=255]
-19:11:37,184 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT r FROM Rectangle r WHERE r.color = :color, time: 39ms, rows: 1
-19:11:37,192 DEBUG &#91;org.hibernate.SQL] - update Rectangle set color=?, x=?, y=? where id=?
-19:11:37,193 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=0,g=0,b=0] to #ff0000
-19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;#ff0000]
-19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;10]
-19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;20]
-19:11:37,193 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;INTEGER] - &#91;1]
-19:11:37,196 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#91;r=0,g=0,b=0] to #ff0000
-19:11:37,196 INFO  &#91;com.thorben.janssen.model.ColorConverter] - Convert #ff0000 to java.awt.Color&#91;r=255,g=0,b=0]
-19:11:37,203 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+19:11:37,114 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#x5B;r=255,g=255,b=255] to #ffffff
+19:11:37,170 DEBUG &#x5B;org.hibernate.SQL] - select r1_0.id,r1_0.color,r1_0.x,r1_0.y from Rectangle r1_0 where r1_0.color=?
+19:11:37,171 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;#ffffff]
+19:11:37,179 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert #ffffff to java.awt.Color&#x5B;r=255,g=255,b=255]
+19:11:37,181 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#x5B;r=255,g=255,b=255] to #ffffff
+19:11:37,181 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert #ffffff to java.awt.Color&#x5B;r=255,g=255,b=255]
+19:11:37,184 DEBUG &#x5B;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT r FROM Rectangle r WHERE r.color = :color, time: 39ms, rows: 1
+19:11:37,192 DEBUG &#x5B;org.hibernate.SQL] - update Rectangle set color=?, x=?, y=? where id=?
+19:11:37,193 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#x5B;r=0,g=0,b=0] to #ff0000
+19:11:37,193 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;#ff0000]
+19:11:37,193 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;INTEGER] - &#x5B;10]
+19:11:37,193 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;20]
+19:11:37,193 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;4] as &#x5B;INTEGER] - &#x5B;1]
+19:11:37,196 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert java.awt.Color&#x5B;r=0,g=0,b=0] to #ff0000
+19:11:37,196 INFO  &#x5B;com.thorben.janssen.model.ColorConverter] - Convert #ff0000 to java.awt.Color&#x5B;r=255,g=0,b=0]
+19:11:37,203 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     31200 nanoseconds spent acquiring 1 JDBC connections;
     26100 nanoseconds spent releasing 1 JDBC connections;
     191100 nanoseconds spent preparing 2 JDBC statements;
@@ -194,4 +209,4 @@ em.close();
 
 
 <p>As you saw in this article, implementing an <em>AttributeConverter</em> is simple. You only need to implement the <em>AttributeConverter </em>interface with its 2 conversion methods and annotate that class with a <em>@Converter</em> annotation. If you set the <em>autoApply </em>attribute of that annotation to <em>true</em>, your persistence provider will use the converter for all entity attributes of the supported type. If you don&#8217;t set that attribute or set it to <em>false</em>, you need to annotate each entity attribute on which you want to use the converter with <em>@Convert</em> and reference your converter implementation.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Performance Tuning – 2023 Edition</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate Performance Tuning – 2023 Edition</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate Performance Tuning – 2023 Edition</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Hibernate Performance Tuning – 2023 Edition</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Based on most discussions online and at conferences, there seem to be 2 kinds of projects that use Hibernate for their persistence layer. Most use it with great success and have only minor complaints about some syntax or APIs. Others complain ferociously about Hibernate&#8217;s performance and how inefficient it handles basic use cases.</p>
 
 
@@ -65,8 +80,8 @@
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-07:03:29,976 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT p FROM ChessPlayer p LEFT JOIN FETCH p.gamesWhite LEFT JOIN FETCH p.gamesBlack ORDER BY p.id, time: 10ms, rows: 4
-07:03:30,028 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+07:03:29,976 DEBUG &#x5B;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT p FROM ChessPlayer p LEFT JOIN FETCH p.gamesWhite LEFT JOIN FETCH p.gamesBlack ORDER BY p.id, time: 10ms, rows: 4
+07:03:30,028 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     46700 nanoseconds spent acquiring 1 JDBC connections;
     43700 nanoseconds spent releasing 1 JDBC connections;
     383099 nanoseconds spent preparing 5 JDBC statements;
@@ -114,7 +129,7 @@
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:23:20,545 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 6 milliseconds. SQL: 'select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0'
+12:23:20,545 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 6 milliseconds. SQL: 'select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0'
 </pre></div>
 
 
@@ -243,31 +258,31 @@ for (Author author : authors) {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:30:53,705 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0
-12:30:53,731 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a, time: 38ms, rows: 11
-12:30:53,739 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,746 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Joshua, lastName: Bloch has written 1 books.
-12:30:53,747 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,750 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Gavin, lastName: King has written 1 books.
-12:30:53,750 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,753 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Christian, lastName: Bauer has written 1 books.
-12:30:53,754 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,756 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Gary, lastName: Gregory has written 1 books.
-12:30:53,757 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,759 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Raoul-Gabriel, lastName: Urma has written 1 books.
-12:30:53,759 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,762 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Mario, lastName: Fusco has written 1 books.
-12:30:53,763 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,764 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Alan, lastName: Mycroft has written 1 books.
-12:30:53,765 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,768 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Andrew Lee, lastName: Rubinger has written 2 books.
-12:30:53,769 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,771 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Aslak, lastName: Knutsen has written 1 books.
-12:30:53,772 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,775 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Bill, lastName: Burke has written 1 books.
-12:30:53,775 DEBUG &#91;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
-12:30:53,777 INFO  &#91;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Scott, lastName: Oaks has written 1 books.
-12:30:53,799 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+12:30:53,705 DEBUG &#x5B;org.hibernate.SQL] - select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0
+12:30:53,731 DEBUG &#x5B;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a, time: 38ms, rows: 11
+12:30:53,739 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,746 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Joshua, lastName: Bloch has written 1 books.
+12:30:53,747 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,750 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Gavin, lastName: King has written 1 books.
+12:30:53,750 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,753 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Christian, lastName: Bauer has written 1 books.
+12:30:53,754 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,756 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Gary, lastName: Gregory has written 1 books.
+12:30:53,757 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,759 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Raoul-Gabriel, lastName: Urma has written 1 books.
+12:30:53,759 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,762 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Mario, lastName: Fusco has written 1 books.
+12:30:53,763 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,764 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Alan, lastName: Mycroft has written 1 books.
+12:30:53,765 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,768 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Andrew Lee, lastName: Rubinger has written 2 books.
+12:30:53,769 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,771 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Aslak, lastName: Knutsen has written 1 books.
+12:30:53,772 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,775 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Bill, lastName: Burke has written 1 books.
+12:30:53,775 DEBUG &#x5B;org.hibernate.SQL] - select b1_0.authorId,b1_1.id,p1_0.id,p1_0.name,p1_0.version,b1_1.publishingDate,b1_1.title,b1_1.version from BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId left join Publisher p1_0 on p1_0.id=b1_1.publisherid where b1_0.authorId=?
+12:30:53,777 INFO  &#x5B;com.thorben.janssen.hibernate.performance.TestIdentifyPerformanceIssues] - Author firstName: Scott, lastName: Oaks has written 1 books.
+12:30:53,799 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     37200 nanoseconds spent acquiring 1 JDBC connections;
     23300 nanoseconds spent releasing 1 JDBC connections;
     758803 nanoseconds spent preparing 12 JDBC statements;
@@ -302,9 +317,9 @@ List&lt;Author&gt; authors = em.createQuery(&quot;SELECT a FROM Author a JOIN FE
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:43:02,616 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,b1_0.authorId,b1_1.id,b1_1.publisherid,b1_1.publishingDate,b1_1.title,b1_1.version,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 join (BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId) on a1_0.id=b1_0.authorId
-12:43:02,650 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a JOIN FETCH a.books b, time: 49ms, rows: 11
-12:43:02,667 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+12:43:02,616 DEBUG &#x5B;org.hibernate.SQL] - select a1_0.id,b1_0.authorId,b1_1.id,b1_1.publisherid,b1_1.publishingDate,b1_1.title,b1_1.version,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 join (BookAuthor b1_0 join Book b1_1 on b1_1.id=b1_0.bookId) on a1_0.id=b1_0.authorId
+12:43:02,650 DEBUG &#x5B;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a JOIN FETCH a.books b, time: 49ms, rows: 11
+12:43:02,667 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     23400 nanoseconds spent acquiring 1 JDBC connections;
     26401 nanoseconds spent releasing 1 JDBC connections;
     157701 nanoseconds spent preparing 1 JDBC statements;
@@ -464,7 +479,7 @@ b.getAuthors().add(a);
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-14:13:59,430 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,430 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         b1_0.id,
         b1_0.format,
@@ -475,14 +490,14 @@ b.getAuthors().add(a);
         Book b1_0 
     where
         b1_0.id=?
-14:13:59,478 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,478 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         Author
         (firstName, lastName, version, id) 
     values
         (?, ?, ?, ?)
-14:13:59,484 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,484 DEBUG &#x5B;org.hibernate.SQL] - 
     update
         Book 
     set
@@ -493,41 +508,41 @@ b.getAuthors().add(a);
     where
         id=? 
         and version=?
-14:13:59,489 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,489 DEBUG &#x5B;org.hibernate.SQL] - 
     delete 
     from
         book_author 
     where
         book_id=?
-14:13:59,491 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,491 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         book_author
         (book_id, author_id) 
     values
         (?, ?)
-14:13:59,494 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,494 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         book_author
         (book_id, author_id) 
     values
         (?, ?)
-14:13:59,495 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,495 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         book_author
         (book_id, author_id) 
     values
         (?, ?)
-14:13:59,499 DEBUG &#91;org.hibernate.SQL] - 
+14:13:59,499 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         book_author
         (book_id, author_id) 
     values
         (?, ?)
-14:13:59,509 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+14:13:59,509 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     26900 nanoseconds spent acquiring 1 JDBC connections;
     35000 nanoseconds spent releasing 1 JDBC connections;
     515400 nanoseconds spent preparing 8 JDBC statements;
@@ -734,4 +749,4 @@ this.em.createQuery(update).executeUpdate();
 
 
 <p>You can get more information about these and all other Hibernate features in the courses included in the <a href="/join-persistence-hub/">Persistence Hub</a>.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

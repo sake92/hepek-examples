@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Think twice before using an object mapping library to get your DTOs</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Think twice before using an object mapping library to get your DTOs</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Think twice before using an object mapping library to get your DTOs</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Think twice before using an object mapping library to get your DTOs</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>I often get asked if I can recommend any object mapping library to map entity objects to DTOs. And you can find several discussions and articles about that on google. But instead of asking which library you should use, you should first ask yourself if you should map an entity to a DTO at all. Because in almost all situations, I recommend avoiding this mapping in the first place. And you then don&#8217;t need any form of object mapping library. The reason is that when working with Hibernate, or any other JPA implementation, this form of mapping removes all benefits of a DTO projection. And that is, of course, also the case when using Spring Data JPA.</p>
 
 
@@ -189,4 +204,4 @@ List&lt;BookWithAuthorNames&gt; books = q.getResultList();
 
 
 <p>The only situation in which using an object mapping framework is an option is when you implement a write operation and want to expose a DTO representation to the caller. You need entity objects to implement the write operation, and you don&#8217;t get any benefits from executing an additional query returning a DTO projection. So, in that case, it&#8217;s easier to use an object mapping framework to map an entity to a DTO object.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

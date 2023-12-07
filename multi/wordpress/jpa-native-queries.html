@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Native Queries – How to call native SQL queries with JPA &amp; Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Native Queries – How to call native SQL queries with JPA &amp; Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Native Queries – How to call native SQL queries with JPA &amp; Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Native Queries – How to call native SQL queries with JPA &amp; Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p><span style="font-size: inherit;">The Java Persistence Query Language (JPQL) is the most common way to query data from a database with JPA. It enables you to reuse your mapping definitions and is easier to use than SQL. But it supports only a small subset of the SQL standard, and it also provides no support for database-specific features.</span> </p>
 
 
@@ -40,13 +55,13 @@
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 Query q = em.createNativeQuery(&quot;SELECT a.firstname, a.lastname FROM Author a&quot;);
-List&lt;Object&#91;]&gt; authors = q.getResultList();
+List&lt;Object&#x5B;]&gt; authors = q.getResultList();
 
-for (Object&#91;] a : authors) {
+for (Object&#x5B;] a : authors) {
     System.out.println(&quot;Author &quot;
-            + a&#91;0]
+            + a&#x5B;0]
             + &quot; &quot;
-            + a&#91;1]);
+            + a&#x5B;1]);
 }
 </pre></div>
 
@@ -83,13 +98,13 @@ public class Author { ... }
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 Query q = em.createNamedQuery(&quot;selectAuthorNames&quot;);
-List&lt;Object&#91;]&gt; authors = q.getResultList();
+List&lt;Object&#x5B;]&gt; authors = q.getResultList();
 
-for (Object&#91;] a : authors) {
+for (Object&#x5B;] a : authors) {
     System.out.println(&quot;Author &quot;
-            + a&#91;0]
+            + a&#x5B;0]
             + &quot; &quot;
-            + a&#91;1]);
+            + a&#x5B;1]);
 }
 </pre></div>
 
@@ -116,12 +131,12 @@ for (Object&#91;] a : authors) {
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 Query q = em.createNativeQuery(&quot;SELECT a.firstname, a.lastname FROM Author a WHERE a.id = ?&quot;);
 q.setParameter(1, 1);
-Object&#91;] author = (Object&#91;]) q.getSingleResult();
+Object&#x5B;] author = (Object&#x5B;]) q.getSingleResult();
 
 System.out.println(&quot;Author &quot;
-        + author&#91;0]
+        + author&#x5B;0]
         + &quot; &quot;
-        + author&#91;1]);
+        + author&#x5B;1]);
 </pre></div>
 
 
@@ -135,12 +150,12 @@ System.out.println(&quot;Author &quot;
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 Query q = em.createNativeQuery(&quot;SELECT a.firstname, a.lastname FROM Author a WHERE a.id = :id&quot;);
 q.setParameter(&quot;id&quot;, 1);
-Object&#91;] author = (Object&#91;]) q.getSingleResult();
+Object&#x5B;] author = (Object&#x5B;]) q.getSingleResult();
 
 System.out.println(&quot;Author &quot;
-        + author&#91;0]
+        + author&#x5B;0]
         + &quot; &quot;
-        + author&#91;1]);
+        + author&#x5B;1]);
 </pre></div>
 
 
@@ -310,10 +325,10 @@ List&lt;BookAuthor&gt; authors = (List&lt;BookAuthor&gt;) session
 		.setTupleTransformer((tuple, aliases) -&gt; {
 				log.info(&quot;Transform tuple&quot;);
 				BookAuthor a = new BookAuthor();
-				a.setId((Long) tuple&#91;0]);
-				a.setFirstName((String) tuple&#91;1]);
-				a.setLastName((String) tuple&#91;2]);
-				a.setNumBooks((Integer) tuple&#91;3]);
+				a.setId((Long) tuple&#x5B;0]);
+				a.setFirstName((String) tuple&#x5B;1]);
+				a.setLastName((String) tuple&#x5B;2]);
+				a.setNumBooks((Integer) tuple&#x5B;3]);
 				return a;
 		}).getResultList();
 
@@ -386,4 +401,4 @@ for (Author a : authors) {
 
 
 <p>And you should always define the <a href="https://thorben-janssen.com/hibernate-query-spaces/">query space</a> of your native queries. It enables Hibernate to optimize the dirty check and flush operation it needs to perform before executing the query.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

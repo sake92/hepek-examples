@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>8 things you need to know when migrating to Hibernate 6.x</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>8 things you need to know when migrating to Hibernate 6.x</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>8 things you need to know when migrating to Hibernate 6.x</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>8 things you need to know when migrating to Hibernate 6.x</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Hibernate 6 has been released for a while, and the latest Spring Data JPA version includes it as a dependency. So, it’s no surprise that more and more developers want to migrate their applications to the latest Hibernate version. As you’re reading this article, you’re probably one of them. And you might ask yourself what you need to do to migrate your application and what you get out of it. I summarized that in this article and included links to further articles that explain the different features in great detail.</p>
 
 
@@ -105,10 +120,10 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:15:04,917 DEBUG &#91;org.hibernate.SQL] - 
+16:15:04,917 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('ChessPlayer_SEQ')
-16:15:04,947 DEBUG &#91;org.hibernate.SQL] - 
+16:15:04,947 DEBUG &#x5B;org.hibernate.SQL] - 
     insert
     into
         ChessPlayer
@@ -183,11 +198,11 @@ public class ChessPlayer {
 Query query = session.createNativeQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;)
     .setResultTransformer(new ResultTransformer(){
             @Override
-            public Object transformTuple(Object&#91;] tuples, String&#91;] aliases) {
+            public Object transformTuple(Object&#x5B;] tuples, String&#x5B;] aliases) {
                 PersonDTO personDTO = new PersonDTO();
-                personDTO.setPersonId((int)tuples&#91;0]);
-                personDTO.setFirstName((String)tuples&#91;1]);
-                personDTO.setLastName((String)tuples&#91;2]);
+                personDTO.setPersonId((int)tuples&#x5B;0]);
+                personDTO.setFirstName((String)tuples&#x5B;1]);
+                personDTO.setLastName((String)tuples&#x5B;2]);
                 return personDTO;
             }
   
@@ -209,13 +224,13 @@ List&lt;PersonDTO&gt; list = query.list();
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 PersonDTO person = (PersonDTO) session
-        .createQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;, Object&#91;].class)
+        .createQuery(&quot;select id as personId, first_name as firstName, last_name as lastName, city from Person p&quot;, Object&#x5B;].class)
         .setTupleTransformer((tuples, aliases) -&gt; {
                 log.info(&quot;Transform tuple&quot;);
                 PersonDTO personDTO = new PersonDTO();
-                personDTO.setPersonId((int)tuples&#91;0]);
-                personDTO.setFirstName((String)tuples&#91;1]);
-                personDTO.setLastName((String)tuples&#91;2]);
+                personDTO.setPersonId((int)tuples&#x5B;0]);
+                personDTO.setFirstName((String)tuples&#x5B;1]);
+                personDTO.setLastName((String)tuples&#x5B;2]);
                 return personDTO;
         }).getSingleResult();
 </pre></div>
@@ -417,4 +432,4 @@ public class ChessGame {
 
 
 <p>If you want to stay up to date with the latest developments in Hibernate and Spring Data JPA, I recommend joining the <a href="/join-persistence-hub/">Persistence Hub</a>. Besides many other things, that gives you access to my monthly Java Persistence News in which I tell you about the latest releases and show you how to use the new features.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>@Incubating features in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>@Incubating features in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>@Incubating features in Hibernate 6</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>@Incubating features in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>If you tried Hibernate 6, you might have recognized the new <em>@Incubating</em> annotation. The Hibernate team introduces it to tell users about new APIs and interfaces that might still change. That&#8217;s a great addition because most developers expect new APIs and features to be stable after they are part of a final release. In general, that is the case. Hibernate&#8217;s APIs are incredibly stable. But not being able to change a new API after its 1st release makes it impossible to improve it based on user feedback. It also makes it hard to develop and release a set of interconnected features. So, allowing a little more flexibility might be good for everyone involved.</p>
 
 
@@ -56,14 +71,14 @@
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-15:24:58,715 DEBUG &#91;org.hibernate.SQL] - insert into Author (city, postalCode, street, firstName, lastName, version, id) values (?, ?, ?, ?, ?, ?, ?)
-15:24:58,716 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;homeCity]
-15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;12345]
-15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;homeStreet]
-15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;VARCHAR] - &#91;firstName]
-15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;VARCHAR] - &#91;lastName]
-15:24:58,717 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;6] as &#91;INTEGER] - &#91;0]
-15:24:58,719 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;7] as &#91;CHAR] - &#91;c4e6a76d-d241-4806-aeae-8afca5598cf2]
+15:24:58,715 DEBUG &#x5B;org.hibernate.SQL] - insert into Author (city, postalCode, street, firstName, lastName, version, id) values (?, ?, ?, ?, ?, ?, ?)
+15:24:58,716 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;homeCity]
+15:24:58,717 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;12345]
+15:24:58,717 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;VARCHAR] - &#x5B;homeStreet]
+15:24:58,717 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;4] as &#x5B;VARCHAR] - &#x5B;firstName]
+15:24:58,717 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;5] as &#x5B;VARCHAR] - &#x5B;lastName]
+15:24:58,717 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;6] as &#x5B;INTEGER] - &#x5B;0]
+15:24:58,719 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;7] as &#x5B;CHAR] - &#x5B;c4e6a76d-d241-4806-aeae-8afca5598cf2]
 </pre></div>
 
 
@@ -163,12 +178,12 @@ public class ChessGame {
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 BookPublisherValue bpv = (BookPublisherValue) session
-		.createQuery(&quot;SELECT b.title as title, b.publisher.name as publisher FROM Book b WHERE id = 1&quot;, Object&#91;].class)
+		.createQuery(&quot;SELECT b.title as title, b.publisher.name as publisher FROM Book b WHERE id = 1&quot;, Object&#x5B;].class)
 		.setTupleTransformer((tuple, aliases) -&gt; {
 				log.info(&quot;Transform tuple&quot;);
 				BookPublisherValue v = new BookPublisherValue();
-				v.setTitle((String) tuple&#91;0]);
-				v.setPublisher((String) tuple&#91;1]);
+				v.setTitle((String) tuple&#x5B;0]);
+				v.setPublisher((String) tuple&#x5B;1]);
 				return v;
 		}).getSingleResult();
 </pre></div>
@@ -179,7 +194,7 @@ BookPublisherValue bpv = (BookPublisherValue) session
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 BookPublisherValue bpv = (BookPublisherValue) session
-                .createQuery(&quot;SELECT b.title as title, b.publisher.name as publisher FROM Book b WHERE id = 1&quot;, Object&#91;].class)
+                .createQuery(&quot;SELECT b.title as title, b.publisher.name as publisher FROM Book b WHERE id = 1&quot;, Object&#x5B;].class)
                 .setTupleTransformer(new AliasToBeanResultTransformer&lt;BookPublisherValue&gt;(BookPublisherValue.class)).getSingleResult();
 </pre></div>
 
@@ -212,12 +227,12 @@ public class AddressInstantiator implements EmbeddableInstantiator {
         return object.getClass().equals( Address.class );
     }
 
-    public Object instantiate(Supplier&lt;Object&#91;]&gt; valuesAccess, SessionFactoryImplementor sessionFactory) {
-        final Object&#91;] values = valuesAccess.get();
+    public Object instantiate(Supplier&lt;Object&#x5B;]&gt; valuesAccess, SessionFactoryImplementor sessionFactory) {
+        final Object&#x5B;] values = valuesAccess.get();
         // valuesAccess contains attribute values in alphabetical order
-        final String city = (String) values&#91;0];
-        final String postalCode = (String) values&#91;1];
-        final String street = (String) values&#91;2];
+        final String city = (String) values&#x5B;0];
+        final String postalCode = (String) values&#x5B;1];
+        final String street = (String) values&#x5B;2];
         log.info(&quot;Instantiate Address embeddable for &quot;+street+&quot; &quot;+postalCode+&quot; &quot;+city);
         return new Address( street, city, postalCode );
     }
@@ -239,4 +254,4 @@ public class AddressInstantiator implements EmbeddableInstantiator {
 
 
 <p>Introducing such an annotation is a great idea because it gives the development team more flexibility when releasing new features and adjusting them until they find a solution that solves most users&#8217; needs. But it also introduces the risk that one of the new features you just started using in your application changes, and you need to adjust your code to it. We will need to see how often that happens and how severe these changes will be.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

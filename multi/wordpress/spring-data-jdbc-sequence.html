@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Use a sequence to generate primary keys</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Use a sequence to generate primary keys</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Use a sequence to generate primary keys</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Spring Data JDBC – Use a sequence to generate primary keys</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>By default, Spring Data JDBC expects the database to provide a primary key value for every new record. The easiest way to achieve that is to use an autoincremented column. We used that in the <a href="https://thorben-janssen.com/spring-data-jdbc-getting-started/">Introduction to Spring Data JDBC</a> guide. But what do you do if your table model uses a database sequence instead?</p>
 
 
@@ -112,14 +127,14 @@ public class GetSequenceValueCallback implements BeforeConvertCallback&lt;ChessG
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:00:22.891  INFO 6728 --- &#91;           main] c.t.j.model.GetSequenceValueCallback     : Get the next value from a database sequence and use it as the primary key
-16:00:22.892 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL query &#91;SELECT nextval('chessgame_seq')]
-16:00:22.946 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL update
-16:00:22.947 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_game&quot; (&quot;id&quot;, &quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?, ?)]
-16:00:22.969 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
-16:00:22.970 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
-16:00:22.979 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
-16:00:22.980 DEBUG 6728 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+16:00:22.891  INFO 6728 --- &#x5B;           main] c.t.j.model.GetSequenceValueCallback     : Get the next value from a database sequence and use it as the primary key
+16:00:22.892 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL query &#x5B;SELECT nextval('chessgame_seq')]
+16:00:22.946 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL update
+16:00:22.947 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;INSERT INTO &quot;chess_game&quot; (&quot;id&quot;, &quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?, ?)]
+16:00:22.969 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+16:00:22.970 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+16:00:22.979 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+16:00:22.980 DEBUG 6728 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
 </pre></div>
 
 
@@ -132,4 +147,4 @@ public class GetSequenceValueCallback implements BeforeConvertCallback&lt;ChessG
 
 
 <p>As you saw in this article, you can easily provide your own primary key generation by implementing a <em>BeforeConvertCallback</em>. Spring Data JDBC automatically calls it when persisting or updating an aggregate. Due to that, you need to check if you need to generate the primary key value. If that&#8217;s the case, you can use a <em>JdbcTemplate </em>to execute a simple SQL statement that gets the next value from a database sequence.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

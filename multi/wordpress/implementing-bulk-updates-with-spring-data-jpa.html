@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Implementing Bulk Updates with Spring Data JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Implementing Bulk Updates with Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Implementing Bulk Updates with Spring Data JPA</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Implementing Bulk Updates with Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>When using Spring Data JPA, most developers are used to letting Spring handle almost all database operations. That&#8217;s especially the case for all update operations. Thanks to JPA&#8217;s entity mappings and the managed lifecycle of all entity objects, you only need to change an attribute of an entity object. Everything else happens automatically.</p>
 
 
@@ -21,14 +36,14 @@ chessGameRepository.saveAll(chessGames);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2021-11-06 18:40:38.992 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : select chessgame0_.id as id1_0_, chessgame0_.chess_tournament_id as chess_to5_0_, chessgame0_.date as date2_0_, chessgame0_.player_black_id as player_b6_0_, chessgame0_.player_white_id as player_w7_0_, chessgame0_.round as round3_0_, chessgame0_.version as version4_0_ from chess_game chessgame0_ left outer join chess_tournament chesstourn1_ on chessgame0_.chess_tournament_id=chesstourn1_.id where chesstourn1_.id=?
-2021-11-06 18:40:39.068 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:40:39.073 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:40:39.076 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:40:39.078 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:40:39.081 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:40:39.084 DEBUG 47820 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:40:39.091  INFO 47820 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+2021-11-06 18:40:38.992 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : select chessgame0_.id as id1_0_, chessgame0_.chess_tournament_id as chess_to5_0_, chessgame0_.date as date2_0_, chessgame0_.player_black_id as player_b6_0_, chessgame0_.player_white_id as player_w7_0_, chessgame0_.round as round3_0_, chessgame0_.version as version4_0_ from chess_game chessgame0_ left outer join chess_tournament chesstourn1_ on chessgame0_.chess_tournament_id=chesstourn1_.id where chesstourn1_.id=?
+2021-11-06 18:40:39.068 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.073 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.076 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.078 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.081 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.084 DEBUG 47820 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:40:39.091  INFO 47820 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2170500 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     2541500 nanoseconds spent preparing 7 JDBC statements;
@@ -94,14 +109,14 @@ spring.jpa.properties.hibernate.order_updates=true
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2021-11-06 18:54:11.959 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : select chessgame0_.id as id1_0_, chessgame0_.chess_tournament_id as chess_to5_0_, chessgame0_.date as date2_0_, chessgame0_.player_black_id as player_b6_0_, chessgame0_.player_white_id as player_w7_0_, chessgame0_.round as round3_0_, chessgame0_.version as version4_0_ from chess_game chessgame0_ left outer join chess_tournament chesstourn1_ on chessgame0_.chess_tournament_id=chesstourn1_.id where chesstourn1_.id=?
-2021-11-06 18:54:12.033 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:54:12.037 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:54:12.038 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:54:12.039 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:54:12.039 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:54:12.040 DEBUG 27696 --- &#91;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
-2021-11-06 18:54:12.054  INFO 27696 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+2021-11-06 18:54:11.959 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : select chessgame0_.id as id1_0_, chessgame0_.chess_tournament_id as chess_to5_0_, chessgame0_.date as date2_0_, chessgame0_.player_black_id as player_b6_0_, chessgame0_.player_white_id as player_w7_0_, chessgame0_.round as round3_0_, chessgame0_.version as version4_0_ from chess_game chessgame0_ left outer join chess_tournament chesstourn1_ on chessgame0_.chess_tournament_id=chesstourn1_.id where chesstourn1_.id=?
+2021-11-06 18:54:12.033 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.037 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.038 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.039 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.039 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.040 DEBUG 27696 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set chess_tournament_id=?, date=?, player_black_id=?, player_white_id=?, round=?, version=? where id=? and version=?
+2021-11-06 18:54:12.054  INFO 27696 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2280100 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     1944400 nanoseconds spent preparing 2 JDBC statements;
@@ -152,8 +167,8 @@ chessGameRepository.updateTournamentRound(5);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2021-11-06 19:49:56.021 DEBUG 41720 --- &#91;           main] org.hibernate.SQL                        : update chess_game set round=?
-2021-11-06 19:49:56.040  INFO 41720 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+2021-11-06 19:49:56.021 DEBUG 41720 --- &#x5B;           main] org.hibernate.SQL                        : update chess_game set round=?
+2021-11-06 19:49:56.040  INFO 41720 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     2200000 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     2048300 nanoseconds spent preparing 1 JDBC statements;
@@ -185,4 +200,4 @@ chessGameRepository.updateTournamentRound(5);
 
 
 <p>If you can express all update operations in 1 statement, you can avoid the performance problem entirely by implementing a modifying query. You do that by defining a method on your repository and annotating it with a <em>@Query</em> and a <em>@Modifying</em> annotation. The <em>@Query </em>annotation enables you to provide your own update statement. The <em>@Modifying</em> annotation tells Spring Data JPA to execute it as modifying operation.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

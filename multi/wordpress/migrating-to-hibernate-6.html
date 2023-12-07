@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Migrating to Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Migrating to Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Migrating to Hibernate 6</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Migrating to Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Hibernate 6 has been released for a while, and I see more and more teams migrating their persistence layers or at least preparing for the migration. As so often, the work required for the migration to Hibernate 6 depends on your code quality and the Hibernate version you&#8217;re currently using.</p>
 
 
@@ -88,7 +103,7 @@
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 // query with implicit SELECT clause
-List&lt;Object&#91;]&gt; results = em.createQuery(&quot;FROM Author a JOIN a.books b&quot;).getResultList();
+List&lt;Object&#x5B;]&gt; results = em.createQuery(&quot;FROM Author a JOIN a.books b&quot;).getResultList();
 </pre></div>
 
 
@@ -119,7 +134,7 @@ SELECT a FROM Author a JOIN a.books
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 // define SELECT clause
-List&lt;Object&#91;]&gt; results = em.createQuery(&quot;SELECT a, b FROM Author a JOIN a.books b&quot;).getResultList();
+List&lt;Object&#x5B;]&gt; results = em.createQuery(&quot;SELECT a, b FROM Author a JOIN a.books b&quot;).getResultList();
 </pre></div>
 
 
@@ -159,10 +174,10 @@ public class Author {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-08:18:36,724 DEBUG &#91;org.hibernate.SQL] - 
+08:18:36,724 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('hibernate_sequence')
-08:18:36,768 DEBUG &#91;org.hibernate.SQL] - 
+08:18:36,768 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         Author
@@ -176,11 +191,11 @@ public class Author {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-08:24:21,772 DEBUG &#91;org.hibernate.SQL] - 
+08:24:21,772 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('Author_SEQ')
-08:24:21,778 WARN  &#91;org.hibernate.engine.jdbc.spi.SqlExceptionHelper] - SQL Error: 0, SQLState: 42P01
-08:24:21,779 ERROR &#91;org.hibernate.engine.jdbc.spi.SqlExceptionHelper] - ERROR: relation &quot;author_seq&quot; does not exist
+08:24:21,778 WARN  &#x5B;org.hibernate.engine.jdbc.spi.SqlExceptionHelper] - SQL Error: 0, SQLState: 42P01
+08:24:21,779 ERROR &#x5B;org.hibernate.engine.jdbc.spi.SqlExceptionHelper] - ERROR: relation &quot;author_seq&quot; does not exist
   Position: 16
 </pre></div>
 
@@ -286,7 +301,7 @@ public class Author {
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-19:49:20,330 DEBUG &#91;org.hibernate.SQL] - 
+19:49:20,330 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         this_.id as id1_0_1_,
         this_.firstName as firstnam2_0_1_,
@@ -308,20 +323,20 @@ public class Author {
             on books3_.books_id=book1_.id 
     where
         book1_.title like ?
-19:49:20,342 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;%Hibernate%]
-19:49:20,355 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_1_0_] : &#91;BIGINT]) - &#91;1]
-19:49:20,355 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_0_1_] : &#91;BIGINT]) - &#91;1]
-19:49:20,359 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;publishe4_1_0_] : &#91;BIGINT]) - &#91;1]
-19:49:20,359 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;title2_1_0_] : &#91;VARCHAR]) - &#91;Hibernate]
-19:49:20,360 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;version3_1_0_] : &#91;INTEGER]) - &#91;0]
-19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;firstnam2_0_1_] : &#91;VARCHAR]) - &#91;Max]
-19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;lastname3_0_1_] : &#91;VARCHAR]) - &#91;WroteABook]
-19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;version4_0_1_] : &#91;INTEGER]) - &#91;0]
-19:49:20,361 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_1_0_] : &#91;BIGINT]) - &#91;1]
-19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_0_1_] : &#91;BIGINT]) - &#91;3]
-19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;firstnam2_0_1_] : &#91;VARCHAR]) - &#91;Paul]
-19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;lastname3_0_1_] : &#91;VARCHAR]) - &#91;WritesALot]
-19:49:20,362 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;version4_0_1_] : &#91;INTEGER]) - &#91;0]
+19:49:20,342 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;%Hibernate%]
+19:49:20,355 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;id1_1_0_] : &#x5B;BIGINT]) - &#x5B;1]
+19:49:20,355 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;id1_0_1_] : &#x5B;BIGINT]) - &#x5B;1]
+19:49:20,359 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;publishe4_1_0_] : &#x5B;BIGINT]) - &#x5B;1]
+19:49:20,359 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;title2_1_0_] : &#x5B;VARCHAR]) - &#x5B;Hibernate]
+19:49:20,360 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;version3_1_0_] : &#x5B;INTEGER]) - &#x5B;0]
+19:49:20,361 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;firstnam2_0_1_] : &#x5B;VARCHAR]) - &#x5B;Max]
+19:49:20,361 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;lastname3_0_1_] : &#x5B;VARCHAR]) - &#x5B;WroteABook]
+19:49:20,361 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;version4_0_1_] : &#x5B;INTEGER]) - &#x5B;0]
+19:49:20,361 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;id1_1_0_] : &#x5B;BIGINT]) - &#x5B;1]
+19:49:20,362 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;id1_0_1_] : &#x5B;BIGINT]) - &#x5B;3]
+19:49:20,362 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;firstnam2_0_1_] : &#x5B;VARCHAR]) - &#x5B;Paul]
+19:49:20,362 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;lastname3_0_1_] : &#x5B;VARCHAR]) - &#x5B;WritesALot]
+19:49:20,362 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;version4_0_1_] : &#x5B;INTEGER]) - &#x5B;0]
 </pre></div>
 
 
@@ -340,7 +355,7 @@ public class Author {
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-19:52:11,012 DEBUG &#91;org.hibernate.SQL] - 
+19:52:11,012 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         a1_0.id,
         a1_0.firstName,
@@ -356,7 +371,7 @@ public class Author {
                 on a1_0.id=b1_0.authors_id 
         where
             b1_1.title like ? escape ''
-19:52:11,022 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;%Hibernate%]
+19:52:11,022 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;%Hibernate%]
 </pre></div>
 
 
@@ -377,4 +392,4 @@ public class Author {
 
 
 <p>The removal of Hibernate&#8217;s deprecated Criteria API will cause bigger issues. You will need to rewrite all queries that use the old API. I recommend you do that while you&#8217;re still using Hibernate 5. It still supports Hibernate&#8217;s old Criteria API and JPA&#8217;s Criteria API. So, you can replace one query after the other without breaking your application.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

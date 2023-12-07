@@ -1,8 +1,23 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><meta name="og:title" content="Example" /><title>Static page with navbar - Example</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /><style>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><meta name="og:title" content="Example" /><title>Static page with navbar - Example</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style><style>
         body {
-          padding-top: 33px; /* move from navbar */
+          padding-top: 60px; /* move from navbar */
         }
         .navbar-brand > span > img {
           height: 30px; /* make logo smaller */
         }
-      </style></head><body><div class="container-fluid"><div class="hidden-print"></div><div><nav class="navbar navbar-default navbar-fixed-top"><div class="container-fluid"><div class="navbar-header"><button type="button" class="btn navbar-toggle collapsed" data-toggle="collapse" data-target="#main-navbar"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a class="navbar-brand" href="../index.html"><span><img src="https://img.icons8.com/doodle/48/000000/football2.png" alt="logo" width="32" height="32" /></span> Example</a></div><div class="collapse navbar-collapse" id="main-navbar"><ul class="nav navbar-nav navbar-left"></ul><ul class="nav navbar-nav navbar-right"><li><a href="simple-static-page.html">Simple static page</a></li><li><li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">Nested <span class='caret'></span></a><ul class="dropdown-menu"><li><a href="simple-static-page.html">Simple static page</a></li></ul></li></li></ul></div></div></nav><h2>Hello world, again!</h2><p>Some content...</p></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+      </style></head><body><div class="hidden-print"><nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top"><div class="container-fluid"><a class="navbar-brand" href="../index.html"><span><img src="https://img.icons8.com/doodle/48/000000/football2.png" alt="logo" width="32" height="32" /></span> Example</a><button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#main-navbar"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="main-navbar"><ul class="navbar-nav"></ul><ul class="navbar-nav ms-auto"><li class="nav-item"><a href="simple-static-page.html" class="nav-link">Simple static page</a></li><li class="nav-item"><a href="static-page-with-navbar.html" class="nav-link">Static page with navbar</a></li></ul></div></div></nav></div><div class="container-fluid"><div><nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top"><div class="container-fluid"><a class="navbar-brand" href="../index.html"><span><img src="https://img.icons8.com/doodle/48/000000/football2.png" alt="logo" width="32" height="32" /></span> Example</a><button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#main-navbar"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="main-navbar"><ul class="navbar-nav"></ul><ul class="navbar-nav ms-auto"><li class="nav-item"><a href="simple-static-page.html" class="nav-link">Simple static page</a></li><li class="nav-item dropdown"><a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">Nested <span class='caret'></span></a><ul class="dropdown-menu"><li><a href="simple-static-page.html" class="dropdown-item">Simple static page</a></li></ul></li></ul></div></div></nav><h2>Hello world, again!</h2><p>Some content...</p></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Defining custom queries and projections</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Defining custom queries and projections</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Defining custom queries and projections</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Spring Data JDBC – Defining custom queries and projections</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Some of the most important features in every persistence framework are the ones that enable us to query data and retrieve it in our preferred format. In the best case, you can easily define and execute standard queries, but you can also define very complex ones. Spring Data JDBC provides you with all of this, and I will show you how to use these features in this article.</p>
 
 
@@ -76,8 +91,8 @@ games.forEach(g -&gt; log.info(g.toString()));
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2022-05-20 18:39:56.561 DEBUG 2024 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
-2022-05-20 18:39:56.562 DEBUG 2024 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;played_on&quot; AS &quot;played_on&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;played_on&quot; &lt; ?]
+2022-05-20 18:39:56.561 DEBUG 2024 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 18:39:56.562 DEBUG 2024 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;played_on&quot; AS &quot;played_on&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;played_on&quot; &lt; ?]
 </pre></div>
 
 
@@ -131,15 +146,15 @@ games.forEach(g -&gt; log.info(g.toString()));
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2022-05-20 19:06:16.903 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
-2022-05-20 19:06:16.905 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT g.*
+2022-05-20 19:06:16.903 DEBUG 16976 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 19:06:16.905 DEBUG 16976 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;SELECT g.*
 FROM chess_game g
     JOIN chess_move m ON g.id = m.chess_game
 WHERE m.move = ?
 ]
-2022-05-20 19:06:17.018 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
-2022-05-20 19:06:17.018 DEBUG 16976 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
-2022-05-20 19:06:17.037  INFO 16976 --- &#91;           main] com.thorben.janssen.TestQueryMethod      : ChessGame &#91;id=16, playerBlack=IdOnlyAggregateReference{id=10}, playerWhite=IdOnlyAggregateReference{id=9}, moves=&#91;ChessMove &#91;moveNumber=1, color=WHITE, move=e4], ChessMove &#91;moveNumber=1, color=BLACK, move=e5]]]
+2022-05-20 19:06:17.018 DEBUG 16976 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 19:06:17.018 DEBUG 16976 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
+2022-05-20 19:06:17.037  INFO 16976 --- &#x5B;           main] com.thorben.janssen.TestQueryMethod      : ChessGame &#x5B;id=16, playerBlack=IdOnlyAggregateReference{id=10}, playerWhite=IdOnlyAggregateReference{id=9}, moves=&#x5B;ChessMove &#x5B;moveNumber=1, color=WHITE, move=e4], ChessMove &#x5B;moveNumber=1, color=BLACK, move=e5]]]
 </pre></div>
 
 
@@ -168,7 +183,7 @@ public class ChessGamePlayerNames {
 
     @Override
     public String toString() {
-        return &quot;ChessGamePlayerNames &#91;gameId=&quot; + gameId + &quot;, playedOn=&quot; + playedOn + &quot;, playerBlackFirstName=&quot;
+        return &quot;ChessGamePlayerNames &#x5B;gameId=&quot; + gameId + &quot;, playedOn=&quot; + playedOn + &quot;, playerBlackFirstName=&quot;
                 + playerBlackFirstName + &quot;, playerBlackLastName=&quot; + playerBlackLastName + &quot;, playerWhiteFirstName=&quot;
                 + playerWhiteFirstName + &quot;, playerWhiteLastName=&quot; + playerWhiteLastName + &quot;]&quot;;
     }
@@ -212,8 +227,8 @@ games.forEach(g -&gt; log.info(g.toString()));
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2022-05-20 19:09:16.592 DEBUG 12120 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
-2022-05-20 19:09:16.593 DEBUG 12120 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT g.id as game_id,
+2022-05-20 19:09:16.592 DEBUG 12120 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-20 19:09:16.593 DEBUG 12120 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;SELECT g.id as game_id,
        g.played_on as played_on,
        w.first_name as player_white_first_name,
        w.last_name as player_white_last_name,
@@ -223,7 +238,7 @@ FROM chess_game g
     JOIN chess_player w ON g.player_white = w.id
     JOIN chess_player b ON g.player_black = b.id
 ]
-2022-05-20 19:09:16.675  INFO 12120 --- &#91;           main] com.thorben.janssen.TestQueryMethod      : ChessGamePlayerNames &#91;gameId=16, playedOn=2022-05-19T18:00, playerBlackFirstName=A better, playerBlackLastName=player, playerWhiteFirstName=Thorben, playerWhiteLastName=Janssen]
+2022-05-20 19:09:16.675  INFO 12120 --- &#x5B;           main] com.thorben.janssen.TestQueryMethod      : ChessGamePlayerNames &#x5B;gameId=16, playedOn=2022-05-19T18:00, playerBlackFirstName=A better, playerBlackLastName=player, playerWhiteFirstName=Thorben, playerWhiteLastName=Janssen]
 </pre></div>
 
 
@@ -248,4 +263,4 @@ FROM chess_game g
 
 
 <ul><li>The easiest one is the entity projection. Spring Data JDBC then applies the mapping defined for your entity class to each record in the result set. If your entity class contains mapped associations to other entity classes, Spring Data JDBC executes additional queries to initialize these associations.<br>Entity projections are a great fit if you want to change data or if your business logic requires the entire aggregate.</li><li><em>Object[]</em>s are a rarely used projection that can be a good fit for read-only operations. They enable you to only select the columns you need.</li><li>DTO projections provide the same benefits as&nbsp;<em>Object[]</em>&nbsp;projections but using them is much more comfortable. That&#8217;s why they are more commonly used and my preferred projection for read-only operations.<br>As you saw in the example, DTO projections are indepent of your aggregates and their boundaries. This enables you to query the data in the format that fits your business logic.</li></ul>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

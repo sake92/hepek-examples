@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s StatelessSession – What it is and how to use it</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s StatelessSession – What it is and how to use it</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s StatelessSession – What it is and how to use it</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Hibernate’s StatelessSession – What it is and how to use it</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Some of Hibernate&#8217;s core features are automatic dirty checks, flushes, and the 1st level cache. They make the implementation of most standard use cases simple and efficient. But they also add a lot of hidden complexity and are not a great fit for all use cases. Your typical nightly import job or most other use cases that perform lots of write operations don&#8217;t benefit from those features. They often even slow down such use cases. In those situations, Hibernate&#8217;s <em>StatelessSession </em>might be a better fit.</p>
 
 
@@ -94,19 +109,19 @@ statelessSession.getTransaction().commit();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:46:23,963 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Perform insert operation
-17:46:23,968 DEBUG &#91;org.hibernate.SQL] - 
+17:46:23,963 INFO  &#x5B;com.thorben.janssen.TestStatelessSession] - Perform insert operation
+17:46:23,968 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('player_seq')
-17:46:23,983 DEBUG &#91;org.hibernate.SQL] - 
+17:46:23,983 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessPlayer
         (birthDate, firstName, lastName, version, id) 
     values
         (?, ?, ?, ?, ?)
-17:46:23,988 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Update firstName
-17:46:23,989 DEBUG &#91;org.hibernate.SQL] - 
+17:46:23,988 INFO  &#x5B;com.thorben.janssen.TestStatelessSession] - Update firstName
+17:46:23,989 DEBUG &#x5B;org.hibernate.SQL] - 
     update
         ChessPlayer 
     set
@@ -164,7 +179,7 @@ statelessSession.getTransaction().commit();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:58:09,648 DEBUG &#91;org.hibernate.SQL] - 
+17:58:09,648 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -195,14 +210,14 @@ statelessSession.getTransaction().commit();
             on c1_0.id=g2_0.playerBlack_id 
     where
         c1_0.id=?
-17:58:09,682 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT p
+17:58:09,682 DEBUG &#x5B;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT p
 FROM ChessPlayer p
     JOIN FETCH p.gamesWhite
     JOIN FETCH p.gamesBlack
 WHERE p.id=:id, time: 56ms, rows: 1
-17:58:09,685 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Magnus Carlsen
-17:58:09,685 INFO  &#91;com.thorben.janssen.TestStatelessSession] - White pieces: 1
-17:58:09,686 INFO  &#91;com.thorben.janssen.TestStatelessSession] - Black pieces: 2
+17:58:09,685 INFO  &#x5B;com.thorben.janssen.TestStatelessSession] - Magnus Carlsen
+17:58:09,685 INFO  &#x5B;com.thorben.janssen.TestStatelessSession] - White pieces: 1
+17:58:09,686 INFO  &#x5B;com.thorben.janssen.TestStatelessSession] - Black pieces: 2
 </pre></div>
 
 
@@ -273,4 +288,4 @@ statelessSession.getTransaction().commit();
 
 
 <p>Overall, Hibernate’s&nbsp;<em>StatelessSession&nbsp;</em>is a great feature if you want to reduce the overhead of Hibernate’s&nbsp;<em>Session</em>&nbsp;handling and don’t need features like lazy loading, cascading, a 1st level cache, and automatic flushes.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

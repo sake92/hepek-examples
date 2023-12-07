@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The difference between Spring Data JPA’s findById, getOne, getById, and findOne methods</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The difference between Spring Data JPA’s findById, getOne, getById, and findOne methods</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The difference between Spring Data JPA’s findById, getOne, getById, and findOne methods</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>The difference between Spring Data JPA’s findById, getOne, getById, and findOne methods</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Spring Data’s&nbsp;<em>JpaRepository&nbsp;</em>provides a huge set of methods that simplify the implementation of your database operations. You can use them to persist, remove, and read an entity object. Choosing the right method for your use case is one of the few problems these interfaces create. And that’s sometimes not as easy as you might expect. One example is the methods&nbsp;<em>findById</em>,&nbsp;<em>getOne, getById</em>, and&nbsp;<em>findOne</em>. Based on their name, all seem to do the same. So, when should you use which one?</p>
 
 
@@ -154,7 +169,7 @@ Optional&lt;ChessPlayer&gt; player = playerRepo.findOne(example);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2023-02-01 15:48:11.370 DEBUG 27840 --- &#91;           main] org.hibernate.SQL                        : 
+2023-02-01 15:48:11.370 DEBUG 27840 --- &#x5B;           main] org.hibernate.SQL                        : 
     select
         chessplaye0_.id as id1_1_,
         chessplaye0_.birth_date as birth_da2_1_,
@@ -237,4 +252,4 @@ Optional&lt;ChessPlayer&gt; player = playerRepo.findOne(spec);
 
 
 <p>These are just some of the methods provided by the <em>JpaRepository </em>that have similar names but provide different functionality. Other examples are the <a href="/spring-data-jpa-save-saveandflush-and-saveall/"><em>save()</em>, <em>saveAndFlush()</em>, and <em>saveAll()</em> method</a>s that I explained in a previous article.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

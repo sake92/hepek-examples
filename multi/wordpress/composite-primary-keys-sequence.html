@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Modeling sequence-based composite primary keys with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Modeling sequence-based composite primary keys with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Modeling sequence-based composite primary keys with Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Modeling sequence-based composite primary keys with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Some <a href="https://thorben-janssen.com/primary-key-mappings-jpa-hibernate/">primary keys</a> consist of more than 1 entity attribute or database column. These are called composite primary keys. They often contain a foreign key reference to a parent object or represent a complex natural key. Another reason to use composite keys is combining a domain-specific value with a simple counter, e.g., an order type and the order number. If this counter gets incremented independently, most developers want to use a database sequence for it.</p>
 
 
@@ -272,4 +287,4 @@ public class ChessPlayer {
 
 
 <p>Only the mapping as an <em>IdClass </em>supports composite primary keys that use generated identifier values. You model all attributes on your entity class and annotate them with the required mapping annotations. You also need to annotate your entity class with an <em>@IdClass</em> annotation and reference a class that contains all identifying attributes and fulfills JPA&#8217;s requirements of an identifier class.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

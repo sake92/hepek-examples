@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Database portability – Pitfalls when supporting multiple RDBMS with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Database portability – Pitfalls when supporting multiple RDBMS with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Database portability – Pitfalls when supporting multiple RDBMS with Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Database portability – Pitfalls when supporting multiple RDBMS with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>The JPA specification and Hibernate, as its most popular implementation, claim to provide database portability. That means you don&#8217;t need to change your persistence code or mapping annotations when connecting your application to a different RDBMS. They achieve that by providing an automated object-relational mapping, an API that abstracts from the executed SQL statements, and their own query language. </p>
 
 
@@ -280,7 +295,7 @@ Author a = em.createNamedQuery(&quot;Author.selectByIdNative&quot;, Author.class
 		...
 		&lt;named-native-query name=&quot;Author.selectByIdNative&quot;
 			result-class=&quot;com.thorben.janssen.model.Author&quot;&gt;
-			&lt;query&gt;&lt;!&#91;CDATA&#91;
+			&lt;query&gt;&lt;!&#x5B;CDATA&#x5B;
                     select a.* 
                     from Author a 
                     WHERE a.id = :id
@@ -324,4 +339,4 @@ Author a = em.createNamedQuery(&quot;Author.selectByIdNative&quot;, Author.class
 
 
 <p>In those cases, you need to decide if you can avoid a specific feature entirely, e.g., only use JPQL or Criteria queries. Or you need to provide database-specific versions yourself. In that case, you can create an&nbsp;<em>orm.xml</em>&nbsp;file in which you adjust the mapping information you provided as annotations.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

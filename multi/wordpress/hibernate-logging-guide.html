@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Logging Guide for Hibernate 4, 5 &amp; 6 – Use the right config for dev and prod</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Logging Guide for Hibernate 4, 5 &amp; 6 – Use the right config for dev and prod</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Logging Guide for Hibernate 4, 5 &amp; 6 – Use the right config for dev and prod</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Logging Guide for Hibernate 4, 5 &amp; 6 – Use the right config for dev and prod</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Choosing the right logging configuration can make the difference between finding a performance issue during development or suffering from it on production. But it can also create an overhead that slows down your application. You need to decide which information you need and configure your system accordingly.</p>
 
 
@@ -121,7 +136,7 @@
 log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 log4j.appender.stdout.Target=System.out
 log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
-log4j.appender.stdout.layout.ConversionPattern=%d{HH:mm:ss,SSS} %-5p &#91;%c] - %m%n
+log4j.appender.stdout.layout.ConversionPattern=%d{HH:mm:ss,SSS} %-5p &#x5B;%c] - %m%n
 
 log4j.rootLogger=info, stdout
 
@@ -180,7 +195,7 @@ log4j.logger.org.hibernate.cache=debug
         &lt;Console name=&quot;Console-Appender&quot; target=&quot;SYSTEM_OUT&quot;&gt;
             &lt;PatternLayout&gt;
                 &lt;pattern&gt;
-                    &#91;%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} &#91;%t] %c{1} - %msg%n
+                    &#x5B;%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} &#x5B;%t] %c{1} - %msg%n
                 &lt;/pattern&gt;&gt;
             &lt;/PatternLayout&gt;
         &lt;/Console&gt;
@@ -300,7 +315,7 @@ org.hibernate.cache.level=FINER
 	&lt;appender name=&quot;STDOUT&quot; class=&quot;ch.qos.logback.core.ConsoleAppender&quot;&gt;
 		&lt;encoder class=&quot;ch.qos.logback.classic.encoder.PatternLayoutEncoder&quot;&gt;
 			&lt;Pattern&gt;
-				%d{yyyy-MM-dd HH:mm:ss} &#91;%thread] %-5level %logger{36} - %msg%n
+				%d{yyyy-MM-dd HH:mm:ss} &#x5B;%thread] %-5level %logger{36} - %msg%n
 			&lt;/Pattern&gt;
 		&lt;/encoder&gt;
 	&lt;/appender&gt;
@@ -367,28 +382,28 @@ org.hibernate.cache.level=FINER
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-13:45:20,863 DEBUG &#91;org.hibernate.SQL] - select nextval ('hibernate_sequence')
-13:45:20,907 DEBUG &#91;org.hibernate.SQL] - select nextval ('hibernate_sequence')
-13:45:20,939 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
-13:45:20,950 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Thorben]
-13:45:20,951 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Janssen]
-13:45:20,952 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-13:45:20,953 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;4] as &#91;BIGINT] - &#91;1]
-13:45:20,960 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
-13:45:20,960 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolia]
-13:45:20,960 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
-13:45:20,961 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-13:45:20,961 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
-13:45:21,488 DEBUG &#91;org.hibernate.SQL] - update Author set firstName=?, lastName=?, version=? where id=? and version=?
-13:45:21,494 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolai]
-13:45:21,503 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
-13:45:21,505 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;3] as &#91;INTEGER] - &#91;1]
-13:45:21,509 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
-13:45:21,510 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;5] as &#91;INTEGER] - &#91;0]
-13:45:21,522 DEBUG &#91;org.hibernate.SQL] - select author0_.id as id1_0_, author0_.firstName as firstNam2_0_, author0_.lastName as lastName3_0_, author0_.version as version4_0_ from Author author0_ where author0_.lastName=?
-13:45:21,524 TRACE &#91;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Janssen]
-13:45:21,531 TRACE &#91;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#91;id1_0_] : &#91;BIGINT]) - &#91;1]
-13:45:21,541 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+13:45:20,863 DEBUG &#x5B;org.hibernate.SQL] - select nextval ('hibernate_sequence')
+13:45:20,907 DEBUG &#x5B;org.hibernate.SQL] - select nextval ('hibernate_sequence')
+13:45:20,939 DEBUG &#x5B;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+13:45:20,950 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Thorben]
+13:45:20,951 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Janssen]
+13:45:20,952 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+13:45:20,953 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;4] as &#x5B;BIGINT] - &#x5B;1]
+13:45:20,960 DEBUG &#x5B;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+13:45:20,960 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Nicolia]
+13:45:20,960 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Parlog]
+13:45:20,961 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+13:45:20,961 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;4] as &#x5B;BIGINT] - &#x5B;2]
+13:45:21,488 DEBUG &#x5B;org.hibernate.SQL] - update Author set firstName=?, lastName=?, version=? where id=? and version=?
+13:45:21,494 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Nicolai]
+13:45:21,503 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Parlog]
+13:45:21,505 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;1]
+13:45:21,509 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;4] as &#x5B;BIGINT] - &#x5B;2]
+13:45:21,510 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;5] as &#x5B;INTEGER] - &#x5B;0]
+13:45:21,522 DEBUG &#x5B;org.hibernate.SQL] - select author0_.id as id1_0_, author0_.firstName as firstNam2_0_, author0_.lastName as lastName3_0_, author0_.version as version4_0_ from Author author0_ where author0_.lastName=?
+13:45:21,524 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicBinder] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Janssen]
+13:45:21,531 TRACE &#x5B;org.hibernate.type.descriptor.sql.BasicExtractor] - extracted value (&#x5B;id1_0_] : &#x5B;BIGINT]) - &#x5B;1]
+13:45:21,541 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     71600 nanoseconds spent acquiring 1 JDBC connections;
     42200 nanoseconds spent releasing 1 JDBC connections;
     5946500 nanoseconds spent preparing 6 JDBC statements;
@@ -419,34 +434,34 @@ org.hibernate.cache.level=FINER
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-15:37:21,600 DEBUG &#91;org.hibernate.SQL] - select nextval('Author_SEQ')
-15:37:21,609 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'select nextval('Author_SEQ')'
-15:37:21,612 DEBUG &#91;org.hibernate.SQL] - select nextval('Author_SEQ')
-15:37:21,615 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'select nextval('Author_SEQ')'
-15:37:21,902 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
-15:37:21,903 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Thorben]
-15:37:21,903 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Janssen]
-15:37:21,903 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-15:37:21,904 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;BIGINT] - &#91;1]
-15:37:21,908 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 4 milliseconds. SQL: 'insert into Author (firstName, lastName, version, id) values ('Thorben', 'Janssen', 0, 1)'
-15:37:21,911 DEBUG &#91;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
-15:37:21,911 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolia]
-15:37:21,911 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
-15:37:21,912 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-15:37:21,912 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
-15:37:21,914 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'insert into Author (firstName, lastName, version, id) values ('Nicolia', 'Parlog', 0, 2)'
-15:37:21,915 DEBUG &#91;org.hibernate.SQL] - update Author set firstName=?, lastName=?, version=? where id=? and version=?
-15:37:21,915 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Nicolai]
-15:37:21,915 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Parlog]
-15:37:21,916 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;1]
-15:37:21,916 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;BIGINT] - &#91;2]
-15:37:21,916 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;5] as &#91;INTEGER] - &#91;0]
-15:37:21,919 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 3 milliseconds. SQL: 'update Author set firstName='Nicolai', lastName='Parlog', version=1 where id=2 and version=0'
-15:37:21,952 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.lastName=?
-15:37:21,952 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Janssen]
-15:37:21,959 INFO  &#91;org.hibernate.SQL_SLOW] - SlowQuery: 6 milliseconds. SQL: 'select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.lastName='Janssen''
-15:37:21,964 DEBUG &#91;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a WHERE a.lastName = :lastName, time: 26ms, rows: 1
-15:37:21,972 INFO  &#91;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
+15:37:21,600 DEBUG &#x5B;org.hibernate.SQL] - select nextval('Author_SEQ')
+15:37:21,609 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'select nextval('Author_SEQ')'
+15:37:21,612 DEBUG &#x5B;org.hibernate.SQL] - select nextval('Author_SEQ')
+15:37:21,615 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'select nextval('Author_SEQ')'
+15:37:21,902 DEBUG &#x5B;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+15:37:21,903 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Thorben]
+15:37:21,903 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Janssen]
+15:37:21,903 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+15:37:21,904 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;4] as &#x5B;BIGINT] - &#x5B;1]
+15:37:21,908 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 4 milliseconds. SQL: 'insert into Author (firstName, lastName, version, id) values ('Thorben', 'Janssen', 0, 1)'
+15:37:21,911 DEBUG &#x5B;org.hibernate.SQL] - insert into Author (firstName, lastName, version, id) values (?, ?, ?, ?)
+15:37:21,911 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Nicolia]
+15:37:21,911 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Parlog]
+15:37:21,912 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+15:37:21,912 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;4] as &#x5B;BIGINT] - &#x5B;2]
+15:37:21,914 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 2 milliseconds. SQL: 'insert into Author (firstName, lastName, version, id) values ('Nicolia', 'Parlog', 0, 2)'
+15:37:21,915 DEBUG &#x5B;org.hibernate.SQL] - update Author set firstName=?, lastName=?, version=? where id=? and version=?
+15:37:21,915 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Nicolai]
+15:37:21,915 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Parlog]
+15:37:21,916 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;1]
+15:37:21,916 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;4] as &#x5B;BIGINT] - &#x5B;2]
+15:37:21,916 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;5] as &#x5B;INTEGER] - &#x5B;0]
+15:37:21,919 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 3 milliseconds. SQL: 'update Author set firstName='Nicolai', lastName='Parlog', version=1 where id=2 and version=0'
+15:37:21,952 DEBUG &#x5B;org.hibernate.SQL] - select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.lastName=?
+15:37:21,952 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Janssen]
+15:37:21,959 INFO  &#x5B;org.hibernate.SQL_SLOW] - SlowQuery: 6 milliseconds. SQL: 'select a1_0.id,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.lastName='Janssen''
+15:37:21,964 DEBUG &#x5B;org.hibernate.stat.internal.StatisticsImpl] - HHH000117: HQL: SELECT a FROM Author a WHERE a.lastName = :lastName, time: 26ms, rows: 1
+15:37:21,972 INFO  &#x5B;org.hibernate.engine.internal.StatisticalLoggingSessionEventListener] - Session Metrics {
     51899 nanoseconds spent acquiring 1 JDBC connections;
     30200 nanoseconds spent releasing 1 JDBC connections;
     419199 nanoseconds spent preparing 6 JDBC statements;
@@ -566,4 +581,4 @@ org.hibernate.level=SEVERE</pre>
 
 
 <p>The development configuration should activate debug logging for some crucial categories like <em>org.hibernate.SQL</em> and I most often also <a href="//thorben-janssen.com/how-to-activate-hibernate-statistics-to-analyze-performance-issues/">activate Hibernate statistics</a> to find <a href="//thorben-janssen.com/tips-to-boost-your-hibernate-performance/">potential performance issues</a> as soon as possible.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Create better Criteria queries with Blaze persistence</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Create better Criteria queries with Blaze persistence</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Create better Criteria queries with Blaze persistence</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Create better Criteria queries with Blaze persistence</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>The Blaze Persistence project provides an interesting alternative to JPA’s Criteria API. Both APIs enable you to define queries dynamically at runtime. Most developers use it to create query statements based on user input or the result of a business operation. Unfortunately, JPA’s Criteria API isn’t very popular because it’s hard to read and write. As I will show you in this tutorial, Blaze Persistence’s Criteria API provides an easier-to-use solution. It integrates with various JPA implementations and provides a huge set of query features.</p>
 
 
@@ -90,7 +105,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:53:39,968 DEBUG &#91;org.hibernate.SQL] - 
+17:53:39,968 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -99,10 +114,10 @@ em.close();
         c1_0.version 
     from
         ChessPlayer c1_0
-17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
-17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Jorden van Foreest
-17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
-17:53:40,037 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+17:53:40,037 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
+17:53:40,037 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Jorden van Foreest
+17:53:40,037 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
+17:53:40,037 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
 </pre></div>
 
 
@@ -149,7 +164,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-19:03:52,772 DEBUG &#91;org.hibernate.SQL] - 
+19:03:52,772 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -161,7 +176,7 @@ em.close();
     where
         c1_0.firstName=? 
         and c1_0.lastName=?
-19:03:52,824 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+19:03:52,824 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
 </pre></div>
 
 
@@ -206,7 +221,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-19:13:15,557 DEBUG &#91;org.hibernate.SQL] - 
+19:13:15,557 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -224,8 +239,8 @@ em.close();
             c1_0.firstName=? 
             and c1_0.lastName=?
         )
-19:13:15,598 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
-19:13:15,598 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+19:13:15,598 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
+19:13:15,598 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
 </pre></div>
 
 
@@ -335,7 +350,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-07:20:34,964 DEBUG &#91;org.hibernate.SQL] - 
+07:20:34,964 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.endDate,
@@ -353,7 +368,7 @@ em.close();
         where
             p1_1.firstName=? 
             and p1_1.lastName=?
-07:20:34,994 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
+07:20:34,994 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
 </pre></div>
 
 
@@ -389,7 +404,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-07:38:28,951 DEBUG &#91;org.hibernate.SQL] - 
+07:38:28,951 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.endDate,
@@ -407,7 +422,7 @@ em.close();
         where
             p1_1.firstName=? 
             and p1_1.lastName=?
-07:38:28,992 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
+07:38:28,992 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
 </pre></div>
 
 
@@ -448,7 +463,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-10:22:35,027 DEBUG &#91;org.hibernate.SQL] - 
+10:22:35,027 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.endDate,
@@ -478,7 +493,7 @@ em.close();
             where
                 p2_1.firstName=? 
                 and p2_1.lastName=?
-10:22:35,070 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
+10:22:35,070 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Tata Steel Chess Tournament 2021
 </pre></div>
 
 
@@ -521,7 +536,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-10:52:52,061 DEBUG &#91;org.hibernate.SQL] - 
+10:52:52,061 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -530,8 +545,8 @@ em.close();
         c1_0.version 
     from
         ChessPlayer c1_0 offset ? rows fetch first ? rows only
-10:52:52,112 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
-10:52:52,113 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+10:52:52,112 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
+10:52:52,113 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
 </pre></div>
 
 
@@ -585,7 +600,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:31:07,257 DEBUG &#91;org.hibernate.SQL] - 
+11:31:07,257 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -600,11 +615,11 @@ em.close();
         ChessPlayer c1_0 
     order by
         c1_0.id asc offset ? rows fetch first ? rows only
-11:31:07,259 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;INTEGER] - &#91;0]
-11:31:07,260 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;2]
-11:31:07,288 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
-11:31:07,288 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Jorden van Foreest
-11:31:07,508 DEBUG &#91;org.hibernate.SQL] - 
+11:31:07,259 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;INTEGER] - &#x5B;0]
+11:31:07,260 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;INTEGER] - &#x5B;2]
+11:31:07,288 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Magnus Carlsen
+11:31:07,288 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Jorden van Foreest
+11:31:07,508 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.birthDate,
@@ -626,11 +641,11 @@ em.close();
         and 0=0 
     order by
         c1_0.id asc offset ? rows fetch first ? rows only
-11:31:07,509 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;BIGINT] - &#91;2]
-11:31:07,509 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;INTEGER] - &#91;0]
-11:31:07,509 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;INTEGER] - &#91;2]
-11:31:07,513 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
-11:31:07,513 INFO  &#91;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
+11:31:07,509 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;BIGINT] - &#x5B;2]
+11:31:07,509 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;INTEGER] - &#x5B;0]
+11:31:07,509 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;2]
+11:31:07,513 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Anish Giri
+11:31:07,513 INFO  &#x5B;com.thorben.janssen.TestBlazeCriteria] - Fabiano Caruana
 </pre></div>
 
 
@@ -647,4 +662,4 @@ em.close();
 
 
 <p>Blaze Persistence uses many default values that simplify the definition of a query and reduce the required boilerplate code. Good examples are the standard FROM and SELECT clauses that use the entity reference you provided when creating the query. You can, of course, override these defaults if they don&#8217;t match the requirements of your use case. This gives you full flexibility to define the queries you need for your use case.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

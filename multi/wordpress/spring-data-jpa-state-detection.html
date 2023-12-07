@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – Detecting Your Entity’s State</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JPA – Detecting Your Entity’s State</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – Detecting Your Entity’s State</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Spring Data JPA – Detecting Your Entity’s State</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Spring Data JPA&#8217;s repositories provide many methods that implement the standard operations you need to create a basic persistence layer. One of them is the&nbsp;<em>save(S entity)</em>&nbsp;method, which the CrudRepository defines. When you call this method, it depends on the entity object&#8217;s state which database operation Spring Data JPA performs. Spring Data JPA stores a new record in the database if you call the method with a new entity object. And if you provide an object that has already been persisted in the database, Spring Data JPA executes an SQL UPDATE statement instead.</p>
 
 
@@ -141,4 +156,4 @@ public class ChessGame implements Persistable&lt;Long&gt; {
 
 
 <p>If you want to customize the state detection algorithm, your entity class must implement the&nbsp;<em>Persistable</em>&nbsp;interface with its&nbsp;<em>isNew()</em>&nbsp;method. Within that method, you can access all attributes of your entity and implement your own check. Developers often do this for entity classes that use a programmatically assigned primary key and don&#8217;t have a version attribute.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

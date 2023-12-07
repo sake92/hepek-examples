@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – How to create a custom base repository</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JPA – How to create a custom base repository</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – How to create a custom base repository</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Spring Data JPA – How to create a custom base repository</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Most developers create their own repositories by adding their queries to one of Spring Data JPA’s standard base repositories, like the <em>JpaRepository</em> or the <em>CrudRepository</em>. These repositories give you a set of standard operations, e.g., to read and write entity objects. It often seems like the obvious choice to define your own repositories based on one of these standard interfaces. But they are not adjusted to your project. They usually contain several methods you don’t want to use. Some of the provided methods can even cause performance problems.</p>
 
 
@@ -244,4 +259,4 @@ public interface BetterChessPlayerRepository extends BetterJpaRepository&lt;Ches
 
 
 <p>If you want to provide custom implementations for any of these methods or add methods that are unknown to Spring Data JPA, you need to use a <a href="/composite-repositories-spring-data-jpa/">fragment repository</a>. When doing that, please remember that Spring Data JPA doesn&#8217;t support fragment interfaces on super interfaces. So, you can&#8217;t reference them in your base repository definition.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

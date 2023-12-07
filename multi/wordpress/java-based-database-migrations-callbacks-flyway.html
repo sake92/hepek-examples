@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Flyway – Implementing Java-based Migrations and Callbacks</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Flyway – Implementing Java-based Migrations and Callbacks</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Flyway – Implementing Java-based Migrations and Callbacks</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Flyway – Implementing Java-based Migrations and Callbacks</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Flyway&#8217;s SQL-script based <a href="/database-migration/">database migration</a><span style="font-size: inherit;"> is more than powerful enough for most use cases. But sometimes, you must take it one step further to adapt your existing data to the new database schema. E.g., you might need to extract data from blobs or read JSON documents so that you can fill the newly added database columns. In these cases, Flyway&#8217;s Java migration and callback methods provide an easy and powerful way to implement the necessary migration logic.</span></p>
 
 
@@ -56,7 +71,7 @@ public class V2__extract_author extends BaseJavaMigration {
 			// get data from book table
 			Long bookId = rs.getLong(&quot;id&quot;);
 			String author = rs.getString(&quot;author&quot;);
-			String&#91;] name = author.split(&quot;,&quot;);
+			String&#x5B;] name = author.split(&quot;,&quot;);
 
 			// get author id from sequence
 			ResultSet authorIdRs = idSt.executeQuery(&quot;select nextval('author_seq');&quot;);
@@ -65,8 +80,8 @@ public class V2__extract_author extends BaseJavaMigration {
 
 			// write new author
 			psAuthor.setLong(1, authorId);
-			psAuthor.setString(2, name&#91;1]);
-			psAuthor.setString(3, name&#91;0]);
+			psAuthor.setString(2, name&#x5B;1]);
+			psAuthor.setString(3, name&#x5B;0]);
 			psAuthor.execute();
 
 			// update book
@@ -247,4 +262,4 @@ public class FillDatabaseAfterMigrate extends BaseCallback {
 
 
 <p>Combining all this gives you a powerful toolset to implement a version-based <a href="/database-migration/">database migration</a> approach. </p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

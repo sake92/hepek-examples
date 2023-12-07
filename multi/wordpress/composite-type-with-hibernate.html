@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to map composite column types with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to map composite column types with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to map composite column types with Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>How to map composite column types with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>When most developers design their table and entity models, they create tables that only use basic column types and map these to basic entity attributes. Even though these are the most commonly used types, they are not the only ones supported by modern relational databases and Hibernate. You can also use composite, JSON, and XML types. I already showed you how to <a href="https://thorben-janssen.com/persist-postgresqls-jsonb-data-type-hibernate/">map a JSON column</a> using different Hibernate versions. In this article, I want to focus on mapping composite column types. Since Hibernate 6.2, this got incredibly simple if you’re using an Oracle, PostgreSQL, or DB2 database.</p>
 
 
@@ -107,18 +122,18 @@ em.persist(e);
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:43:52,494 DEBUG &#91;org.hibernate.SQL] - 
+11:43:52,494 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('MyEntity_SEQ')
-11:43:52,510 DEBUG &#91;org.hibernate.SQL] - 
+11:43:52,510 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         MyEntity
         (structProperty,id) 
     values
         (?,?)
-11:43:52,510 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;STRUCT] - &#91;com.thorben.janssen.model.MyStructure@7c7e73c5]
-11:43:52,514 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;BIGINT] - &#91;1]
+11:43:52,510 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;STRUCT] - &#x5B;com.thorben.janssen.model.MyStructure@7c7e73c5]
+11:43:52,514 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;BIGINT] - &#x5B;1]
 </pre></div>
 
 
@@ -139,7 +154,7 @@ MyEntity e = em.createQuery(&quot;&quot;&quot;
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:06:43,917 DEBUG &#91;org.hibernate.SQL] - 
+16:06:43,917 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         m1_0.id,
         (m1_0.structProperty).longProp,
@@ -199,4 +214,4 @@ public class MyStructure {
 
 
 <p>After you have implemented your embeddable and defined the mapping to the composite type, you can use it in the same way as any other embeddable. This even includes your JPQL queries. You can use the path operator &#8220;.&#8221; to navigate from an entity object via the embeddable attribute to a specific field.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

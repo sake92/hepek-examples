@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate-specific extensions to the Criteria API</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate-specific extensions to the Criteria API</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate-specific extensions to the Criteria API</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Hibernate-specific extensions to the Criteria API</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Most developers know that the JPA specification defines the string-based&nbsp;<a href="https://thorben-janssen.com/jpql/" target="_blank" rel="noreferrer noopener">JPQL</a>&nbsp;query language and that Hibernate extends it to support things like database-specific functions, window functions, and set-based operations. But most developers don&#8217;t know that since version 6, Hibernate has done the same for JPA&#8217;s Criteria API.</p>
 
 
@@ -163,7 +178,7 @@ List&lt;ChessGame&gt; games = em.createQuery(q).getResultList();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:58:59,183 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.playedOn,c1_0.playerBlack_id,c1_0.playerWhite_id,c1_0.version from ChessGame c1_0 where c1_0.playedOn=current_date
+11:58:59,183 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.playedOn,c1_0.playerBlack_id,c1_0.playerWhite_id,c1_0.version from ChessGame c1_0 where c1_0.playedOn=current_date
 </pre></div>
 
 
@@ -186,9 +201,9 @@ games.forEach(p -&gt; log.info(p));
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:32:13,147 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 where c1_0.firstName ilike ? escape ''
-16:32:13,148 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;%ikar%]
-16:32:13,168 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Hikaru, lastName=Nakamura]
+16:32:13,147 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 where c1_0.firstName ilike ? escape ''
+16:32:13,148 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;%ikar%]
+16:32:13,168 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=4, firstName=Hikaru, lastName=Nakamura]
 </pre></div>
 
 
@@ -219,11 +234,11 @@ games.forEach(p -&gt; log.info(p));
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:24:56,003 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 order by c1_0.firstName asc nulls first
-17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=2, firstName=Fabiano, lastName=Caruana]
-17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Hikaru, lastName=Nakamura]
-17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen]
-17:24:56,017 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=3, firstName=Richard, lastName=Rapport]
+17:24:56,003 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 order by c1_0.firstName asc nulls first
+17:24:56,017 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=2, firstName=Fabiano, lastName=Caruana]
+17:24:56,017 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=4, firstName=Hikaru, lastName=Nakamura]
+17:24:56,017 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=1, firstName=Magnus, lastName=Carlsen]
+17:24:56,017 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=3, firstName=Richard, lastName=Rapport]
 </pre></div>
 
 
@@ -246,11 +261,11 @@ games.forEach(p -&gt; log.info(p));
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-08:15:10,477 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 order by character_length(c1_0.firstName) asc
-08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen]
-08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Hikaru, lastName=Nakamura]
-08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=2, firstName=Fabiano, lastName=Caruana]
-08:15:10,493 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=3, firstName=Richard, lastName=Rapport]
+08:15:10,477 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 order by character_length(c1_0.firstName) asc
+08:15:10,493 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=1, firstName=Magnus, lastName=Carlsen]
+08:15:10,493 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=4, firstName=Hikaru, lastName=Nakamura]
+08:15:10,493 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=2, firstName=Fabiano, lastName=Caruana]
+08:15:10,493 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=3, firstName=Richard, lastName=Rapport]
 </pre></div>
 
 
@@ -286,13 +301,13 @@ persons.forEach(t -&gt; log.info(t.get(&quot;firstName&quot;) + &quot;, &quot; +
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:43:05,857 DEBUG &#91;org.hibernate.SQL] - select c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 union select c2_0.firstName,c2_0.lastName from ChessStreamer c2_0
-17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Hikaru, Nakamura
-17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Fabiano, Caruana
-17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Magnus, Carlsen
-17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Richard, Rapport
-17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Levy, Rozman
-17:43:05,865 INFO  &#91;com.thorben.janssen.sample.TestSample] - Ben, Finegold
+17:43:05,857 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.firstName,c1_0.lastName from ChessPlayer c1_0 union select c2_0.firstName,c2_0.lastName from ChessStreamer c2_0
+17:43:05,865 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - Hikaru, Nakamura
+17:43:05,865 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - Fabiano, Caruana
+17:43:05,865 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - Magnus, Carlsen
+17:43:05,865 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - Richard, Rapport
+17:43:05,865 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - Levy, Rozman
+17:43:05,865 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - Ben, Finegold
 </pre></div>
 
 
@@ -323,4 +338,4 @@ persons.forEach(t -&gt; log.info(t.get(&quot;firstName&quot;) + &quot;, &quot; +
 
 
 <p>By adding all these proprietary features, the <em>HibernateCriteriaBuilder</em> interface provides you with the same query features as Hibernate&#8217;s HQL query language, which extends JPA&#8217;s JPQL language. That enables you to easily switch between the 2 approaches and use the query definition you feel most comfortable with.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

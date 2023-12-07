@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to configure List semantics in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to configure List semantics in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to configure List semantics in Hibernate 6</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>How to configure List semantics in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Based on its javadoc, a <em>java.util.List</em> is supposed to represent an ordered collection of values. But that&#8217;s not necessarily the case if you use it as the type of a to-many association or an <em>ElementCollection</em>. As I explained before, Hibernate can <a href="/association-mappings-bag-list-set/">handle a <em>java.util.List</em> as a Bag or a List</a>. Only the&nbsp;<em>List</em>&nbsp;mapping persists the order of its elements. But by default, Hibernate handles a&nbsp;<em>java.util.List</em>&nbsp;as a&nbsp;<em>Bag</em>. After you have fetched it from the database, it contains the elements in an undefined order.</p>
 
 
@@ -137,15 +152,15 @@ em.close();
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-18:13:54,250 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
-18:13:54,277 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-18:13:54,281 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-18:13:54,284 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-18:13:54,295 DEBUG &#91;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
-18:13:54,326 DEBUG &#91;org.hibernate.SQL] - update ChessTournament set endDate=?, name=?, startDate=?, version=? where id=? and version=?
-18:13:54,334 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
-18:13:54,340 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
-18:13:54,343 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+18:13:54,250 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
+18:13:54,277 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:13:54,281 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:13:54,284 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:13:54,295 DEBUG &#x5B;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
+18:13:54,326 DEBUG &#x5B;org.hibernate.SQL] - update ChessTournament set endDate=?, name=?, startDate=?, version=? where id=? and version=?
+18:13:54,334 DEBUG &#x5B;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+18:13:54,340 DEBUG &#x5B;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+18:13:54,343 DEBUG &#x5B;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
 </pre></div>
 
 
@@ -153,8 +168,8 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-18:20:49,230 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
-18:20:49,234 DEBUG &#91;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
+18:20:49,230 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
+18:20:49,234 DEBUG &#x5B;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
 </pre></div>
 
 
@@ -208,13 +223,13 @@ tournament.getPlayers().add(1, player4);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-18:32:07,152 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
-18:32:07,159 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-18:32:07,164 DEBUG &#91;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
-18:32:07,177 DEBUG &#91;org.hibernate.SQL] - update ChessTournament set endDate=?, name=?, startDate=?, version=? where id=? and version=?
-18:32:07,183 DEBUG &#91;org.hibernate.SQL] - update ChessTournament_ChessPlayer set players_id=? where ChessTournament_id=? and players_ORDER=?
-18:32:07,187 DEBUG &#91;org.hibernate.SQL] - update ChessTournament_ChessPlayer set players_id=? where ChessTournament_id=? and players_ORDER=?
-18:32:07,191 DEBUG &#91;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
+18:32:07,152 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.endDate,c1_0.name,c1_0.startDate,c1_0.version from ChessTournament c1_0 where c1_0.id=?
+18:32:07,159 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+18:32:07,164 DEBUG &#x5B;org.hibernate.SQL] - select p1_0.ChessTournament_id,p1_0.players_ORDER,p1_1.id,p1_1.birthDate,p1_1.firstName,p1_1.lastName,p1_1.version from ChessTournament_ChessPlayer p1_0 join ChessPlayer p1_1 on p1_1.id=p1_0.players_id where p1_0.ChessTournament_id=?
+18:32:07,177 DEBUG &#x5B;org.hibernate.SQL] - update ChessTournament set endDate=?, name=?, startDate=?, version=? where id=? and version=?
+18:32:07,183 DEBUG &#x5B;org.hibernate.SQL] - update ChessTournament_ChessPlayer set players_id=? where ChessTournament_id=? and players_ORDER=?
+18:32:07,187 DEBUG &#x5B;org.hibernate.SQL] - update ChessTournament_ChessPlayer set players_id=? where ChessTournament_id=? and players_ORDER=?
+18:32:07,191 DEBUG &#x5B;org.hibernate.SQL] - insert into ChessTournament_ChessPlayer (ChessTournament_id, players_ORDER, players_id) values (?, ?, ?)
 </pre></div>
 
 
@@ -243,4 +258,4 @@ tournament.getPlayers().add(1, player4);
 
 
 <p>When you decide to persist the order of your <em>List</em>s, please keep in mind that this can slow down your write operations. Hibernate needs to manage the index of all <em>List</em> elements, which requires multiple update operations if you&#8217;re inserting or removing an element that&#8217;s not the last one.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

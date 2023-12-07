@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Entity Views with Blaze Persistence – The better DTO projections?</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Entity Views with Blaze Persistence – The better DTO projections?</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Entity Views with Blaze Persistence – The better DTO projections?</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Entity Views with Blaze Persistence – The better DTO projections?</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Blaze Persistence’s Entity Views try to solve some of the most common complaints about DTO projections in JPA and Hibernate. Most developers know that DTOs improve the performance of their read operations. But they often avoid using them because it requires boilerplate code and often creates code that’s not easily maintainable. JPA’s DTO support also doesn’t provide a comfortable way to map lists of associated objects. Blaze Persistence’s Entity Views improve on all this by supporting interface-based DTO definitions and flexible, annotation-based mappings.</p>
 
 
@@ -151,7 +166,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:34:35,966 DEBUG &#91;org.hibernate.SQL] - 
+12:34:35,966 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.firstName,
@@ -167,12 +182,12 @@ em.close();
             c1_0.firstName=? 
             and c1_0.lastName=?
         )
-12:34:35,966 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;VARCHAR] - &#91;Fabiano]
-12:34:35,967 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;2] as &#91;VARCHAR] - &#91;Caruana]
-12:34:35,967 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;3] as &#91;VARCHAR] - &#91;Magnus]
-12:34:35,967 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;4] as &#91;VARCHAR] - &#91;Carlsen]
-12:34:35,971 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen
-12:34:35,971 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana
+12:34:35,966 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;VARCHAR] - &#x5B;Fabiano]
+12:34:35,967 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;Caruana]
+12:34:35,967 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;3] as &#x5B;VARCHAR] - &#x5B;Magnus]
+12:34:35,967 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;4] as &#x5B;VARCHAR] - &#x5B;Carlsen]
+12:34:35,971 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen
+12:34:35,971 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana
 </pre></div>
 
 
@@ -263,7 +278,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:34:17,440 DEBUG &#91;org.hibernate.SQL] - 
+12:34:17,440 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         p1_0.firstName||' '||p1_0.lastName,
@@ -276,12 +291,12 @@ em.close();
     left join
         ChessPlayer p2_0 
             on p2_0.id=c1_0.playerWhite_id
-12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
-12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
-12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
-12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
-12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
-12:34:17,447 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+12:34:17,447 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:34:17,447 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:34:17,447 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:34:17,447 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:34:17,447 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:34:17,447 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
 </pre></div>
 
 
@@ -332,7 +347,7 @@ public interface ChessGameView {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:33:44,669 DEBUG &#91;org.hibernate.SQL] - 
+12:33:44,669 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.playerBlack_id,
@@ -349,12 +364,12 @@ public interface ChessGameView {
     left join
         ChessPlayer p2_0 
             on p2_0.id=c1_0.playerWhite_id
-12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
-12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
-12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
-12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
-12:33:44,674 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
-12:33:44,675 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+12:33:44,674 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:33:44,674 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:33:44,674 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:33:44,674 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:33:44,674 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:33:44,675 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
 </pre></div>
 
 
@@ -417,7 +432,7 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:42:25,412 DEBUG &#91;org.hibernate.SQL] - 
+12:42:25,412 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         g1_0.id,
@@ -447,22 +462,22 @@ em.close();
     left join
         ChessPlayer p4_0 
             on p4_0.id=g2_0.playerWhite_id
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
-12:42:25,431 INFO  &#91;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Magnus Carlsen - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Jorden van Foreest - Magnus Carlsen
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Anish Giri
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Jorden van Foreest
+12:42:25,431 INFO  &#x5B;com.thorben.janssen.TestBlazeEntityView] - Fabiano Caruana - Magnus Carlsen
 </pre></div>
 
 
@@ -489,4 +504,4 @@ em.close();
 
 
 <p>Based on these 2 improvements, Blaze Persistence&#8217;s entity view projections provide the same benefits as JPA&#8217;s DTO projections but are much more flexible and easier to use.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

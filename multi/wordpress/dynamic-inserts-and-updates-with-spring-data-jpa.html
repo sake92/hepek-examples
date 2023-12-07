@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Dynamic Inserts and Updates with Spring Data JPA</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Dynamic Inserts and Updates with Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Dynamic Inserts and Updates with Spring Data JPA</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Dynamic Inserts and Updates with Spring Data JPA</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>When you persist a new entity or update an existing one with Spring Data JPA, you might have recognized that you&#8217;re always executing the same SQL statement that sets all columns mapped by the entity. That&#8217;s even the case if you only update one of its attributes. </p>
 
 
@@ -63,10 +78,10 @@ p.setFirstName(&quot;Thorben&quot;);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:33:15.505 DEBUG 19836 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:33:15.514 DEBUG 19836 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:33:15.547 DEBUG 19836 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, id) values (?, ?, ?, ?)
-11:33:15.557 DEBUG 19836 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=? where id=?
+11:33:15.505 DEBUG 19836 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:33:15.514 DEBUG 19836 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:33:15.547 DEBUG 19836 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (birth_date, first_name, last_name, id) values (?, ?, ?, ?)
+11:33:15.557 DEBUG 19836 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=? where id=?
 </pre></div>
 
 
@@ -119,10 +134,10 @@ p.setFirstName(&quot;Thorben&quot;);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:37:20.374 DEBUG 7448 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:37:20.386 DEBUG 7448 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:37:20.427 DEBUG 7448 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (first_name, last_name, id) values (?, ?, ?)
-11:37:20.435 DEBUG 7448 --- &#91;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=? where id=?
+11:37:20.374 DEBUG 7448 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:37:20.386 DEBUG 7448 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:37:20.427 DEBUG 7448 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (first_name, last_name, id) values (?, ?, ?)
+11:37:20.435 DEBUG 7448 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set birth_date=?, first_name=?, last_name=? where id=?
 </pre></div>
 
 
@@ -180,10 +195,10 @@ p.setFirstName(&quot;Thorben&quot;);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-11:39:45.177 DEBUG 13832 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:39:45.185 DEBUG 13832 --- &#91;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
-11:39:45.214 DEBUG 13832 --- &#91;           main] org.hibernate.SQL                        : insert into chess_player (first_name, last_name, id) values (?, ?, ?)
-11:39:45.224 DEBUG 13832 --- &#91;           main] org.hibernate.SQL                        : update chess_player set first_name=? where id=?
+11:39:45.177 DEBUG 13832 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:39:45.185 DEBUG 13832 --- &#x5B;           main] org.hibernate.SQL                        : select nextval ('player_sequence')
+11:39:45.214 DEBUG 13832 --- &#x5B;           main] org.hibernate.SQL                        : insert into chess_player (first_name, last_name, id) values (?, ?, ?)
+11:39:45.224 DEBUG 13832 --- &#x5B;           main] org.hibernate.SQL                        : update chess_player set first_name=? where id=?
 </pre></div>
 
 
@@ -208,4 +223,4 @@ p.setFirstName(&quot;Thorben&quot;);
 
 
 <p>If that&#8217;s a problem, you can annotate your entity class with @DynamicInsert and @DynamicUpdate. These proprietary annotations tell Hibernate to dynamically generate the SQL INSERT or UPDATE statement for each entity object. When doing that, please keep in mind that you don&#8217;t get this for free and can&#8217;t activate or deactivate it for specific use cases. To generate a specific UPDATE or INSERT statement, Hibernate needs to detect which attributes have changed and generate a new SQL statement based on this information. That slows down all insert or update operations for objects of this entity class.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

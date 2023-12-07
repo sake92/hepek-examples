@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>FlushMode in JPA and Hibernate – What it is and how to change it</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>FlushMode in JPA and Hibernate – What it is and how to change it</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>FlushMode in JPA and Hibernate – What it is and how to change it</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>FlushMode in JPA and Hibernate – What it is and how to change it</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>The&nbsp;<em>FlushMode</em>&nbsp;defines when new entities and your changes on existing ones get written to the database. This might seem like a simple and obvious mechanism. But I recognized in my <a href="/join-persistence-hub/">Q&amp;A calls</a> that it often causes some confusion because, by default, Hibernate doesn’t perform a flush when you call the&nbsp;<em>persist&nbsp;</em>method on your&nbsp;<em>EntityManager</em>, or the&nbsp;<em>save&nbsp;</em>method on your Spring Data JPA repository. It also doesn’t only perform a flush at the end of the transaction, even though this is an important and guaranteed trigger of a flush operation.</p>
 
 
@@ -160,10 +175,10 @@ em.close();
 12:14:17,117 DEBUG SQL:144 - select nextval ('player_seq')
 12:14:17,125 DEBUG SQL:144 - select nextval ('player_seq')
 12:14:17,225 DEBUG SQL:144 - select chessplaye0_.id as id1_1_, chessplaye0_.birthDate as birthdat2_1_, chessplaye0_.firstName as firstnam3_1_, chessplaye0_.lastName as lastname4_1_, chessplaye0_.version as version5_1_ from ChessPlayer chessplaye0_
-12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen, birthDate=1990-09-30, version=0]
-12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=2, firstName=Jorden, lastName=van Foreest, birthDate=1999-04-30, version=0]
-12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=3, firstName=Anish, lastName=Giri, birthDate=1994-06-28, version=0]
-12:14:17,241  INFO TestSample:96 - ChessPlayer &#91;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#x5B;id=1, firstName=Magnus, lastName=Carlsen, birthDate=1990-09-30, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#x5B;id=2, firstName=Jorden, lastName=van Foreest, birthDate=1999-04-30, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#x5B;id=3, firstName=Anish, lastName=Giri, birthDate=1994-06-28, version=0]
+12:14:17,241  INFO TestSample:96 - ChessPlayer &#x5B;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0]
 12:14:17,249 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
 </pre></div>
 
@@ -244,10 +259,10 @@ em.close();
 14:50:16,552 DEBUG SQL:144 - select nextval ('player_seq')
 14:50:16,559 DEBUG SQL:144 - select nextval ('player_seq')
 14:50:16,652 DEBUG SQL:144 - select chessplaye0_.id as id1_1_, chessplaye0_.birthDate as birthdat2_1_, chessplaye0_.firstName as firstnam3_1_, chessplaye0_.lastName as lastname4_1_, chessplaye0_.version as version5_1_ from ChessPlayer chessplaye0_
-14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=1, firstName=Magnus, lastName=Carlsen, birthDate=1990-09-30, version=0]
-14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=2, firstName=Jorden, lastName=van Foreest, birthDate=1999-04-30, version=0]
-14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=3, firstName=Anish, lastName=Giri, birthDate=1994-06-28, version=0]
-14:50:16,669  INFO TestSample:135 - ChessPlayer &#91;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#x5B;id=1, firstName=Magnus, lastName=Carlsen, birthDate=1990-09-30, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#x5B;id=2, firstName=Jorden, lastName=van Foreest, birthDate=1999-04-30, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#x5B;id=3, firstName=Anish, lastName=Giri, birthDate=1994-06-28, version=0]
+14:50:16,669  INFO TestSample:135 - ChessPlayer &#x5B;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0]
 14:50:16,678 DEBUG SQL:144 - insert into ChessPlayer (birthDate, firstName, lastName, version, id) values (?, ?, ?, ?, ?)
 </pre></div>
 
@@ -354,4 +369,4 @@ em.close();
 
 
 <p>I recommend using <em>FlushMode</em>Type<em>.AUTO</em> for all persistence layers. It avoids the risk that you might miss flushing a pending change or that a query works on outdated data. And Hibernate provides its own optimization, based on the <a href="https://thorben-janssen.com/hibernate-query-spaces/">query space</a>, to avoid any unnecessary flushes.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

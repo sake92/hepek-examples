@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Sequence naming strategies in Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Sequence naming strategies in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Sequence naming strategies in Hibernate 6</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Sequence naming strategies in Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Hibernate 6 introduced a new configuration parameter and an interface to define the implicit naming strategy for database sequences and tables used to generate primary key values. When you migrate an existing application to <a href="/category/hibernate-6/">Hibernate 6</a>, you quickly recognize that change because the default naming strategy has changed. Due to that, Hibernate might try using a sequence that doesn&#8217;t exist in your database. But that’s not the only situation in which you should be familiar with this new setting. It can also be helpful to map a legacy database with strangely named sequences or if you need to follow some internal naming conventions.</p>
 
 
@@ -83,10 +98,10 @@ em.persist(player);
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:15:04,917 DEBUG &#91;org.hibernate.SQL] - 
+16:15:04,917 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('ChessPlayer_SEQ')
-16:15:04,947 DEBUG &#91;org.hibernate.SQL] - 
+16:15:04,947 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessPlayer
@@ -121,10 +136,10 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:17:04,094 DEBUG &#91;org.hibernate.SQL] - 
+16:17:04,094 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('player_SEQ')
-16:17:04,120 DEBUG &#91;org.hibernate.SQL] - 
+16:17:04,120 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         player
@@ -191,10 +206,10 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:51:10,742 DEBUG &#91;org.hibernate.SQL] - 
+16:51:10,742 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('hibernate_sequence')
-16:51:10,771 DEBUG &#91;org.hibernate.SQL] - 
+16:51:10,771 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessPlayer
@@ -237,10 +252,10 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:51:50,304 DEBUG &#91;org.hibernate.SQL] - 
+16:51:50,304 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('player_seq')
-16:51:50,343 DEBUG &#91;org.hibernate.SQL] - 
+16:51:50,343 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessPlayer
@@ -299,10 +314,10 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-16:57:15,706 DEBUG &#91;org.hibernate.SQL] - 
+16:57:15,706 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('hibernate_sequence')
-16:57:15,734 DEBUG &#91;org.hibernate.SQL] - 
+16:57:15,734 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessPlayer
@@ -412,10 +427,10 @@ public class ChessPlayer {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:06:51,325 DEBUG &#91;org.hibernate.SQL] - 
+17:06:51,325 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('seq_Player')
-17:06:51,352 DEBUG &#91;org.hibernate.SQL] - 
+17:06:51,352 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         Player
@@ -462,4 +477,4 @@ public class ChessPlayer {
 
 
 <p>You can also provide your own naming strategy for database sequences. To do that, you need to implement the <em>ImplicitDatabaseObjectNamingStrategy</em> interface and provide the fully-qualified class name as the value of the configuration property <em>hibernate.id.db_structure_naming_strategy</em>.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

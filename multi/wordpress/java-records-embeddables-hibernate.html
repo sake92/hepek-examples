@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Java Records as Embeddables with Hibernate 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Java Records as Embeddables with Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Java Records as Embeddables with Hibernate 6</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Java Records as Embeddables with Hibernate 6</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Since the release of Java’s record feature, I got asked how you could use records with Hibernate. Until Hibernate 6, I had to tell you that JPA and Hibernate only supported records as <a href="https://thorben-janssen.com/java-records-hibernate-jpa/" target="_blank" rel="noreferrer noopener">DTO projections</a>. That finally changed with the release of Hibernate 6.0 and got even easier with Hibernate 6.2. Unfortunately, you still can&#8217;t use records to model your entities, but you can at least use them as an <em>@Embeddable</em>.</p>
 
 
@@ -162,9 +177,9 @@ System.out.println(a.getAddress());
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:43:51,155 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.street,a1_0.city,a1_0.postalCode,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.id=?
-17:43:51,155 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;BIGINT] - &#91;1]
-Address: Address&#91;street=homeStreet, city=homeCity, postalCode=12345]
+17:43:51,155 DEBUG &#x5B;org.hibernate.SQL] - select a1_0.id,a1_0.street,a1_0.city,a1_0.postalCode,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.id=?
+17:43:51,155 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;BIGINT] - &#x5B;1]
+Address: Address&#x5B;street=homeStreet, city=homeCity, postalCode=12345]
 </pre></div>
 
 
@@ -259,11 +274,11 @@ System.out.println(a.getAddress());
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:24:59,987 DEBUG &#91;org.hibernate.SQL] - select a1_0.id,a1_0.city,a1_0.postalCode,a1_0.street,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.id=?
-17:24:59,987 TRACE &#91;org.hibernate.orm.jdbc.bind] - binding parameter &#91;1] as &#91;BIGINT] - &#91;1]
-17:24:59,991 INFO  &#91;org.thoughts.on.java.model.AddressInstantiator] - Instantiate Address embeddable for homeStreet 12345 homeCity
-17:24:59,992 INFO  &#91;org.thoughts.on.java.model.AddressInstantiator] - Instantiate Address embeddable for homeStreet 12345 homeCity
-Address &#91;city=homeCity, postalCode=12345, street=homeStreet]
+17:24:59,987 DEBUG &#x5B;org.hibernate.SQL] - select a1_0.id,a1_0.city,a1_0.postalCode,a1_0.street,a1_0.firstName,a1_0.lastName,a1_0.version from Author a1_0 where a1_0.id=?
+17:24:59,987 TRACE &#x5B;org.hibernate.orm.jdbc.bind] - binding parameter &#x5B;1] as &#x5B;BIGINT] - &#x5B;1]
+17:24:59,991 INFO  &#x5B;org.thoughts.on.java.model.AddressInstantiator] - Instantiate Address embeddable for homeStreet 12345 homeCity
+17:24:59,992 INFO  &#x5B;org.thoughts.on.java.model.AddressInstantiator] - Instantiate Address embeddable for homeStreet 12345 homeCity
+Address &#x5B;city=homeCity, postalCode=12345, street=homeStreet]
 </pre></div>
 
 
@@ -284,4 +299,4 @@ Address &#91;city=homeCity, postalCode=12345, street=homeStreet]
 
 
 <p>If you&#8217;re using version 6.0 or 6.1, you need to implement your own <em>EmbeddableInstantiator</em> implementation for each embeddable record class. Since version 6.2, that class is no longer required. Hibernate now finds and uses the constructor provided by your embeddable record class.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

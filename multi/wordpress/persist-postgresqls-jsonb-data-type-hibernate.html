@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to use PostgreSQL’s JSONB data type with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to use PostgreSQL’s JSONB data type with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to use PostgreSQL’s JSONB data type with Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>How to use PostgreSQL’s JSONB data type with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Most databases offer many proprietary features besides the known SQL standard. One example is <a href="https://www.postgresql.org/docs/9.4/static/datatype-json.html">PostgreSQL&#8217;s <em>JSONB</em> data type</a> which allows you to store JSON documents efficiently in a database column.</p>
 
 
@@ -318,8 +333,8 @@ public class MyEntity {
 public class MyJsonType implements UserType {
  
     @Override
-    public int&#91;] sqlTypes() {
-        return new int&#91;]{Types.JAVA_OBJECT};
+    public int&#x5B;] sqlTypes() {
+        return new int&#x5B;]{Types.JAVA_OBJECT};
     }
  
     @Override
@@ -345,9 +360,9 @@ public class MyJsonType implements UserType {
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
 @Override
-public Object nullSafeGet(final ResultSet rs, final String&#91;] names, final SessionImplementor session,
+public Object nullSafeGet(final ResultSet rs, final String&#x5B;] names, final SessionImplementor session,
                           final Object owner) throws HibernateException, SQLException {
-    final String cellContent = rs.getString(names&#91;0]);
+    final String cellContent = rs.getString(names&#x5B;0]);
     if (cellContent == null) {
         return null;
     }
@@ -537,4 +552,4 @@ MyEntity e = em.createQuery(&quot;SELECT e FROM MyEntity e WHERE e.jsonProperty.
 
 
 <p>Hibernate 4 and 5 don&#8217;t support these data types. You have to implement the mapping yourself. As you have seen in this post, you can do this by implementing the&nbsp;<em>UserType&nbsp;</em>interface, registering it with a&nbsp;<em>@TypeDef</em>&nbsp;annotation, and creating a Hibernate dialect that registers the column type.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

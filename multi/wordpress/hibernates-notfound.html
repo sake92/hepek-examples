@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s @NotFound Annotation – How to use it and a better alternative</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Hibernate’s @NotFound Annotation – How to use it and a better alternative</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Hibernate’s @NotFound Annotation – How to use it and a better alternative</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Hibernate’s @NotFound Annotation – How to use it and a better alternative</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Some table models don&#8217;t enforce their foreign key references by a foreign key constraint. This is a bad practice that often leads to foreign key references that point to non-existing records. When Hibernate tries to resolve such a broken reference, it throws an <em>EntityNotFoundException</em>. You should, therefore, define a foreign key constraint for every foreign key reference. </p>
 
 
@@ -78,8 +93,8 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:04:20,702 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,p1_0.id,p1_0.birthDate,p1_0.firstName,p1_0.lastName,p1_0.version,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 left join ChessPlayer p1_0 on p1_0.id=c1_0.playerBlack_id where c1_0.id=?
-17:04:20,712 ERROR &#91;com.thorben.janssen.sample.TestSample] - org.hibernate.FetchNotFoundException: Entity `com.thorben.janssen.sample.model.ChessPlayer` with identifier value `100` does not exist
+17:04:20,702 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,p1_0.id,p1_0.birthDate,p1_0.firstName,p1_0.lastName,p1_0.version,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 left join ChessPlayer p1_0 on p1_0.id=c1_0.playerBlack_id where c1_0.id=?
+17:04:20,712 ERROR &#x5B;com.thorben.janssen.sample.TestSample] - org.hibernate.FetchNotFoundException: Entity `com.thorben.janssen.sample.model.ChessPlayer` with identifier value `100` does not exist
 </pre></div>
 
 
@@ -122,9 +137,9 @@ em.close();
 </pre></div>
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:23:24,203 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,p1_0.id,p1_0.birthDate,p1_0.firstName,p1_0.lastName,p1_0.version,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 left join ChessPlayer p1_0 on p1_0.id=c1_0.playerBlack_id where c1_0.id=?
-17:23:24,223 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-17:23:24,237 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessPlayer &#91;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0] - null
+17:23:24,203 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,p1_0.id,p1_0.birthDate,p1_0.firstName,p1_0.lastName,p1_0.version,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 left join ChessPlayer p1_0 on p1_0.id=c1_0.playerBlack_id where c1_0.id=?
+17:23:24,223 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+17:23:24,237 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessPlayer &#x5B;id=4, firstName=Fabiano, lastName=Caruana, birthDate=1992-07-30, version=0] - null
 </pre></div>
 
 
@@ -178,10 +193,10 @@ public class ChessGame {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-17:35:52,212 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 where c1_0.id=?
-17:35:52,241 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-17:35:52,255 DEBUG &#91;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
-17:35:52,260 ERROR &#91;com.thorben.janssen.sample.TestSample] - jakarta.persistence.EntityNotFoundException: Unable to find com.thorben.janssen.sample.model.ChessPlayer with id 100
+17:35:52,212 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.chessTournament_id,c1_0.date,c1_0.playerBlack_id,c1_0.playerWhite_id,c1_0.round,c1_0.version from ChessGame c1_0 where c1_0.id=?
+17:35:52,241 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+17:35:52,255 DEBUG &#x5B;org.hibernate.SQL] - select c1_0.id,c1_0.birthDate,c1_0.firstName,c1_0.lastName,c1_0.version from ChessPlayer c1_0 where c1_0.id=?
+17:35:52,260 ERROR &#x5B;com.thorben.janssen.sample.TestSample] - jakarta.persistence.EntityNotFoundException: Unable to find com.thorben.janssen.sample.model.ChessPlayer with id 100
 </pre></div>
 
 
@@ -246,4 +261,4 @@ public class ChessGame {
 
 
 <p>If you prefer to handle the broken foreign key references in your business code, you can annotate your association attribute with <em>@JoinColumn</em> and define the <em>ConstraintMode.NO_CONSTRAINT</em>. Hibernate then doesn&#8217;t generate a foreign key constraint when generating the table model. At runtime, it doesn&#8217;t check the foreign key reference until the generated proxy object tries to resolve it.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

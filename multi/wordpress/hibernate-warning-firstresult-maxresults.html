@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to fix Hibernate’s Warning “HHH000104: firstResult/maxResults specified with collection fetch”</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to fix Hibernate’s Warning “HHH000104: firstResult/maxResults specified with collection fetch”</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to fix Hibernate’s Warning “HHH000104: firstResult/maxResults specified with collection fetch”</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>How to fix Hibernate’s Warning “HHH000104: firstResult/maxResults specified with collection fetch”</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>One of the most common recommendations to improve the performance of your persistence layer is to use <em>JOIN FETCH</em> clauses or <em>EntityGraph</em>s to fetch required associations when loading an entity. I entirely agree with these recommendations, and we discuss this in great detail in the Hibernate Performance Tuning course in the <a href="/join-persistence-hub/">Persistence Hub</a>. But if you follow this advice and call the <em>setFirstResult </em>and <em>setMaxResult </em>methods to limit the size of the result set, you will see the following warning in your log file:</p>
 
 
@@ -53,8 +68,8 @@ List&lt;ChessTournament&gt; tournaments = q.getResultList();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-15:56:57,623 WARN  &#91;org.hibernate.hql.internal.ast.QueryTranslatorImpl] - HHH000104: firstResult/maxResults specified with collection fetch; applying in memory!
-15:56:57,626 DEBUG &#91;org.hibernate.SQL] - 
+15:56:57,623 WARN  &#x5B;org.hibernate.hql.internal.ast.QueryTranslatorImpl] - HHH000104: firstResult/maxResults specified with collection fetch; applying in memory!
+15:56:57,626 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         chesstourn0_.id as id1_1_0_,
         chessplaye2_.id as id1_0_1_,
@@ -173,14 +188,14 @@ List&lt;ChessTournament&gt; tournaments = tournamentQuery.getResultList();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-07:30:04,557 DEBUG &#91;org.hibernate.SQL] - 
+07:30:04,557 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id 
     from
         ChessTournament c1_0 
     where
         c1_0.name like ? escape '' offset ? rows fetch first ? rows only
-07:30:04,620 DEBUG &#91;org.hibernate.SQL] - 
+07:30:04,620 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         c1_0.id,
         c1_0.endDate,
@@ -203,9 +218,9 @@ List&lt;ChessTournament&gt; tournaments = tournamentQuery.getResultList();
                 on c1_0.id=p1_0.ChessTournament_id 
         where
             c1_0.id in(?,?,?)
-07:30:04,666 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessTournament &#91;id=1, name=Tata Steel Chess Tournament 2021, startDate=2021-01-14, endDate=2021-01-30, version=0]
-07:30:04,666 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessTournament &#91;id=2, name=Tata Steel Chess Tournament 2022, startDate=2022-01-14, endDate=2022-01-30, version=0]
-07:30:04,666 INFO  &#91;com.thorben.janssen.sample.TestSample] - ChessTournament &#91;id=3, name=2022 Superbet Chess Classic Romania, startDate=2022-05-03, endDate=2022-05-15, version=0]
+07:30:04,666 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessTournament &#x5B;id=1, name=Tata Steel Chess Tournament 2021, startDate=2021-01-14, endDate=2021-01-30, version=0]
+07:30:04,666 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessTournament &#x5B;id=2, name=Tata Steel Chess Tournament 2022, startDate=2022-01-14, endDate=2022-01-30, version=0]
+07:30:04,666 INFO  &#x5B;com.thorben.janssen.sample.TestSample] - ChessTournament &#x5B;id=3, name=2022 Superbet Chess Classic Romania, startDate=2022-05-03, endDate=2022-05-15, version=0]
 </pre></div>
 
 
@@ -222,4 +237,4 @@ List&lt;ChessTournament&gt; tournaments = tournamentQuery.getResultList();
 
 
 <p>You can avoid that by executing 2 query statements. The first one applies pagination when it fetches the primary keys of all records you want to retrieve. In the example of this post, these were the <em>id</em> values of all <em>ChessTournament </em>entities that matched the WHERE clause. The 2nd query then uses the list of primary key values to get the entity objects and initializes the required associations.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

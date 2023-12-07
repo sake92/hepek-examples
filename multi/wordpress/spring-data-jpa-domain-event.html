@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – Publishing Domain Events When Changing an Entity</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JPA – Publishing Domain Events When Changing an Entity</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JPA – Publishing Domain Events When Changing an Entity</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Spring Data JPA – Publishing Domain Events When Changing an Entity</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Since Spring Data JPA 1.11 (the Ingalls release), you can automatically publish domain events when an entity object gets saved. You only need to add a method to your entity class that returns a&nbsp;<em>Collection&nbsp;</em>of the event objects you want to publish and annotate the method with&nbsp;<em>@DomainEvents</em>.&nbsp;Spring Data JPA calls that method and publishes the events when you execute the&nbsp;<em>save</em>&nbsp;or&nbsp;<em>saveAll</em>&nbsp;method of the entity’s repository.&nbsp;Similar to other Spring application events, you can observe them using an <em>@EventListener</em> or <em>@TransactionalEventListener</em>.</p>
 
 
@@ -342,4 +357,4 @@ public void handleTournamentEndedEvent(TournamentEndedEvent event) {
 
 
 <p>You can implement an observer for your domain events in the same way as any other event observer in Spring. You only need a method that expects a parameter of the type of your event class and annotate it with <em>@EventListener</em> or <em>@TransactionalEventListener</em>.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

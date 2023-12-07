@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The Best Spring Data JPA Logging Configuration in Spring Boot</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The Best Spring Data JPA Logging Configuration in Spring Boot</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The Best Spring Data JPA Logging Configuration in Spring Boot</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>The Best Spring Data JPA Logging Configuration in Spring Boot</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Spring Data JPA&#8217;s repositories provide most of the database operations for you. That makes working with Spring Data JPA very comfortable but it also increases the importance of a good logging configuration. If you don&#8217;t implement your database operations yourself, you at least need to make sure that you know which operations get performed.</p>
 
 
@@ -49,8 +64,8 @@ log.info(player.getFirstName() + &quot; &quot; + player.getLastName());
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2021-12-14 14:41:05.189 DEBUG 65812 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 75ms, rows: 19
-2021-12-14 14:41:05.196  INFO 65812 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+2021-12-14 14:41:05.189 DEBUG 65812 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 75ms, rows: 19
+2021-12-14 14:41:05.196  INFO 65812 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     1913100 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     1401600 nanoseconds spent preparing 1 JDBC statements;
@@ -62,7 +77,7 @@ log.info(player.getFirstName() + &quot; &quot; + player.getLastName());
     0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
     11600 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
-2021-12-14 14:41:05.213  INFO 58480 --- &#91;           main] c.thorben.janssen.spring.data.TestDemo   : Magnus Carlsen
+2021-12-14 14:41:05.213  INFO 58480 --- &#x5B;           main] c.thorben.janssen.spring.data.TestDemo   : Magnus Carlsen
 </pre></div>
 
 
@@ -83,9 +98,9 @@ spring.jpa.properties.hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS=3
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2021-12-14 15:02:57.570  INFO 36940 --- &#91;           main] org.hibernate.SQL_SLOW                   : SlowQuery: 4 milliseconds. SQL: 'HikariProxyPreparedStatement@2022715982 wrapping select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_'
-2021-12-14 15:02:57.643 DEBUG 36940 --- &#91;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 82ms, rows: 19
-2021-12-14 15:02:57.650  INFO 36940 --- &#91;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
+2021-12-14 15:02:57.570  INFO 36940 --- &#x5B;           main] org.hibernate.SQL_SLOW                   : SlowQuery: 4 milliseconds. SQL: 'HikariProxyPreparedStatement@2022715982 wrapping select chessplaye0_.id as id1_1_, chessplaye0_.birth_date as birth_da2_1_, chessplaye0_.first_name as first_na3_1_, chessplaye0_.last_name as last_nam4_1_, chessplaye0_.version as version5_1_ from chess_player chessplaye0_'
+2021-12-14 15:02:57.643 DEBUG 36940 --- &#x5B;           main] o.h.stat.internal.StatisticsImpl         : HHH000117: HQL: select generatedAlias0 from ChessPlayer as generatedAlias0, time: 82ms, rows: 19
+2021-12-14 15:02:57.650  INFO 36940 --- &#x5B;           main] i.StatisticalLoggingSessionEventListener : Session Metrics {
     1901800 nanoseconds spent acquiring 1 JDBC connections;
     0 nanoseconds spent releasing 0 JDBC connections;
     1981300 nanoseconds spent preparing 1 JDBC statements;
@@ -97,7 +112,7 @@ spring.jpa.properties.hibernate.session.events.log.LOG_QUERIES_SLOWER_THAN_MS=3
     0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
     12500 nanoseconds spent executing 1 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
-2021-12-14 15:02:57.696  INFO 36940 --- &#91;           main] c.thorben.janssen.spring.data.TestDemo   : Magnus Carlsen
+2021-12-14 15:02:57.696  INFO 36940 --- &#x5B;           main] c.thorben.janssen.spring.data.TestDemo   : Magnus Carlsen
 </pre></div>
 
 
@@ -155,4 +170,4 @@ logging.level.org.hibernate=ERROR
 
 
 <p>Spring Data JPA adds another layer of abstraction on top of your persistence provider. That makes the implementation of your persistence much easier. But the abstraction also makes it harder to understand how your application uses the database. This increases the importance of your logging configuration. Using the right configurations, you get all the information you need to find, analyze, and fix potential problems during development. You should use a different configuration to avoid any overhead in production and get the best performance.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

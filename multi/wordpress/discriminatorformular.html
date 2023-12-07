@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>@DiscriminatorFormular – Modeling Single Table Inheritance Without a Discriminator</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>@DiscriminatorFormular – Modeling Single Table Inheritance Without a Discriminator</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>@DiscriminatorFormular – Modeling Single Table Inheritance Without a Discriminator</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>@DiscriminatorFormular – Modeling Single Table Inheritance Without a Discriminator</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Inheritance is one of the key concepts of all object-oriented programming languages. And Java makes there no difference. All developers are familiar with this concept and expect to use it in all parts of their code. That, of course, also includes the persistence layer and the entity model. But the concept of inheritance doesn&#8217;t exist in relational table models. JPA and Hibernate bridge that gap by providing different <a href="https://thorben-janssen.com/complete-guide-inheritance-strategies-jpa-hibernate/">inheritance mapping strategies</a> that map the entities to one or more database tables.</p>
 
 
@@ -163,4 +178,4 @@ public void testSample1() {
 
 
 <p>This mapping requires a discriminator value that tells Hibernate to which subclass it has to map the record. By default, this value gets stored in a separate column. If your table model doesn&#8217;t provide such a column, you can use Hibernate&#8217;s <em>@DiscriminatorFormula</em> annotation. It expects an SQL snippet that returns the discriminator value for each record. Hibernate includes this snippet in the <em>SELECT </em>statement and maps the record based on the returned discriminator value when fetching an entity from the database.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

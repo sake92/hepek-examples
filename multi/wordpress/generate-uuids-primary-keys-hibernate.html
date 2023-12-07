@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to generate UUIDs as primary keys with Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>How to generate UUIDs as primary keys with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>How to generate UUIDs as primary keys with Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>How to generate UUIDs as primary keys with Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Most developers prefer numerical primary keys because they are efficient to use and <a href="//thorben-janssen.com/jpa-generate-primary-keys/">easy to generate</a>. But that doesn&#8217;t mean that a primary key has to be a number.</p>
 
 
@@ -60,10 +75,10 @@ em.persist(b);
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
 18:27:50,009 DEBUG AbstractSaveEventListener:127 - Generated identifier: 21e22474-d31f-4119-8478-d9d448727cfe, using strategy: org.hibernate.id.UUIDGenerator
 18:27:50,035 DEBUG SQL:128 - insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
-18:27:50,039 TRACE bind:28 - binding parameter &#91;1] as &#91;DATE] - &#91;1902-04-30]
-18:27:50,040 TRACE bind:28 - binding parameter &#91;2] as &#91;VARCHAR] - &#91;The Hound of the Baskervilles]
-18:27:50,040 TRACE bind:28 - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-18:27:50,040 TRACE bind:28 - binding parameter &#91;4] as &#91;BINARY] - &#91;21e22474-d31f-4119-8478-d9d448727cfe]
+18:27:50,039 TRACE bind:28 - binding parameter &#x5B;1] as &#x5B;DATE] - &#x5B;1902-04-30]
+18:27:50,040 TRACE bind:28 - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;The Hound of the Baskervilles]
+18:27:50,040 TRACE bind:28 - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+18:27:50,040 TRACE bind:28 - binding parameter &#x5B;4] as &#x5B;BINARY] - &#x5B;21e22474-d31f-4119-8478-d9d448727cfe]
 </pre></div>
 
 
@@ -151,10 +166,10 @@ em.persist(b);
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
 18:28:25,859 DEBUG AbstractSaveEventListener:127 - Generated identifier: ac864ed4-bd3d-4ca0-8ba2-b49ec74465ff, using strategy: org.hibernate.id.uuid.UuidGenerator
 18:28:25,879 DEBUG SQL:128 - insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
-18:28:25,886 TRACE bind:28 - binding parameter &#91;1] as &#91;DATE] - &#91;1902-04-30]
-18:28:25,887 TRACE bind:28 - binding parameter &#91;2] as &#91;VARCHAR] - &#91;The Hound of the Baskervilles]
-18:28:25,887 TRACE bind:28 - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-18:28:25,888 TRACE bind:28 - binding parameter &#91;4] as &#91;BINARY] - &#91;ac864ed4-bd3d-4ca0-8ba2-b49ec74465ff]
+18:28:25,886 TRACE bind:28 - binding parameter &#x5B;1] as &#x5B;DATE] - &#x5B;1902-04-30]
+18:28:25,887 TRACE bind:28 - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;The Hound of the Baskervilles]
+18:28:25,887 TRACE bind:28 - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+18:28:25,888 TRACE bind:28 - binding parameter &#x5B;4] as &#x5B;BINARY] - &#x5B;ac864ed4-bd3d-4ca0-8ba2-b49ec74465ff]
 </pre></div>
 
 
@@ -203,10 +218,10 @@ em.persist(b);
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
 12:23:19,356 DEBUG AbstractSaveEventListener:118 – Generated identifier: d7cd23b8-991c-470f-ac63-d8fb106f391e, using strategy: org.hibernate.id.UUIDGenerator
 12:23:19,388 DEBUG SQL:92 – insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
-12:23:19,392 TRACE BasicBinder:65 – binding parameter &#91;1] as &#91;DATE] – &#91;1902-04-30]
-12:23:19,393 TRACE BasicBinder:65 – binding parameter &#91;2] as &#91;VARCHAR] – &#91;The Hound of the Baskervilles]
-12:23:19,393 TRACE BasicBinder:65 – binding parameter &#91;3] as &#91;INTEGER] – &#91;0]
-12:23:19,394 TRACE BasicBinder:65 – binding parameter &#91;4] as &#91;OTHER] – &#91;d7cd23b8-991c-470f-ac63-d8fb106f391e]
+12:23:19,392 TRACE BasicBinder:65 – binding parameter &#x5B;1] as &#x5B;DATE] – &#x5B;1902-04-30]
+12:23:19,393 TRACE BasicBinder:65 – binding parameter &#x5B;2] as &#x5B;VARCHAR] – &#x5B;The Hound of the Baskervilles]
+12:23:19,393 TRACE BasicBinder:65 – binding parameter &#x5B;3] as &#x5B;INTEGER] – &#x5B;0]
+12:23:19,394 TRACE BasicBinder:65 – binding parameter &#x5B;4] as &#x5B;OTHER] – &#x5B;d7cd23b8-991c-470f-ac63-d8fb106f391e]
 </pre></div>
 
 
@@ -268,10 +283,10 @@ em.persist(b);
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
 18:28:57,068 DEBUG AbstractSaveEventListener:127 - Generated identifier: c0a8b235-8207-1771-8182-07d7756a0000, using strategy: org.hibernate.id.uuid.UuidGenerator
 18:28:57,095 DEBUG SQL:128 - insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
-18:28:57,101 TRACE bind:28 - binding parameter &#91;1] as &#91;DATE] - &#91;1902-04-30]
-18:28:57,101 TRACE bind:28 - binding parameter &#91;2] as &#91;VARCHAR] - &#91;The Hound of the Baskervilles]
-18:28:57,102 TRACE bind:28 - binding parameter &#91;3] as &#91;INTEGER] - &#91;0]
-18:28:57,102 TRACE bind:28 - binding parameter &#91;4] as &#91;BINARY] - &#91;c0a8b235-8207-1771-8182-07d7756a0000]
+18:28:57,101 TRACE bind:28 - binding parameter &#x5B;1] as &#x5B;DATE] - &#x5B;1902-04-30]
+18:28:57,101 TRACE bind:28 - binding parameter &#x5B;2] as &#x5B;VARCHAR] - &#x5B;The Hound of the Baskervilles]
+18:28:57,102 TRACE bind:28 - binding parameter &#x5B;3] as &#x5B;INTEGER] - &#x5B;0]
+18:28:57,102 TRACE bind:28 - binding parameter &#x5B;4] as &#x5B;BINARY] - &#x5B;c0a8b235-8207-1771-8182-07d7756a0000]
 </pre></div>
 
 
@@ -327,10 +342,10 @@ em.persist(b);
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
 12:35:22,760 DEBUG AbstractSaveEventListener:118 – Generated identifier: c0a8b214-578f-131a-8157-8f431d060000, using strategy: org.hibernate.id.UUIDGenerator
 12:35:22,792 DEBUG SQL:92 – insert into Book (publishingDate, title, version, id) values (?, ?, ?, ?)
-12:35:22,795 TRACE BasicBinder:65 – binding parameter &#91;1] as &#91;DATE] – &#91;1902-04-30]
-12:35:22,795 TRACE BasicBinder:65 – binding parameter &#91;2] as &#91;VARCHAR] – &#91;The Hound of the Baskervilles]
-12:35:22,796 TRACE BasicBinder:65 – binding parameter &#91;3] as &#91;INTEGER] – &#91;0]
-12:35:22,797 TRACE BasicBinder:65 – binding parameter &#91;4] as &#91;OTHER] – &#91;c0a8b214-578f-131a-8157-8f431d060000]
+12:35:22,795 TRACE BasicBinder:65 – binding parameter &#x5B;1] as &#x5B;DATE] – &#x5B;1902-04-30]
+12:35:22,795 TRACE BasicBinder:65 – binding parameter &#x5B;2] as &#x5B;VARCHAR] – &#x5B;The Hound of the Baskervilles]
+12:35:22,796 TRACE BasicBinder:65 – binding parameter &#x5B;3] as &#x5B;INTEGER] – &#x5B;0]
+12:35:22,797 TRACE BasicBinder:65 – binding parameter &#x5B;4] as &#x5B;OTHER] – &#x5B;c0a8b214-578f-131a-8157-8f431d060000]
 </pre></div>
 
 
@@ -347,4 +362,4 @@ em.persist(b);
 
 
 <p>Hibernate can generate UUID values for several years now. In versions 4 and 5, you need to use a <em>@GenericGenerator</em> and provide the class of the generator you want to use. Hibernate 6 simplified this by  introducing the <em>@UuidGenerator</em> annotation for it. </p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

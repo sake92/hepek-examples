@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The Best Mapping for Shared Technical Attributes With Hibernate</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>The Best Mapping for Shared Technical Attributes With Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>The Best Mapping for Shared Technical Attributes With Hibernate</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>The Best Mapping for Shared Technical Attributes With Hibernate</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>Most domain models have a few technical attributes shared by most entity classes. Typical examples are the version attribute and the timestamp or user who performed the last update or persisted an entity. In these situations, many developers ask themselves what&#8217;s the best way to model these attributes. Oleg did the same recently in the comments here on the blog, and I will explain the 2 most popular options in this article.</p>
 
 
@@ -132,16 +147,16 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-14:41:37,080 INFO  &#91;com.thorben.janssen.TestMapping] - ==== testMappedSuperclass ====
+14:41:37,080 INFO  &#x5B;com.thorben.janssen.TestMapping] - ==== testMappedSuperclass ====
 Nov. 30, 2021 2:41:37 PM com.thorben.janssen.model.MyAbstractEntity setLastModifiedUser
 INFO: Set lastModifiedUser
-14:41:37,143 DEBUG &#91;org.hibernate.SQL] - 
+14:41:37,143 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('tournament_seq')
-14:41:37,149 DEBUG &#91;org.hibernate.SQL] - 
+14:41:37,149 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('tournament_seq')
-14:41:37,179 DEBUG &#91;org.hibernate.SQL] - 
+14:41:37,179 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessTournament
@@ -219,7 +234,7 @@ public class MetaData {
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
-jakarta.persistence.PersistenceException:&#91;PersistenceUnit:my-persistence-unit] Unable to build Hibernate SessionFactory
+jakarta.persistence.PersistenceException:&#x5B;PersistenceUnit:my-persistence-unit] Unable to build Hibernate SessionFactory
 ...
 Caused by: org.hibernate.cfg.NotYetImplementedException: Still need to wire in composite in-memory value generation
 </pre></div>
@@ -283,15 +298,15 @@ em.close();
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-15:04:51,692 INFO  &#91;com.thorben.janssen.TestMapping] - ==== testEmbeddable ====
-15:04:51,736 INFO  &#91;com.thorben.janssen.model.MetaData] - Set lastModifiedUser and lastModifiedDateTime
-15:04:51,742 DEBUG &#91;org.hibernate.SQL] - 
+15:04:51,692 INFO  &#x5B;com.thorben.janssen.TestMapping] - ==== testEmbeddable ====
+15:04:51,736 INFO  &#x5B;com.thorben.janssen.model.MetaData] - Set lastModifiedUser and lastModifiedDateTime
+15:04:51,742 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('ChessGame_SEQ')
-15:04:51,749 DEBUG &#91;org.hibernate.SQL] - 
+15:04:51,749 DEBUG &#x5B;org.hibernate.SQL] - 
     select
         nextval('ChessGame_SEQ')
-15:04:51,807 DEBUG &#91;org.hibernate.SQL] - 
+15:04:51,807 DEBUG &#x5B;org.hibernate.SQL] - 
     insert 
     into
         ChessGame
@@ -334,4 +349,4 @@ em.close();
 
 
 <p>In general, I recommend trying the <em>@Embeddable</em> mapping first. It&#8217;s the cleaner approach, and it works really well, as long as you model the version or primary key attributes on your entity classes. If you don&#8217;t want to do that, you should use a <em>@MappedSuperclass</em> mapping. </p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

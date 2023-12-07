@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Getting Started</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Spring Data JDBC – Getting Started</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Spring Data JDBC – Getting Started</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Spring Data JDBC – Getting Started</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>As a Java developer, you can choose between various frameworks to store your data in a relational database. If you&#8217;re looking for an object-relational mapping framework that follows DDD and is not very complex but still handles most of the standard CRUD operations for you, you should try <a href="https://spring.io/projects/spring-data-jdbc">Spring Data JDBC</a>.</p>
 
 
@@ -215,12 +230,12 @@ gameRepo.save(game);
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2022-05-19 14:24:42.294 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
-2022-05-19 14:24:42.295 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_game&quot; (&quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?)]
-2022-05-19 14:24:42.338 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
-2022-05-19 14:24:42.338 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
-2022-05-19 14:24:42.346 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
-2022-05-19 14:24:42.346 DEBUG 31848 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-05-19 14:24:42.294 DEBUG 31848 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-05-19 14:24:42.295 DEBUG 31848 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;INSERT INTO &quot;chess_game&quot; (&quot;player_black&quot;, &quot;player_white&quot;) VALUES (?, ?)]
+2022-05-19 14:24:42.338 DEBUG 31848 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-05-19 14:24:42.338 DEBUG 31848 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
+2022-05-19 14:24:42.346 DEBUG 31848 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing SQL update and returning generated keys
+2022-05-19 14:24:42.346 DEBUG 31848 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;INSERT INTO &quot;chess_move&quot; (&quot;chess_game&quot;, &quot;chess_game_key&quot;, &quot;color&quot;, &quot;move&quot;, &quot;move_number&quot;) VALUES (?, ?, ?, ?, ?)]
 </pre></div>
 
 
@@ -241,10 +256,10 @@ games.forEach(g -&gt; log.info(g.toString()));
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-2022-05-25 09:00:26.230 DEBUG 36564 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;player_black&quot; = ?]
-2022-05-25 09:00:26.267 DEBUG 36564 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
-2022-05-25 09:00:26.268 DEBUG 36564 --- &#91;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#91;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
-2022-05-25 09:00:26.281  INFO 36564 --- &#91;           main] com.thorben.janssen.TestQueryMethod      : ChessGame &#91;id=1, playerBlack=A strong player, playerWhite=Thorben Janssen, moves=&#91;ChessMove &#91;moveNumber=1, color=WHITE, move=e4], ChessMove &#91;moveNumber=1, color=BLACK, move=e5]]]
+2022-05-25 09:00:26.230 DEBUG 36564 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;SELECT &quot;chess_game&quot;.&quot;id&quot; AS &quot;id&quot;, &quot;chess_game&quot;.&quot;player_black&quot; AS &quot;player_black&quot;, &quot;chess_game&quot;.&quot;player_white&quot; AS &quot;player_white&quot; FROM &quot;chess_game&quot; WHERE &quot;chess_game&quot;.&quot;player_black&quot; = ?]
+2022-05-25 09:00:26.267 DEBUG 36564 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL query
+2022-05-25 09:00:26.268 DEBUG 36564 --- &#x5B;           main] o.s.jdbc.core.JdbcTemplate               : Executing prepared SQL statement &#x5B;SELECT &quot;chess_move&quot;.&quot;move&quot; AS &quot;move&quot;, &quot;chess_move&quot;.&quot;color&quot; AS &quot;color&quot;, &quot;chess_move&quot;.&quot;move_number&quot; AS &quot;move_number&quot;, &quot;chess_move&quot;.&quot;chess_game_key&quot; AS &quot;chess_game_key&quot; FROM &quot;chess_move&quot; WHERE &quot;chess_move&quot;.&quot;chess_game&quot; = ? ORDER BY &quot;chess_game_key&quot;]
+2022-05-25 09:00:26.281  INFO 36564 --- &#x5B;           main] com.thorben.janssen.TestQueryMethod      : ChessGame &#x5B;id=1, playerBlack=A strong player, playerWhite=Thorben Janssen, moves=&#x5B;ChessMove &#x5B;moveNumber=1, color=WHITE, move=e4], ChessMove &#x5B;moveNumber=1, color=BLACK, move=e5]]]
 </pre></div>
 
 
@@ -269,4 +284,4 @@ games.forEach(g -&gt; log.info(g.toString()));
 
 
 <p>The definition of a repository follows the standard Spring Data pattern. You only need to define an interface that extends one of Spring Data&#8217;s standard repository interfaces, and Spring Data JDBC provides the required implementation. You can also add your own repository methods as derived queries or use the <em>@Query</em> annotation that you might know from other Spring Data modules.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>

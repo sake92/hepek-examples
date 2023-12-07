@@ -1,4 +1,19 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Using Window Functions with Hibernate 5 &amp; 6</title><link rel="stylesheet" href="https://unpkg.com/bootstrap@3.4.1/dist/css/bootstrap.min.css" /></head><body><div class="container-fluid"><div class="hidden-print"></div><div><div class="page-header text-center"><h1>Using Window Functions with Hibernate 5 &amp; 6</h1></div><div class="row"><div class="col-lg-2 col-md-2 invisible"></div><div class="col-lg-8 col-md-8">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="generator" content="hepek" /><meta name="theme-color" content="#000" /><meta name="mobile-web-app-capable" content="yes" /><title>Using Window Functions with Hibernate 5 &amp; 6</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" /><style>
+    nav#tocScrollspy {
+      display: none;
+    }
+
+    @media (min-width: 991px) {
+      .affix {
+          position: fixed;
+          width: 10%;
+      }
+
+      nav#tocScrollspy {
+        display: block;
+      }
+    }
+    </style></head><body><div class="container-fluid"><div><div class="page-header text-center"><h1>Using Window Functions with Hibernate 5 &amp; 6</h1></div><div class="row"><div class="col-lg-2 col-md-0 invisible"></div><div class="col-lg-8 col-md-12">
 <p>SQL is an incredibly powerful query language. It provides sheer endless possibilities to extract and transform information. One example of that is a window function. It enables you to perform operations on subsets of the table rows available in your query. </p>
 
 
@@ -76,13 +91,13 @@ FROM Employee e
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
-List&lt;Object&#91;]&gt; result = em.createQuery(&quot;&quot;&quot;
+List&lt;Object&#x5B;]&gt; result = em.createQuery(&quot;&quot;&quot;
 										SELECT firstName, 
 											   lastName, 
 											   department, 
 											   salary, 
 											   avg(salary) OVER (PARTITION BY department)
-										FROM Employee e&quot;&quot;&quot;, Object&#91;].class)
+										FROM Employee e&quot;&quot;&quot;, Object&#x5B;].class)
 						  .getResultList();
 </pre></div>
 
@@ -158,7 +173,7 @@ List&lt;EmployeeInfo&gt; emps = em.createQuery(&quot;&quot;&quot;
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-12:26:08,677 DEBUG &#91;org.hibernate.SQL] - select e1_0.firstName,e1_0.lastName,e1_0.department,e1_0.salary,avg(e1_0.salary) over(partition by e1_0.department order by e1_0.firstName) from Employee e1_0
+12:26:08,677 DEBUG &#x5B;org.hibernate.SQL] - select e1_0.firstName,e1_0.lastName,e1_0.department,e1_0.salary,avg(e1_0.salary) over(partition by e1_0.department order by e1_0.firstName) from Employee e1_0
 </pre></div>
 
 
@@ -184,7 +199,7 @@ List&lt;EmployeeInfo&gt; emps = session.createQuery(&quot;&quot;&quot;
 											   department as department,
 											   salary as salary,
 											   avg(salary) OVER (PARTITION BY department) as avgSalary
-										FROM Employee e&quot;&quot;&quot;, Object&#91;].class)
+										FROM Employee e&quot;&quot;&quot;, Object&#x5B;].class)
 								.setTupleTransformer(new AliasToBeanResultTransformer&lt;EmployeeInfo&gt;(EmployeeInfo.class))
 								.getResultList();
 </pre></div>
@@ -202,7 +217,7 @@ List&lt;EmployeeInfo&gt; emps = session.createQuery(&quot;&quot;&quot;
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: java; title: ; notranslate" title="">
-List&lt;Object&#91;]&gt; result = em.createNativeQuery(&quot;&quot;&quot;
+List&lt;Object&#x5B;]&gt; result = em.createNativeQuery(&quot;&quot;&quot;
 										SELECT firstName, 
 											   lastName, 
 											   department, 
@@ -217,7 +232,7 @@ List&lt;Object&#91;]&gt; result = em.createNativeQuery(&quot;&quot;&quot;
 
 
 <div class="wp-block-syntaxhighlighter-code "><pre class="brush: sql; title: ; notranslate" title="">
-14:53:00,980 DEBUG &#91;org.hibernate.SQL] - SELECT firstName,
+14:53:00,980 DEBUG &#x5B;org.hibernate.SQL] - SELECT firstName,
 	   lastName,
 	   department,
 	   salary,
@@ -317,4 +332,4 @@ List&lt;EmployeeInfo&gt; emps = session.createNativeQuery(&quot;&quot;&quot;
 
 
 <p>Independent of the Hibernate version and the kind of query you&#8217;re executing, your query will return an <em>Object[]</em> or a List of <em>Object[]</em>s. You can map these using Hibernate&#8217;s proprietary <em>ResultTransformer</em>, or you can use JPA&#8217;s constructor expression in your JPQL query or an @SqlResultSetMapping annotation for your  native query.</p>
-</div><div class="col-lg-2 col-md-2 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script><script src="https://unpkg.com/bootstrap@3.4.1/dist/js/bootstrap.min.js"></script></body></html>
+</div><div class="col-lg-2 col-md-0 invisible"></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script></body></html>
