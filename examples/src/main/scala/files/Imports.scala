@@ -7,16 +7,15 @@ import ba.sake.hepek.bootstrap3.statik.BootstrapStaticBundle
 
 object Imports {
 
-  private val b = BootstrapStaticBundle()
-  import b._
-
   val Bundle = locally {
+    val b = BootstrapStaticBundle.default
+    import b._
     val customGrid = Grid.withScreenRatios(
       b.Grid.screenRatios
-        .withLg(Ratios().withSingle(1, 4, 1))
-        .withMd(Ratios().withSingle(1, 4, 1))
+        .withLg(Ratios.default.withSingle(1, 4, 1))
+        .withMd(Ratios.default.withSingle(1, 4, 1))
         .withSm(None) // stack on small
-        .withXs(None) // and extra-small screens
+        .withXs(None) // stack on extra-small screens
     )
     b.withGrid(customGrid)
   }

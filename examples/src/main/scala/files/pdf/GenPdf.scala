@@ -1,8 +1,7 @@
 package files.pdf
 
 import java.io.File
-import ba.sake.hepek.prismjs.PrismDependencies
-import ba.sake.hepek.prismjs.Themes
+import ba.sake.hepek.prismjs.* 
 import ba.sake.hepek.pdf.PdfGenerator
 import files.Imports.Bundle._
 import org.openqa.selenium.chrome.ChromeDriver
@@ -11,7 +10,7 @@ object PdfStaticPage extends StaticPage with PrismDependencies {
 
   override def prismSettings =
     super.prismSettings
-      .withTheme(Themes.Okaidia)
+      .withTheme(PrismThemes.Okaidia)
       .withLanguages(List("core", "clike", "java", "scala"))
 
   override def pageContent =

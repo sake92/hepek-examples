@@ -21,24 +21,23 @@ object StaticPageWithNavbar extends StaticPage {
 
   override def pageContent =
     div(
-      Navbar.simple(
+      Navbar.nav(
         brandUrl = staticSiteSettings.indexPage.map(_.ref).getOrElse("#"),
         brandName = siteSettings.name.map(" " + _),
         brandIconUrl = siteSettings.faviconInverted,
-        right = navbarRight
+        right = Seq(
+          a(href := SimpleStaticPage.ref)(SimpleStaticPage.pageSettings.label),
+          Navbar.dropdown(
+            "Nested",
+            Seq(
+              Navbar.dropdownLink(SimpleStaticPage.ref, SimpleStaticPage.pageSettings.label)
+            )
+          )
+        )
       ),
       h2("Hello world, again!"),
       p("Some content...")
     )
-
-  private def navbarRight = {
-    val aLink = SimpleStaticPage.ref
-    val aTitle = SimpleStaticPage.pageSettings.title
-    Seq(
-      a(href := aLink)(aTitle),
-      Navbar.simpleNestedLink(title = "Nested", links = Seq(a(href := aLink)(aTitle)))
-    )
-  }
 
   override def stylesInline =
     super.stylesInline :+

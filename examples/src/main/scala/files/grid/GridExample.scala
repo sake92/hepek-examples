@@ -7,8 +7,8 @@ object GridExample extends StaticPage {
 
   val grid = Grid.withScreenRatios(
     Grid.screenRatios
-      .withLg(Ratios().withSingle(1, 4, 1).withHalf(5, 7).withThird(4, 3, 5))
-      .withMd(Ratios().withHalf(8, 4).withThird(6, 4, 2))
+      .withLg(Ratios.default.withSingle(1, 4, 1).withHalf(5, 7).withThird(4, 3, 5))
+      .withMd(Ratios.default.withHalf(8, 4).withThird(6, 4, 2))
       .withSm(None) // stack ("normal" behavior) on small
       .withXs(None) // and extra-small screens
   )

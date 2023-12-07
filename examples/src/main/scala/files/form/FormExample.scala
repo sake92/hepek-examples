@@ -7,7 +7,7 @@ import ba.sake.hepek.fontawesome5.FA
 
 object FormExample extends StaticPage with FADependencies {
 
-  val customForm = Form.copy(formType = Form.Companion.Type.Horizontal())
+  val customForm = Form.withType(Form.Companion.Type.Horizontal(1, 3))
   import customForm._
 
   override def pageSettings =
